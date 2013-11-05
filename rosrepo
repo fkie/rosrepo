@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+
+import sys
+import os
+# If run from the source tree
+libdir = os.path.join(sys.path[0], "lib")
+if os.path.isdir(libdir): sys.path.insert(0, libdir)
+
+from rosrepo import __version__
+from rosrepo import *
+
+if __name__ == "__main__":
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--version", action="version", version="%s %s" % ( "%(prog)s", __version__))
+  subparsers = parser.add_subparsers(metavar="command")
+  
+  p = subparsers.add_parser("init", help="initialize workspace")
+  p.add_argument("-a", "--autolink", action="store_true", help="search for and symlink to ROS-FKIE checkout")
+  p.add_argument("--delete", action="store_true", help="delete workspace path if it exists")
+  p.add_argument("path", nargs="?", default=".", help="path to the new catkin workspace")
+  p.set_defaults(func=cmd_init.run)
+  
+  p = subparsers.add_parser("checkout", help="add repository to workspace")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  co_group = p.add_mutually_exclusive_group(required=True)
+  co_group.add_argument("--git", action="store_true", help="use Git")
+  co_group.add_argument("--svn", action="store_true", help="use Subversion")
+  co_group.add_argument("--link", action="store_true", help="symlink existing checkout")
+  p.add_argument("url", help="repository url")
+  p.add_argument("name", nargs="?", help="repository name")
+  p.set_defaults(func=cmd_checkout.run)
+
+  p = subparsers.add_parser("list", help="list included packages")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("-n", "--name-only", action="store_true", help="list package names only")
+  p.add_argument("-a", "--all", action="store_true", help="list all available packages")
+  p.add_argument("-m", "--manual", action="store_true", help="list manually included packages only")
+  p.set_defaults(func=cmd_list.run)
+  
+  p = subparsers.add_parser("find", help="show path of available package")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("--relative", action="store_true", help="make path relative to catkin workspace")
+  p.add_argument("package", help="package name to look for")
+  p.set_defaults(func=cmd_find.run)
+
+  p = subparsers.add_parser("include", help="include packages in build")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("-a", "--all", action="store_true", help="include all available packages")
+  p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
+  p.add_argument("--mark-auto", action="store_true", help="mark package as automatic dependency")
+  p.add_argument("package", nargs="*", help="package name to include")
+  p.set_defaults(func=cmd_include.run)
+  
+  p = subparsers.add_parser("exclude", help="exclude packages from build")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("-a", "--all", action="store_true", help="exclude all available packages")
+  p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
+  p.add_argument("package", nargs="*", help="package name to exclude")
+  p.set_defaults(func=cmd_exclude.run)
+
+  p = subparsers.add_parser("build", help="build packages")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("-a", "--all", action="store_true", help="include all available packages")
+  p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
+  p.add_argument("--cc", help="select C compiler (implies --clean)")
+  p.add_argument("--cxx", help="select C++ compiler (implies --clean)")
+  p.add_argument("package", nargs="*", help="include only listed packages")
+  p.set_defaults(func=cmd_build.run)
+  args = parser.parse_args()
+  args.func(args)
+
