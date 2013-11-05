@@ -1,5 +1,29 @@
 #!/usr/bin/env python
+"""
+Copyright (c) 2013 Fraunhofer FKIE
 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+ * Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
 import sys
 import os
 # If run from the source tree
@@ -14,13 +38,13 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--version", action="version", version="%s %s" % ( "%(prog)s", __version__))
   subparsers = parser.add_subparsers(metavar="command")
-  
+
   p = subparsers.add_parser("init", help="initialize workspace")
   p.add_argument("-a", "--autolink", action="store_true", help="search for and symlink to ROS-FKIE checkout")
   p.add_argument("--delete", action="store_true", help="delete workspace path if it exists")
   p.add_argument("path", nargs="?", default=".", help="path to the new catkin workspace")
   p.set_defaults(func=cmd_init.run)
-  
+
   p = subparsers.add_parser("checkout", help="add repository to workspace")
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   co_group = p.add_mutually_exclusive_group(required=True)
@@ -37,7 +61,7 @@ if __name__ == "__main__":
   p.add_argument("-a", "--all", action="store_true", help="list all available packages")
   p.add_argument("-m", "--manual", action="store_true", help="list manually included packages only")
   p.set_defaults(func=cmd_list.run)
-  
+
   p = subparsers.add_parser("find", help="show path of available package")
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.add_argument("--relative", action="store_true", help="make path relative to catkin workspace")
@@ -51,7 +75,7 @@ if __name__ == "__main__":
   p.add_argument("--mark-auto", action="store_true", help="mark package as automatic dependency")
   p.add_argument("package", nargs="*", help="package name to include")
   p.set_defaults(func=cmd_include.run)
-  
+
   p = subparsers.add_parser("exclude", help="exclude packages from build")
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.add_argument("-a", "--all", action="store_true", help="exclude all available packages")

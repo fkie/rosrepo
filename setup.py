@@ -8,9 +8,10 @@ from rosrepo import __version__ as rosrepo_version
 
 setup(
   name          = "rosrepo",
-  description   = "Repository management tool for ROS-FKIE",
+  description   = "ROS Repository Management Tool",
   author        = "Timo Röhling",
   author_email  = "timo.roehling@fkie.fraunhofer.de",
+  license       = "BSD",
   packages      = [ "rosrepo" ],
   package_dir   = { "" : "lib" },
   scripts       = [ "rosrepo" ],
