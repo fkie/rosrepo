@@ -29,37 +29,89 @@ can be used with the caveat that only packages in the current working set
 are accessible unless the `ROS_PACKAGE_PATH` is augmented with the `repos`
 folder.
 
-Commands
-========
+## Commands
 
-## init
-This command either creates or updates a catkin workspace to the
-new layout. Existing folders in `src` are moved to `repos`.
+### init
+Creates or updates a catkin workspace to the new layout. 
+Existing folders in `src` are moved to `repos`.
 
-## include
-Adds packages and their dependencies to the working set
+    rosrepo init [--autolink] [--delete] [path]
 
-## exclude
+* `path`: path to the new catkin workspace. If omitted, `.` is assumed.
+* `-a`,`--autolink`: search for and symlink to ROS-FKIE checkout.
+* `--delete`: delete the workspace path if it already exists.
+
+### include
+Adds packages and their dependencies to the working set.
+
+    rosrepo include [-w WORKSPACE] [--clean] [--mark-auto] --all
+    rosrepo include [-w WORKSPACE] [--clean] [--mark-auto] \
+                    package [package ...]
+
+* `package`: package name(s) which are to be included in the working set.
+* `--all`: select all available packages as working set.
+* `--clean`: force clean build by removing `build` and `devel` folders.
+* `--mark-auto`: mark included packages as automatically added dependencies.
+
+### exclude
 Removes packages from the working set. Automatically added dependencies
 are removed if no remaining package in the working set depends on them.
 
-## build
+    rosrepo exclude [-w WORKSPACE] [--clean] --all
+    rosrepo exclude [-w WORKSPACE] [--clean] package [package ...]
+
+* `package`: package name(s) which are to be excluded from the working set.
+* `--all`: remove all packages from the working set, leaving it empty.
+* `--clean`: force clean build by removing `build` and `devel` folders.
+
+### build
 Runs `catkin_make`. If packages are specified on the command line,
 these packages and their dependencies replace the current working set.
 
-## list
+    rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] --all
+    rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] \
+                  package [package ...]
+
+* `package`: package name(s) which are to replace the working set.
+* `--all`: select all available packages as working set.
+* `--clean`: force clean build by removing `build` and `devel` folders first.
+* `--cc`: force C compiler for build
+* `--cxx`: force C++ compiler for build
+
+### list
 Lists the current working set or all available packages.
 
-## find
+    rosrepo list [-w WORKSPACE] [--name-only] [--all | --manual]
+
+* `--name-only`: show package names only
+* `--all`: show all available packages instead of the current working set
+* `--manual`: only show explicitly included packages and not automatically
+  added dependencies.
+
+### find
 Prints the path of the specified package in the `repos` folder.
 
-## checkout
+    rosrepo find [-w WORKSPACE] [--relative] package
+
+* `package`: package name
+* `--relative`: print path that is relative to the workspace
+
+### checkout
 Performs an SVN checkout or a Git clone. The repository is added
 as subfolder in `repos`. This is command is provided for convenience,
 you can add package folders to `repos` just like you would to `src`.
 
-License
-=======
+    rosrepo checkout [-w WORKSPACE] (--git | --svn | --link) \
+                     url [name]
+
+* `url`: repository URL
+* `name`: repository name (this will become the folder name in `repos`)
+* `--git`: `url` points to a Git repository
+* `--svn`: `url` points to a Subversion repository
+* `--link`: `url` is another folder which will be symlinked
+
+## License
+
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -81,4 +133,3 @@ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
