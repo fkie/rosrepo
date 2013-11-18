@@ -68,7 +68,14 @@ if __name__ == "__main__":
   p.add_argument("package", help="package name to look for")
   p.set_defaults(func=cmd_find.run)
 
-  p = subparsers.add_parser("include", help="include packages in working set")
+  p = subparsers.add_parser("use", help="select new working set")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("-a", "--all", action="store_true", help="include all available packages")
+  p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
+  p.add_argument("package", nargs="*", help="package name to include")
+  p.set_defaults(func=cmd_use.run)
+
+  p = subparsers.add_parser("include", help="add packages to working set")
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.add_argument("-a", "--all", action="store_true", help="include all available packages")
   p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
@@ -76,7 +83,7 @@ if __name__ == "__main__":
   p.add_argument("package", nargs="*", help="package name to include")
   p.set_defaults(func=cmd_include.run)
 
-  p = subparsers.add_parser("exclude", help="exclude packages from working set")
+  p = subparsers.add_parser("exclude", help="remove packages from working set")
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.add_argument("-a", "--all", action="store_true", help="exclude all available packages")
   p.add_argument("-c", "--clean", action="store_true", help="clean workspace")

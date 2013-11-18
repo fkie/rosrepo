@@ -42,7 +42,7 @@ _rosrepo_complete()
 
 	if [ $COMP_CWORD -eq 1 ]
 	then
-		COMPREPLY=( $( compgen -W "-h --help --version init checkout list find include exclude build" -- "$arg" ) )
+		COMPREPLY=( $( compgen -W "-h --help --version init checkout list find include exclude build use" -- "$arg" ) )
 		return 0
 	fi
 	if [ "$cmd" = "init" ]; then
@@ -93,7 +93,7 @@ _rosrepo_complete()
 		fi
 		return 0
 	fi
-	if [ "$cmd" = "include" -o "$cmd" = "exclude" -o "$cmd" = "build" ]
+	if [ "$cmd" = "include" -o "$cmd" = "exclude" -o "$cmd" = "build" -o "$cmd" = "use" ]
 	then
 		COMPREPLY=( $( compgen -W "-h --help -w --workspace -a --all -c --clean" -- "$arg" ) )
 		if [ "$cmd" = "include" ]

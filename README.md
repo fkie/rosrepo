@@ -41,8 +41,18 @@ Existing folders in `src` are moved to `repos`.
 * `-a`,`--autolink`: search for and symlink to ROS-FKIE checkout.
 * `--delete`: delete the workspace path if it already exists.
 
+### use
+Selects packages and their dependencies for the current working set.
+
+    rosrepo use [-w WORKSPACE] [--clean] --all
+    rosrepo use [-w WORKSPACE] [--clean] package [package ...]
+
+* `package`: packages name(s) which are to be included in the working set.
+* `--all`: select all available packages as working set.
+* `--clean`: force clean build by removing `build` and `devel` folders.
+
 ### include
-Adds packages and their dependencies to the working set.
+Adds additional packages and their dependencies to the working set.
 
     rosrepo include [-w WORKSPACE] [--clean] [--mark-auto] --all
     rosrepo include [-w WORKSPACE] [--clean] [--mark-auto] \
@@ -66,11 +76,12 @@ are removed if no remaining package in the working set depends on them.
 
 ### build
 Runs `catkin_make`. If packages are specified on the command line,
-these packages and their dependencies replace the current working set.
+these packages and their dependencies replace the current working set as
+if the `use` command had been invoked first.
 
-    rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] --all
     rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] \
-                  package [package ...]
+                  [package [package ...]]
+    rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] --all
 
 * `package`: package name(s) which are to replace the working set.
 * `--all`: select all available packages as working set.
