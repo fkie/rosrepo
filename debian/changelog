@@ -1,3 +1,11 @@
+rosrepo (1.0.13) unstable; urgency=low
+
+  * Add repository location to debian meta files
+  * Fix typo and make init messages more helpful
+  * Add uninit command to restore default catkin layout
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 27 Nov 2013 14:31:49 +0100
+
 rosrepo (1.0.12) unstable; urgency=low
 
   * Add new "use" command to replace current working set
