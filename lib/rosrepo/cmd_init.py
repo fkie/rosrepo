@@ -57,10 +57,10 @@ def run(args):
           realpath = os.readlink(path)
           if not os.path.isabs(realpath): realpath = os.path.normpath(os.path.join(srcdir, realpath))
           if not realpath.startswith(repodir):
-            sys.stdout.write("Moving '%s'...\n" % entry)
+            sys.stdout.write("Moving `%s' from `src' to `repos'...\n" % entry)
             shutil.move(path, repodir)
         else:
-          sys.stdout.write("Moving '%s'...\n" % entry)
+          sys.stdout.write("Moving `%s' from `src' to `repos'...\n" % entry)
           shutil.move(path, repodir)
   except shutil.Error as e:
     sys.stderr.write("Error: %s" % str(e))
@@ -85,7 +85,7 @@ def run(args):
 
       if(EXISTS "${CMAKE_SOURCE_DIR}/blacklist.txt")
           file(STRINGS "${CMAKE_SOURCE_DIR}/blacklist.txt" _blacklisted)
-          message(STATUS "Backlisted packages: ${_blacklisted}")
+          message(STATUS "Blacklisted packages: ${_blacklisted}")
           set(CATKIN_BLACKLIST_PACKAGES "${_blacklisted}" CACHE STRING "Packages which are not to be built")
       endif(EXISTS "${CMAKE_SOURCE_DIR}/blacklist.txt")
 
@@ -117,15 +117,14 @@ def run(args):
         sys.stdout.write ("Error: Will not symlink, %s already exists\n" % dest)
   sys.stdout.write(textwrap.dedent("""\
 
-  Add the following lines to your .bashrc:
+  Make sure you have the following lines in your .bashrc:
   --8<-------
   source %(rosdir)s/setup.bash
   source %(wsdir)s/devel/setup.bash
   -->8-------
 
-  Compile the catkin workspace with the following commands:
-  --8<-------
-  cd %(wsdir)s
-  catkin_make -k
-  -->8-------
+  * Add packages to the working set with `rosrepo include'
+  * Remove packages from the working set with `rosrepo exclude'
+  * Build the working set with `rosrepo build'
+
   """ % { "rosdir" : rosdir, "wsdir" : wsdir }))
