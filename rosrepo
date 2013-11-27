@@ -98,6 +98,11 @@ if __name__ == "__main__":
   p.add_argument("--cxx", help="select C++ compiler (implies --clean)")
   p.add_argument("package", nargs="*", help="replace working set with listed packages")
   p.set_defaults(func=cmd_build.run)
+
+  p = subparsers.add_parser("uninit", help="uninitialize workspace (restore standard catkin layout)")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.set_defaults(func=cmd_uninit.run)
+
   args = parser.parse_args()
   args.func(args)
 
