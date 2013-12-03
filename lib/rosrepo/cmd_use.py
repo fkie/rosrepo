@@ -38,6 +38,9 @@ def run(args):
   if args.all: args.package = packages.keys()
   if not common.is_valid_selection(args.package, packages):
     sys.exit(1)
+  if not args.package:
+    sys.stdout.write ("no packages specified. working set remains unchanged\n")
+    sys.exit(0)
   selected = set(args.package)
   for name,info in packages.iteritems():
     info.meta["auto"] = not name in selected

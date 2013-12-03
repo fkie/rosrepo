@@ -72,7 +72,7 @@ if __name__ == "__main__":
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.add_argument("-a", "--all", action="store_true", help="include all available packages")
   p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
-  p.add_argument("package", nargs="+", help="package name to include")
+  p.add_argument("package", nargs="*", help="package name to include")
   p.set_defaults(func=cmd_use.run)
 
   p = subparsers.add_parser("include", help="add packages to working set")
