@@ -36,7 +36,7 @@ from rosrepo import *
 if __name__ == "__main__":
   import argparse
   parser = argparse.ArgumentParser()
-  parser.add_argument("--version", action="version", version="%s %s" % ( "%(prog)s", __version__))
+  parser.add_argument("--version", action="version", version="%s" % __version__)
   subparsers = parser.add_subparsers(metavar="command")
 
   p = subparsers.add_parser("init", help="initialize workspace")
