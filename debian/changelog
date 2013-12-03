@@ -1,3 +1,9 @@
+rosrepo (1.0.16) unstable; urgency=low
+
+  * Fix option parsing for --all in "use" command
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 03 Dec 2013 14:58:27 +0100
+
 rosrepo (1.0.15) unstable; urgency=low
 
   * Add "bash" command for environment queries
