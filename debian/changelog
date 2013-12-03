@@ -1,3 +1,9 @@
+rosrepo (1.0.14) unstable; urgency=low
+
+  * Require at least one package argument for "use" command
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 03 Dec 2013 10:14:05 +0100
+
 rosrepo (1.0.13) unstable; urgency=low
 
   * Add repository location to debian meta files
