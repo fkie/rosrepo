@@ -103,6 +103,13 @@ if __name__ == "__main__":
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.set_defaults(func=cmd_uninit.run)
 
+  p = subparsers.add_parser("bash", help="print environment variables")
+  p.add_argument("-w", "--workspace", help="set catkin workspace path")
+  p.add_argument("-t", "--terse", action="store_true", help="only print the value itself")
+  p.add_argument("-e", "--export", action="store_true", help="prepend variable definition with export keyword")
+  p.add_argument("var", nargs="+", help="environment variable is to be queried")
+  p.set_defaults(func=cmd_bash.run)
+
   args = parser.parse_args()
   args.func(args)
 
