@@ -1,3 +1,10 @@
+rosrepo (1.0.15) unstable; urgency=low
+
+  * Add "bash" command for environment queries
+  * Let --version print just the version number itself
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 03 Dec 2013 14:50:24 +0100
+
 rosrepo (1.0.14) unstable; urgency=low
 
   * Require at least one package argument for "use" command
