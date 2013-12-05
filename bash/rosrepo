@@ -4,12 +4,13 @@ if type rosrepo &> /dev/null; then
 
 _rosrepo_complete()
 {
-	local arg prev cmd nargs opt hasWs hasAll myws
+	local arg prev cmd nargs opt hasWs hasAll list_cmd
 	COMPREPLY=()
 	arg="${COMP_WORDS[COMP_CWORD]}"
 	prev="${COMP_WORDS[COMP_CWORD-1]}"
 	cmd="${COMP_WORDS[1]}"
 	nargs=-2
+	list_cmd=( rosrepo list -n )
 	hasWs=0
 	hasArg=0
 	hasAll=0
@@ -36,7 +37,7 @@ _rosrepo_complete()
 			esac
 		else
 			hasWs=0
-			myws=$( eval echo "$opt" )
+			list_cmd+=( -w "$myws" )
 		fi
 	done
 
@@ -85,7 +86,7 @@ _rosrepo_complete()
 	fi
 	if [ "$cmd" = "list" ]
 	then
-		COMPREPLY=( $( compgen -W "-h --help -w --workspace -a --all -n --name-only -m --manual" -- "$arg" ) )
+		COMPREPLY=( $( compgen -W "-h --help -w --workspace -a --all -n --name-only -m --manual -x --excluded" -- "$arg" ) )
 		return 0
 	fi
 	if [ "$cmd" = "find" ]
@@ -108,6 +109,12 @@ _rosrepo_complete()
 		if [ "$cmd" = "include" ]
 		then
 			COMPREPLY+=( $( compgen -W "--mark-auto" -- "$arg" ) )
+			list_cmd+=( -x )
+		elif [ "$cmd" = "exclude" ]
+		then
+			:
+		else
+			list_cmd+=( -a )
 		fi
 		if [ "$cmd" = "build" ]
 		then
@@ -122,12 +129,7 @@ _rosrepo_complete()
 		fi
 		if [ "${arg:0:1}" != "-" -a ! $hasAll -eq 1 ]
 		then
-			if [ -z "$myws" ]
-			then
-				COMPREPLY+=( $( compgen -W "$( rosrepo list -a -n 2>/dev/null )" -- "$arg" ) )
-			else
-				COMPREPLY+=( $( compgen -W "$( rosrepo list -a -n -w $myws 2>/dev/null )" -- "$arg" ) )
-			fi
+			COMPREPLY+=( $( compgen -W "$( "${list_cmd[@]}" 2>/dev/null )" -- "$arg" ) )
 		fi
 		return 0
 	fi
