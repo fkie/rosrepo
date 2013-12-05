@@ -54,7 +54,7 @@ def run(args):
   listing.sort()
   for name, status, repo in listing:
     if not args.all:
-      if status == "-": continue
+      if args.excluded != (status == "-"): continue
       if args.manual and "A" in status: continue
     if args.name_only:
       sys.stdout.write("%s\n" % name)
