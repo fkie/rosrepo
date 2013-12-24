@@ -88,9 +88,10 @@ def run(args):
     develdir = os.path.join(wsdir, "devel")
     if os.path.isdir(develdir): rmtree(develdir)
   os.chdir(wsdir)
-  catkin_invoke = [ "catkin_make", "-k"]
+  catkin_invoke = [ "catkin_make" ]
   if args.clang: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++" ]
   if args.gcc: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=gcc", "-DCMAKE_CXX_COMPILER=g++" ]
+  catkin_invoke = catkin_invoke + args.extra_args
   sys.stdout.write(" ".join(catkin_invoke) + "\n")
   call(catkin_invoke)
 

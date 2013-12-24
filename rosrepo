@@ -112,6 +112,13 @@ if __name__ == "__main__":
   p.add_argument("var", nargs="+", help="environment variable is to be queried")
   p.set_defaults(func=cmd_bash.run)
 
-  args = parser.parse_args()
+  raw_args = sys.argv[1:]
+  extra_args = []
+  if "--" in raw_args:
+    k = raw_args.index("--")
+    extra_args = raw_args[k+1:]
+    raw_args = raw_args[:k]
+  args = parser.parse_args(raw_args)
+  args.extra_args = extra_args
   args.func(args)
 
