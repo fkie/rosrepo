@@ -118,14 +118,7 @@ _rosrepo_complete()
 		fi
 		if [ "$cmd" = "build" ]
 		then
-			COMPREPLY+=( $( compgen -W "--cc --cxx" -- "$arg" ) )
-			case "$prev" in
-				--cc|--cxx)
-					compopt -o filenames 2>/dev/null
-					COMPREPLY=( $( compgen -c -- "$arg" ) )
-					return 0
-					;;
-			esac
+			COMPREPLY+=( $( compgen -W "--clang --gcc" -- "$arg" ) )
 		fi
 		if [ "${arg:0:1}" != "-" -a ! $hasAll -eq 1 ]
 		then

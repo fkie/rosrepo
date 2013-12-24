@@ -95,8 +95,9 @@ if __name__ == "__main__":
   p.add_argument("-w", "--workspace", help="set catkin workspace path")
   p.add_argument("-a", "--all", action="store_true", help="add all available packages to working set")
   p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
-  p.add_argument("--cc", help="select C compiler (implies --clean)")
-  p.add_argument("--cxx", help="select C++ compiler (implies --clean)")
+  g = p.add_mutually_exclusive_group()
+  g.add_argument("--clang", action="store_true", help="reconfigure with Clang compiler (implies --clean)")
+  g.add_argument("--gcc", action="store_true", help="reconfigure with GCC compiler (implies --clean)")
   p.add_argument("package", nargs="*", help="replace working set with listed packages")
   p.set_defaults(func=cmd_build.run)
 

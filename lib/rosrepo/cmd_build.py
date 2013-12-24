@@ -81,7 +81,7 @@ def run(args):
     except OSError as err:
       sys.stderr.write ("Cannot unlink %s: %s\n" % ( dest, str(err)))
       sys.exit(1)
-  if args.clean or args.cc or args.cxx:
+  if args.clean or args.clang or args.gcc:
     sys.stdout.write("Cleaning workspace...\n")
     builddir = os.path.join(wsdir, "build")
     if os.path.isdir(builddir): rmtree(builddir)
@@ -89,8 +89,8 @@ def run(args):
     if os.path.isdir(develdir): rmtree(develdir)
   os.chdir(wsdir)
   catkin_invoke = [ "catkin_make", "-k"]
-  if args.cc: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=%s" % args.cc ]
-  if args.cxx: catkin_invoke = catkin_invoke + [ "-DCMAKE_CXX_COMPILER=%s" % args.cxx ]
+  if args.clang: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++" ]
+  if args.gcc: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=gcc", "-DCMAKE_CXX_COMPILER=g++" ]
   sys.stdout.write(" ".join(catkin_invoke) + "\n")
   call(catkin_invoke)
 
