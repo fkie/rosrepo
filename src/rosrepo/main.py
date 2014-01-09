@@ -24,16 +24,11 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+from . import __version__
+from . import cmd_bash, cmd_build, cmd_checkout, cmd_exclude, cmd_find, cmd_include, cmd_init, cmd_list, cmd_uninit, cmd_use
 import sys
-import os
-# If run from the source tree
-libdir = os.path.join(sys.path[0], "lib")
-if os.path.isdir(libdir): sys.path.insert(0, libdir)
 
-from rosrepo import __version__
-from rosrepo import *
-
-if __name__ == "__main__":
+def main():
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument("--version", action="version", version="%s" % __version__)

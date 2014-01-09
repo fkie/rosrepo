@@ -3,7 +3,7 @@
 
 from distutils.core import setup
 import sys
-sys.path.insert(0, "lib")
+sys.path.insert(0, "src")
 from rosrepo import __version__ as rosrepo_version
 
 setup(
@@ -14,8 +14,8 @@ setup(
   license       = "BSD",
   keywords      = "catkin,ROS",
   packages      = [ "rosrepo" ],
-  package_dir   = { "" : "lib" },
-  scripts       = [ "rosrepo" ],
+  package_dir   = { "" : "src" },
+  scripts       = [ "bin/rosrepo" ],
   version       = rosrepo_version,
   requires      = [ "catkin_pkg", "yaml" ],
   classifiers   = [
