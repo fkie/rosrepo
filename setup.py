@@ -12,10 +12,19 @@ setup(
   author        = "Timo Röhling",
   author_email  = "timo.roehling@fkie.fraunhofer.de",
   license       = "BSD",
+  keywords      = "catkin,ROS",
   packages      = [ "rosrepo" ],
   package_dir   = { "" : "lib" },
   scripts       = [ "rosrepo" ],
   version       = rosrepo_version,
   requires      = [ "catkin_pkg", "yaml" ],
+  classifiers   = [
+                    "Development Status :: 4 - Beta",
+                    "Intended Audience :: Developers",
+                    "License :: OSI Approved :: BSD License",
+                    "Topic :: Software Development :: Build Tools",
+                    "Programming Language :: Python",
+                    "Programming Language :: Python :: 3"
+                  ]
 )
 
