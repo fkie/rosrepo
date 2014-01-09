@@ -26,17 +26,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
-import common
 import shutil
 import textwrap
-from common import find_rosdir
+import rosrepo.common as common
 
 def run(args):
   wsdir = common.find_wsdir(args.workspace)
   if wsdir is None:
     sys.stderr.write ("cannot find suitable catkin workspace\n")
     sys.exit(1)
-  rosdir = find_rosdir()
+  rosdir = common.find_rosdir()
   if rosdir is None:
     sys.stderr.write("Cannot detect ROS installation\n")
     sys.exit(1)

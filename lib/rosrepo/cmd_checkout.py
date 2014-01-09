@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import subprocess
-from common import find_wsdir
+from .common import find_wsdir
 
 def run(args):
   wsdir = find_wsdir(args.workspace)

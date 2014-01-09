@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
-import common
+import rosrepo.common as common
 from shutil import rmtree
 from subprocess import call
 

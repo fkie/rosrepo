@@ -44,7 +44,7 @@ def format_list(packages):
 def is_valid_selection(selected, packages):
   result = True
   for name in selected:
-    if not packages.has_key(name):
+    if not name in packages:
       sys.stderr.write("Unknown package: %s\n" % name)
       result = False
   return result
@@ -57,7 +57,7 @@ def resolve_depends(selected, packages):
     for name in list(depends):
       info = packages[name]
       for dep in info.manifest.buildtool_depends + info.manifest.build_depends + info.manifest.run_depends + info.manifest.test_depends:
-        if packages.has_key(dep.name) and not dep.name in depends:
+        if not dep.name in packages and not dep.name in depends:
           depends.add(dep.name)
           resolve = True
   return depends
@@ -70,7 +70,7 @@ def resolve_rdepends(selected, packages):
     for name,info in packages.iteritems():
       if name in rdepends: continue
       for dep in info.manifest.buildtool_depends + info.manifest.build_depends + info.manifest.run_depends + info.manifest.test_depends:
-        if packages.has_key(dep.name) and dep.name in rdepends:
+        if dep.name in packages and dep.name in rdepends:
           rdepends.add(name)
           resolve = True
   return rdepends
@@ -110,7 +110,7 @@ def find_packages(wsdir):
         info.repo = parts[0]
         info.meta = {}
         info.meta["auto"] = not info.enabled
-        if meta.has_key(pkg.name):
+        if pkg.name in meta:
           info.meta.update(meta[pkg.name])
         result[pkg.name] = info
   except Exception as err:

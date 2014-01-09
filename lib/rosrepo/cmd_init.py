@@ -30,7 +30,7 @@ import shutil
 import textwrap
 from subprocess import call
 
-from common import find_rosdir, find_ros_fkie
+from .common import find_rosdir, find_ros_fkie
 
 def run(args):
   wsdir = os.path.realpath(args.path)

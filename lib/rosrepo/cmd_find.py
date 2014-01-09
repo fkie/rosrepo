@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
-from common import find_wsdir, find_packages
+from .common import find_wsdir, find_packages
 
 def run(args):
   wsdir = find_wsdir(args.workspace)
@@ -35,9 +35,7 @@ def run(args):
     sys.stderr.write ("cannot find suitable catkin workspace\n")
     sys.exit(1)
   packages = find_packages(wsdir)
-  if packages.has_key(args.package):
-    pass
-  else:
+  if not args.package in packages:
     sys.stderr.write ("no such package: %s\n" % args.package)
     sys.exit(1)
   path = packages[args.package].path

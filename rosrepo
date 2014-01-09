@@ -120,5 +120,8 @@ if __name__ == "__main__":
     raw_args = raw_args[:k]
   args = parser.parse_args(raw_args)
   args.extra_args = extra_args
-  args.func(args)
+  if hasattr(args, "func"):
+    args.func(args)
+  else:
+    parser.print_help()
 

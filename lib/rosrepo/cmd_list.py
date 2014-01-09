@@ -25,7 +25,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
-from common import find_wsdir, find_packages
+from .common import find_wsdir, find_packages
 
 def run(args):
   wsdir = find_wsdir(args.workspace)

@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
-import common
+import rosrepo.common as common
 
 def print_var (key, value, terse, export):
   sys.stdout.write("%s\n" % value if terse else "%s%s=%s\n" % ("export " if export else "", key, value))
