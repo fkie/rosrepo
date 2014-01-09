@@ -16,6 +16,6 @@ setup(
   package_dir   = { "" : "lib" },
   scripts       = [ "rosrepo" ],
   version       = rosrepo_version,
-  requires      = [ "catkin_pkg" ]
+  requires      = [ "catkin_pkg", "yaml" ],
 )
 
