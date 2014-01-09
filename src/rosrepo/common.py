@@ -30,6 +30,7 @@ import yaml
 from copy import copy
 from textwrap import fill
 from catkin_pkg.packages import find_packages as find_catkin_packages
+from .compat import iteritems
 
 class PkgInfo:
   path = None
@@ -57,7 +58,7 @@ def resolve_depends(selected, packages):
     for name in list(depends):
       info = packages[name]
       for dep in info.manifest.buildtool_depends + info.manifest.build_depends + info.manifest.run_depends + info.manifest.test_depends:
-        if not dep.name in packages and not dep.name in depends:
+        if dep.name in packages and not dep.name in depends:
           depends.add(dep.name)
           resolve = True
   return depends
@@ -67,7 +68,7 @@ def resolve_rdepends(selected, packages):
   rdepends = copy(selected)
   while resolve:
     resolve = False
-    for name,info in packages.iteritems():
+    for name,info in iteritems(packages):
       if name in rdepends: continue
       for dep in info.manifest.buildtool_depends + info.manifest.build_depends + info.manifest.run_depends + info.manifest.test_depends:
         if dep.name in packages and dep.name in rdepends:
@@ -76,8 +77,8 @@ def resolve_rdepends(selected, packages):
   return rdepends
 
 def resolve_obsolete(packages, removed=None):
-  manual = set([ name for name,info in packages.iteritems() if info.enabled and not info.meta["auto"] ])
-  automatic = set([ name for name,info in packages.iteritems() if info.enabled and info.meta["auto"] ])
+  manual = set([ name for name,info in iteritems(packages) if info.enabled and not info.meta["auto"] ])
+  automatic = set([ name for name,info in iteritems(packages) if info.enabled and info.meta["auto"] ])
   if not removed is None:
     manual = manual - removed
   depends = resolve_depends(manual, packages)
@@ -121,7 +122,7 @@ def find_packages(wsdir):
 def save_metainfo(wsdir, packages):
   metainfo = os.path.join(wsdir, "repos", ".metainfo")
   meta = {}
-  for name,info in packages.iteritems():
+  for name,info in iteritems(packages):
     meta[name] = info.meta
   try:
     f = open(metainfo, "w")

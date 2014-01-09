@@ -29,6 +29,7 @@ import os
 import shutil
 import textwrap
 import rosrepo.common as common
+from .compat import iteritems
 
 def run(args):
   wsdir = common.find_wsdir(args.workspace)
@@ -42,7 +43,7 @@ def run(args):
   srcdir = os.path.join(wsdir, "src")
   repodir = os.path.join(wsdir, "repos")
   packages = common.find_packages(wsdir)
-  enabled = set([name for name,info in packages.iteritems() if info.enabled])
+  enabled = set([name for name,info in iteritems(packages) if info.enabled])
   for name in enabled:
     dest = os.path.join(srcdir, name)
     try:

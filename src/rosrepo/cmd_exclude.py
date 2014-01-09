@@ -28,6 +28,7 @@ import sys
 import os
 import rosrepo.common as common
 from shutil import rmtree
+from .compat import iteritems
 
 def run(args):
   wsdir = common.find_wsdir(args.workspace)
@@ -38,7 +39,7 @@ def run(args):
   if args.all: args.package = packages.keys()
   if not common.is_valid_selection(args.package, packages):
     sys.exit(1)
-  disabled = set([name for name,info in packages.iteritems() if not info.enabled])
+  disabled = set([name for name,info in iteritems(packages) if not info.enabled])
   rdepends = common.resolve_rdepends(set(args.package), packages)
   rdepends = rdepends - disabled
   obsolete = common.resolve_obsolete(packages, rdepends) - rdepends

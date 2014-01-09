@@ -25,7 +25,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 from . import __version__
-from . import cmd_bash, cmd_build, cmd_checkout, cmd_exclude, cmd_find, cmd_include, cmd_init, cmd_list, cmd_uninit, cmd_use
+from . import *
 import sys
 
 def main():

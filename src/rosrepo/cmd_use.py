@@ -28,6 +28,7 @@ import sys
 import os
 import rosrepo.common as common
 from shutil import rmtree
+from .compat import iteritems
 
 def run(args):
   wsdir = common.find_wsdir(args.workspace)
@@ -42,10 +43,10 @@ def run(args):
     sys.stdout.write ("no packages specified. working set remains unchanged\n")
     sys.exit(0)
   selected = set(args.package)
-  for name,info in packages.iteritems():
+  for name,info in iteritems(packages):
     info.meta["auto"] = not name in selected
   needed = common.resolve_depends(selected, packages)
-  enabled = set([name for name,info in packages.iteritems() if info.enabled])
+  enabled = set([name for name,info in iteritems(packages) if info.enabled])
   includes = needed - enabled
   excludes = enabled - needed
   common.save_metainfo(wsdir, packages)
