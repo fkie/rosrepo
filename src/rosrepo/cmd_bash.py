@@ -64,6 +64,6 @@ def run(args):
       print_var(key, os.pathsep.join(new_path), args.terse, args.export)
     else:
       if key in os.environ:
-        print_var(key, os.environ[key], args.terse)
+        print_var(key, os.environ[key], args.terse, args.export)
       else:
         if not args.terse: sys.stdout.write ("# variable %s is not set\n" % key)
