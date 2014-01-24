@@ -1,0 +1,163 @@
+rosrepo (1.0.17) unstable; urgency=low
+
+  * list: Add -x switch to show excluded packages
+  * bash: Make smarter package suggestions
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 05 Dec 2013 10:07:27 +0100
+
+rosrepo (1.0.16) unstable; urgency=low
+
+  * Fix option parsing for --all in "use" command
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 03 Dec 2013 14:58:27 +0100
+
+rosrepo (1.0.15) unstable; urgency=low
+
+  * Add "bash" command for environment queries
+  * Let --version print just the version number itself
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 03 Dec 2013 14:50:24 +0100
+
+rosrepo (1.0.14) unstable; urgency=low
+
+  * Require at least one package argument for "use" command
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 03 Dec 2013 10:14:05 +0100
+
+rosrepo (1.0.13) unstable; urgency=low
+
+  * Add repository location to debian meta files
+  * Fix typo and make init messages more helpful
+  * Add uninit command to restore default catkin layout
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 27 Nov 2013 14:31:49 +0100
+
+rosrepo (1.0.12) unstable; urgency=low
+
+  * Add new "use" command to replace current working set
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 18 Nov 2013 15:02:34 +0100
+
+rosrepo (1.0.11) unstable; urgency=low
+
+  * Improve documentation
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 11 Nov 2013 14:00:55 +0100
+
+rosrepo (1.0.10) unstable; urgency=low
+
+  * Add find subcommand
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 05 Nov 2013 15:17:16 +0100
+
+rosrepo (1.0.9) unstable; urgency=low
+
+  * Add --cc and --cxx option to build command for compiler selection
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 16:08:36 +0100
+
+rosrepo (1.0.8) unstable; urgency=low
+
+  * Check for invalid package names in build command
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 15:48:07 +0100
+
+rosrepo (1.0.7a) unstable; urgency=low
+
+  * Bump version number
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 15:35:27 +0100
+
+rosrepo (1.0.7) unstable; urgency=low
+
+  * Fix workspace resolution (-w) with bash completion
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 14:06:40 +0100
+
+rosrepo (1.0.6) unstable; urgency=low
+
+  * Make symlinks in src folder relative
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 12:19:15 +0100
+
+rosrepo (1.0.5) unstable; urgency=low
+
+  * Make init command idempotent again
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 11:26:16 +0100
+
+rosrepo (1.0.4) unstable; urgency=low
+
+  * Improved conversion of existing catkin workspace with init command
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 11:20:16 +0100
+
+rosrepo (1.0.3) unstable; urgency=low
+
+  * Improve ROS detection
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 30 Oct 2013 11:06:48 +0100
+
+rosrepo (1.0.2) unstable; urgency=low
+
+  * Fix error message on failed symlink attempt
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 28 Oct 2013 12:34:41 +0100
+
+rosrepo (1.0.1) unstable; urgency=low
+
+  * Check dependencies if build subcommand is invoked without packages
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 28 Oct 2013 12:29:40 +0100
+
+rosrepo (1.0.0) unstable; urgency=low
+
+  * Subcommand include checks dependencies of already included packages
+  * Mark packages as automatically included with include --mark-auto
+  * Major version bump as rosrepo is feature-complete for now
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 24 Oct 2013 14:11:58 +0200
+
+rosrepo (0.0.7) unstable; urgency=low
+
+  * Add auto-install feature
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 23 Oct 2013 18:46:39 +0200
+
+rosrepo (0.0.6) unstable; urgency=low
+
+  * Code refactoring for better dependency resolution
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 21 Oct 2013 10:52:53 +0200
+
+rosrepo (0.0.5) unstable; urgency=low
+
+  * Fix bash completion bug with excluded packages
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Fri, 18 Oct 2013 10:16:16 +0200
+
+rosrepo (0.0.4) unstable; urgency=low
+
+  * Catch a few exceptions for less verbose error reporting
+
+ -- Timo Röhling <timo.roehling@gmx.de>  Thu, 17 Oct 2013 13:59:56 +0200
+
+rosrepo (0.0.3) unstable; urgency=low
+
+  * Fixed typo in bash completion
+  * Fixed version number in python module
+
+ -- Timo Röhling <timo.roehling@gmx.de>  Wed, 16 Oct 2013 19:37:27 +0200
+
+rosrepo (0.0.2) unstable; urgency=low
+
+  * Add build subcommand
+  * Add bash completion script
+
+ -- Timo Röhling <timo.roehling@gmx.de>  Wed, 16 Oct 2013 11:21:04 +0200
+
+rosrepo (0.0.1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 15 Oct 2013 16:49:21 +0200
