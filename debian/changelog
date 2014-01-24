@@ -1,3 +1,11 @@
+rosrepo (1.0.18-1) unstable; urgency=low
+
+  * build: Add compiler profiles for GCC and Clang
+  * Separate Debian packaging
+  * Various bugfixes
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Fri, 24 Jan 2014 15:14:49 +0100
+
 rosrepo (1.0.17) unstable; urgency=low
 
   * list: Add -x switch to show excluded packages
