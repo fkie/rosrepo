@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 from .common import find_wsdir, find_packages
+from fnmatch import fnmatchcase
 
 def run(args):
   wsdir = find_wsdir(args.workspace)
@@ -37,6 +38,8 @@ def run(args):
   plen = 7
   rlen = 10
   for name, info in packages.items():
+    if args.glob:
+      if not fnmatchcase(name, args.glob): continue
     if plen < len(name): plen = len(name)
     if rlen < len(info.repo): rlen = len(info.repo)
     if info.enabled:
@@ -53,7 +56,7 @@ def run(args):
     sys.stdout.write(fmt % ( "-------", "----------", "------" ))
   listing.sort()
   for name, status, repo in listing:
-    if not args.all:
+    if not args.all and not args.glob:
       if args.excluded != (status == "-"): continue
       if args.manual and "A" in status: continue
     if args.name_only:
