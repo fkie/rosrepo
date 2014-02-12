@@ -56,6 +56,7 @@ def main():
   p.add_argument("-a", "--all", action="store_true", help="list all available packages")
   p.add_argument("-m", "--manual", action="store_true", help="list manually included packages only")
   p.add_argument("-x", "--excluded", action="store_true", help="list excluded packages only")
+  p.add_argument("glob", nargs="?", help="package name glob")
   p.set_defaults(func=cmd_list.run)
 
   p = subparsers.add_parser("find", help="show path of available package")
