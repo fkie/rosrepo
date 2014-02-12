@@ -1,3 +1,9 @@
+rosrepo (1.0.19-1) unstable; urgency=low
+
+  * Shell globbing for package selection
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 12 Feb 2014 10:30:29 +0100
+
 rosrepo (1.0.18-1) unstable; urgency=low
 
   * build: Add compiler profiles for GCC and Clang
