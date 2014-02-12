@@ -40,7 +40,10 @@ def run(args):
   excludes = set([])
   packages = common.find_packages(wsdir)
   if args.all or args.package:
-    if args.all: args.package = packages.keys()
+    if args.all: 
+      args.package = packages.keys()
+    else:
+      args.package = common.glob_package_names(args.package, packages)
     if not common.is_valid_selection(args.package, packages):
       sys.exit(1)
     selected = set(args.package)

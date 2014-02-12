@@ -36,7 +36,10 @@ def run(args):
     sys.stderr.write ("cannot find suitable catkin workspace\n")
     sys.exit(1)
   packages = common.find_packages(wsdir)
-  if args.all: args.package = packages.keys()
+  if args.all: 
+    args.package = packages.keys()
+  else:
+    args.package = common.glob_package_names(args.package, packages)
   if not common.is_valid_selection(args.package, packages):
     sys.exit(1)
   enabled = set([name for name,info in iteritems(packages) if info.enabled])

@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 import sys
 import yaml
+from fnmatch import fnmatchcase
 from copy import copy
 from textwrap import fill
 from catkin_pkg.packages import find_packages as find_catkin_packages
@@ -41,6 +42,17 @@ class PkgInfo:
 
 def format_list(packages):
   return fill(", ".join(sorted(list(packages))), initial_indent="    ", subsequent_indent="    ")
+
+def glob_package_names(globs, packages):
+  selected = set([])
+  for g in globs:
+    found = False
+    for pkg in packages.keys():
+      if fnmatchcase(pkg, g):
+        selected.add(pkg)
+        found = True
+    if not found: selected.add(g)
+  return selected
 
 def is_valid_selection(selected, packages):
   result = True
