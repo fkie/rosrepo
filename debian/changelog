@@ -1,3 +1,9 @@
+rosrepo (1.0.20-1) unstable; urgency=low
+
+  * list: select packages by glob
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 12 Feb 2014 13:05:42 +0100
+
 rosrepo (1.0.19-1) unstable; urgency=low
 
   * Shell globbing for package selection
