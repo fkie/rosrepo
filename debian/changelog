@@ -1,3 +1,9 @@
+rosrepo (1.0.22-1) unstable; urgency=low
+
+  * Package pinning
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 12 May 2014 13:30:00 +0200
+
 rosrepo (1.0.21-1) unstable; urgency=low
 
   * Overwrite existing symlinks when including packages
