@@ -108,7 +108,7 @@ _rosrepo_complete()
 		COMPREPLY=( $( compgen -W "-h --help -w --workspace -a --all -c --clean" -- "$arg" ) )
 		if [ "$cmd" = "include" ]
 		then
-			COMPREPLY+=( $( compgen -W "--mark-auto" -- "$arg" ) )
+			COMPREPLY+=( $( compgen -W "--pin --mark-auto" -- "$arg" ) )
 			list_cmd+=( -x )
 		elif [ "$cmd" = "exclude" ]
 		then

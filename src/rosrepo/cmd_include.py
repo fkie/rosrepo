@@ -36,7 +36,8 @@ def run(args):
     sys.stderr.write ("cannot find suitable catkin workspace\n")
     sys.exit(1)
   packages = common.find_packages(wsdir)
-  if args.all: 
+  if args.all:
+    args.pin = False
     args.package = packages.keys()
   else:
     args.package = common.glob_package_names(args.package, packages)
@@ -55,6 +56,9 @@ def run(args):
     sys.stdout.write("Automatically including to satisfy dependencies:\n%s\n" % common.format_list(dep_auto))
     for name in dep_auto: packages[name].meta["auto"] = True
   for name in args.package:
+    if args.pin and not packages[name].meta["pin"]:
+      sys.stdout.write("Marking %s as pinned to workspace\n" % name)
+      packages[name].meta["pin"] = True
     if packages[name].meta["auto"] != args.mark_auto:
       sys.stdout.write("Marking %s as %s included\n" % (name, "automatically" if args.mark_auto else "manually"))
       packages[name].meta["auto"] = args.mark_auto
