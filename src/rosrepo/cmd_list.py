@@ -45,6 +45,7 @@ def run(args):
     if info.enabled:
       status = "B"
       if info.meta["auto"]: status = status + "A"
+      if info.meta["pin"]: status = status + "P"
     else:
       status = "-"
     listing.append([ name, status, info.repo ])

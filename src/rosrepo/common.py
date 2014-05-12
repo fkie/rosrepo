@@ -123,6 +123,7 @@ def find_packages(wsdir):
         info.repo = parts[0]
         info.meta = {}
         info.meta["auto"] = not info.enabled
+        info.meta["pin"] = False
         if pkg.name in meta:
           info.meta.update(meta[pkg.name])
         result[pkg.name] = info

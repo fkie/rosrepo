@@ -77,6 +77,7 @@ def main():
   p.add_argument("-a", "--all", action="store_true", help="include all available packages")
   p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
   p.add_argument("--mark-auto", action="store_true", help="mark package as automatic dependency")
+  p.add_argument("--pin", action="store_true", help="pin package as implicitly included")
   p.add_argument("package", nargs="*", help="package name to include")
   p.set_defaults(func=cmd_include.run)
 

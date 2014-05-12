@@ -47,11 +47,14 @@ def run(args):
     sys.exit(0)
   selected = set(args.package)
   for name,info in iteritems(packages):
-    info.meta["auto"] = not name in selected
+    if name in selected or not info.meta["pin"]:
+      info.meta["auto"] = not name in selected
+  pinned = set([name for name,info in iteritems(packages) if info.meta["pin"]])
+  pinned = common.resolve_depends(pinned, packages)
   needed = common.resolve_depends(selected, packages)
   enabled = set([name for name,info in iteritems(packages) if info.enabled])
-  includes = needed - enabled
-  excludes = enabled - needed
+  includes = (pinned | needed) - enabled
+  excludes = enabled - (needed | pinned)
   common.save_metainfo(wsdir, packages)
   if includes:
     sys.stdout.write("The following packages need to be included:\n%s\n" % common.format_list(includes))

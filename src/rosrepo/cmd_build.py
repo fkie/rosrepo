@@ -39,6 +39,8 @@ def run(args):
   includes = set([])
   excludes = set([])
   packages = common.find_packages(wsdir)
+  pinned = set([name for name,info in iteritems(packages) if info.meta["pin"]])
+  pinned = common.resolve_depends(pinned, packages)
   if args.all or args.package:
     if args.all: 
       args.package = packages.keys()
@@ -48,15 +50,16 @@ def run(args):
       sys.exit(1)
     selected = set(args.package)
     for name,info in iteritems(packages):
-      info.meta["auto"] = not name in selected
+      if name in selected or not info.meta["pin"]:
+        info.meta["auto"] = not name in selected
     needed = common.resolve_depends(selected, packages)
     enabled = set([name for name,info in iteritems(packages) if info.enabled])
-    includes = needed - enabled
-    excludes = enabled - needed
+    includes = (pinned | needed) - enabled
+    excludes = enabled - (needed | pinned)
   else:
     enabled = set([name for name,info in iteritems(packages) if info.enabled])
     disabled = set([name for name,info in iteritems(packages) if not info.enabled])
-    includes = common.resolve_depends(enabled, packages) - enabled
+    includes = (pinned | common.resolve_depends(enabled, packages)) - enabled
     excludes = common.resolve_obsolete(packages) - includes - disabled
     for name,info in iteritems(packages):
       if not name in enabled: info.meta["auto"] = True
