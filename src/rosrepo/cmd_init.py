@@ -73,6 +73,15 @@ def run(args):
     f = open(cmakelists_txt, "w")
     f.write(textwrap.dedent("""\
       cmake_minimum_required(VERSION 2.8.3)
+
+      find_program(CATKIN_LINT catkin_lint)
+      if(CATKIN_LINT)
+          execute_process(COMMAND "${CATKIN_LINT}" "${CMAKE_SOURCE_DIR}" RESULT_VARIABLE lint_result)
+          if(NOT ${lint_result} EQUAL 0)
+              message(FATAL_ERROR "catkin_lint failed")
+          endif()
+      endif()
+
       set(CMAKE_CXX_FLAGS_DEVEL "-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -O3 -g" CACHE STRING "Devel build type CXX flags")
       set(CMAKE_C_FLAGS_DEVEL "-Wall -Wextra -Wno-unused-parameter -O3 -g" CACHE STRING "Devel build type C flags")
       set(CMAKE_SHARED_LINKER_FLAGS_DEVEL "-Wl,-z,defs" CACHE STRING "Devel build type shared library linker flags")
@@ -82,12 +91,6 @@ def run(args):
           message(STATUS "Using default CMAKE_BUILD_TYPE=Devel")
           set(CMAKE_BUILD_TYPE Devel)
       endif(NOT CMAKE_BUILD_TYPE)
-
-      if(EXISTS "${CMAKE_SOURCE_DIR}/blacklist.txt")
-          file(STRINGS "${CMAKE_SOURCE_DIR}/blacklist.txt" _blacklisted)
-          message(STATUS "Blacklisted packages: ${_blacklisted}")
-          set(CATKIN_BLACKLIST_PACKAGES "${_blacklisted}" CACHE STRING "Packages which are not to be built")
-      endif(EXISTS "${CMAKE_SOURCE_DIR}/blacklist.txt")
 
       include(toplevel.cmake)
     """))
