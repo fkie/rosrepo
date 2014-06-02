@@ -66,10 +66,11 @@ def run(args):
     sys.stderr.write("Error: %s" % str(e))
     sys.exit(1)
   if os.path.islink(toplevel_cmake): os.unlink(toplevel_cmake)
+  if os.path.exists(toplevel_cmake) and args.reinit: os.unlink(toplevel_cmake)
   if not os.path.exists(toplevel_cmake):
     os.symlink(os.path.join(rosdir, "share", "catkin", "cmake", "toplevel.cmake"), os.path.join(srcdir, "toplevel.cmake"))
   if os.path.islink(cmakelists_txt): os.unlink(cmakelists_txt)
-  if not os.path.exists(cmakelists_txt):
+  if not os.path.exists(cmakelists_txt) or args.reinit:
     f = open(cmakelists_txt, "w")
     f.write(textwrap.dedent("""\
       cmake_minimum_required(VERSION 2.8.3)
