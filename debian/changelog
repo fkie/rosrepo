@@ -1,3 +1,10 @@
+rosrepo (1.0.23-1) unstable; urgency=low
+
+  * Add catkin_lint support
+  * init: Add --reinit option to overwrite src/CMakeLists.txt
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 02 Jun 2014 18:18:03 +0200
+
 rosrepo (1.0.22-1) unstable; urgency=low
 
   * Package pinning
