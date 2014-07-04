@@ -42,7 +42,7 @@ def run(args):
   pinned = set([name for name,info in iteritems(packages) if info.meta["pin"]])
   pinned = common.resolve_depends(pinned, packages)
   if args.all or args.package:
-    if args.all: 
+    if args.all:
       args.package = packages.keys()
     else:
       args.package = common.glob_package_names(args.package, packages)
@@ -95,8 +95,7 @@ def run(args):
     if os.path.isdir(builddir): rmtree(builddir)
     develdir = os.path.join(wsdir, "devel")
     if os.path.isdir(develdir): rmtree(develdir)
-  os.chdir(wsdir)
-  catkin_invoke = [ "catkin_make" ]
+  catkin_invoke = [ "catkin_make", "-C", wsdir ]
   if args.clang: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++" ]
   if args.gcc: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=gcc", "-DCMAKE_CXX_COMPILER=g++" ]
   catkin_invoke = catkin_invoke + args.extra_args
