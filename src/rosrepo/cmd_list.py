@@ -25,43 +25,44 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
+import os
 from .common import find_wsdir, find_packages
 from fnmatch import fnmatchcase
 
 def run(args):
-  wsdir = find_wsdir(args.workspace)
-  if wsdir is None:
-    sys.stderr.write ("cannot find suitable catkin workspace\n")
-    sys.exit(1)
-  packages = find_packages(wsdir)
-  listing = []
-  plen = 7
-  rlen = 10
-  for name, info in packages.items():
-    if args.glob:
-      if not fnmatchcase(name, args.glob): continue
-    if plen < len(name): plen = len(name)
-    if rlen < len(info.repo): rlen = len(info.repo)
-    if info.enabled:
-      status = "B"
-      if info.meta["auto"]: status = status + "A"
-      if info.meta["pin"]: status = status + "P"
-    else:
-      status = "-"
-    listing.append([ name, status, info.repo ])
-  if plen > 52: plen = 52
-  if plen + rlen > 72: rlen = 62 - plen
-  fmt = "%%-%ds  %%-%ds  %%-6s\n" % (plen, rlen)
-  if not args.name_only:
-    sys.stdout.write(fmt % ( "Package", "Repository", "Status" ))
-    sys.stdout.write(fmt % ( "-------", "----------", "------" ))
-  listing.sort()
-  for name, status, repo in listing:
-    if not args.all and not args.glob:
-      if args.excluded != (status == "-"): continue
-      if args.manual and "A" in status: continue
-    if args.name_only:
-      sys.stdout.write("%s\n" % name)
-    else:
-      sys.stdout.write(fmt % (name[:plen], repo[:rlen], status))
-  if not args.name_only: sys.stdout.write("\n")
+    wsdir = find_wsdir(args.workspace)
+    if wsdir is None:
+        sys.stderr.write ("cannot find suitable catkin workspace\n")
+        sys.exit(1)
+    packages = find_packages(wsdir)
+    listing = []
+    plen = 7
+    rlen = 10
+    for name, info in packages.items():
+        if args.glob:
+            if not fnmatchcase(name, args.glob): continue
+        if plen < len(name): plen = len(name)
+        if rlen < len(info.repo): rlen = len(info.repo)
+        if info.enabled:
+            status = "!" if info.broken else "+"
+            if info.meta["auto"]: status = status + "A"
+            if info.meta["pin"]: status = status + "P"
+        else:
+            status = "-"
+        listing.append([ name, status, info.repo ])
+    if plen > 52: plen = 52
+    if plen + rlen > 72: rlen = 62 - plen
+    fmt = "%%-%ds  %%-%ds  %%-6s\n" % (plen, rlen)
+    if not args.name_only:
+        sys.stdout.write(fmt % ( "Package", "Repository", "Status" ))
+        sys.stdout.write(fmt % ( "-------", "----------", "------" ))
+    listing.sort()
+    for name, status, repo in listing:
+        if not args.all and not args.glob:
+            if args.excluded != (status == "-"): continue
+            if args.manual and "A" in status: continue
+        if args.name_only:
+            sys.stdout.write("%s\n" % name)
+        else:
+            sys.stdout.write(fmt % (name[:plen], repo[:rlen], status))
+    if not args.name_only: sys.stdout.write("\n")
