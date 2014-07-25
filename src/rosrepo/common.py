@@ -36,6 +36,7 @@ from .compat import iteritems
 class PkgInfo:
     path = None
     enabled = False
+    broken = False
     manifest = None
     meta = None
     repo = None
@@ -60,6 +61,8 @@ def is_valid_selection(selected, packages):
         if not name in packages:
             sys.stderr.write("Unknown package: %s\n" % name)
             result = False
+        if packages[name].path is None:
+            sys.stderr.write("Package is not available: %s\n" % name)
     return result
 
 def resolve_depends(selected, packages):
@@ -69,6 +72,8 @@ def resolve_depends(selected, packages):
         resolve = False
         for name in list(depends):
             info = packages[name]
+            if info.manifest is None:
+                continue
             for dep in info.manifest.buildtool_depends + info.manifest.build_depends + info.manifest.run_depends + info.manifest.test_depends:
                 if dep.name in packages and not dep.name in depends:
                     depends.add(dep.name)
@@ -82,6 +87,8 @@ def resolve_rdepends(selected, packages):
         resolve = False
         for name,info in iteritems(packages):
             if name in rdepends: continue
+            if info.manifest is None:
+                continue
             for dep in info.manifest.buildtool_depends + info.manifest.build_depends + info.manifest.run_depends + info.manifest.test_depends:
                 if dep.name in packages and dep.name in rdepends:
                     rdepends.add(name)
@@ -118,15 +125,28 @@ def find_packages(wsdir):
             info = PkgInfo()
             if os.path.islink(linkpath) and os.path.realpath(linkpath) == os.path.realpath(pkgpath):
                 info.enabled = True
+            if os.path.exists(linkpath) and not info.enabled:
+                info.broken = True
             info.path = path
             info.manifest = pkg
             info.repo = parts[0]
-            info.meta = {}
-            info.meta["auto"] = not info.enabled
-            info.meta["pin"] = False
+            info.meta = { "auto": not info.enabled, "pin": False }
             if pkg.name in meta:
                 info.meta.update(meta[pkg.name])
             result[pkg.name] = info
+        for f in os.listdir(srcdir):
+            fp = os.path.join(srcdir, f)
+            if f in result: continue
+            if os.path.isfile(fp): continue
+            if not os.path.islink(fp): continue
+            info = PkgInfo()
+            info.enabled = True
+            info.broken = True
+            info.repo = ""
+            info.meta = { "auto": True, "pin": False }
+            if f in meta:
+                info.meta.update(meta[f])
+            result[f] = info
     except Exception as err:
         sys.stderr.write("Error: %s\n" % str(err))
         sys.exit(1)

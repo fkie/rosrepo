@@ -25,6 +25,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
+import os
 from .common import find_wsdir, find_packages
 from fnmatch import fnmatchcase
 
@@ -43,7 +44,7 @@ def run(args):
         if plen < len(name): plen = len(name)
         if rlen < len(info.repo): rlen = len(info.repo)
         if info.enabled:
-            status = "B"
+            status = "!" if info.broken else "+"
             if info.meta["auto"]: status = status + "A"
             if info.meta["pin"]: status = status + "P"
         else:
