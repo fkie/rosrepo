@@ -1,3 +1,10 @@
+rosrepo (1.0.25-1) unstable; urgency=low
+
+  * Fix indentation
+  * List broken symlinks
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Fri, 25 Jul 2014 14:42:14 +0200
+
 rosrepo (1.0.24-1) unstable; urgency=low
 
   * Fix catkin_make invocation
