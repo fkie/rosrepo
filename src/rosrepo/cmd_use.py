@@ -68,6 +68,7 @@ def run(args):
         dest = os.path.join(srcdir, name)
         sys.stdout.write ("Including %s from %s...\n" % ( name, info.repo ))
         try:
+            if os.islink(dest): os.remove(dest)
             os.symlink(source, dest)
         except OSError as err:
             sys.stderr.write ("Cannot create %s: %s\n" % ( dest, str(err)))
