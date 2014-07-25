@@ -61,7 +61,7 @@ def is_valid_selection(selected, packages):
         if not name in packages:
             sys.stderr.write("Unknown package: %s\n" % name)
             result = False
-        if packages[name].path is None:
+        elif packages[name].path is None:
             sys.stderr.write("Package is not available: %s\n" % name)
     return result
 
