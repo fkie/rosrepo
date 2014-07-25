@@ -184,7 +184,8 @@ def find_rosdir():
 def _is_wsdir(path):
   if not os.path.isdir(os.path.join(path, "src")): return False
   if not os.path.isdir(os.path.join(path, "repos")): return False
-  if not os.path.exists(os.path.join(path, "src", "CMakeLists.txt")): return False
+  if not os.path.isfile(os.path.join(path, "src", "CMakeLists.txt")): return False
+  if not os.path.islink(os.path.join(path, "src", "CMakeLists.txt")) and not os.path.islink(os.path.join(path, "src", "toplevel.cmake")): return False
   return True
 
 def find_wsdir(override=None):
