@@ -1,3 +1,9 @@
+rosrepo (1.0.28-1) unstable; urgency=medium
+
+  * list: mark previously built packages with "b"
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 29 Jul 2014 14:30:27 +0200
+
 rosrepo (1.0.27-1) unstable; urgency=low
 
   * Bugfix
