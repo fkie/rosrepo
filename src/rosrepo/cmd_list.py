@@ -34,6 +34,7 @@ def run(args):
     if wsdir is None:
         sys.stderr.write ("cannot find suitable catkin workspace\n")
         sys.exit(1)
+    builddir = os.path.join(wsdir, "build")
     packages = find_packages(wsdir)
     listing = []
     plen = 7
@@ -49,6 +50,8 @@ def run(args):
             if info.meta["pin"]: status = status + "P"
         else:
             status = "-"
+        if os.path.isdir(os.path.join(builddir, name)):
+            status = status + "b"
         listing.append([ name, status, info.repo ])
     if plen > 52: plen = 52
     if plen + rlen > 72: rlen = 62 - plen
