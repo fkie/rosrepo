@@ -218,4 +218,6 @@ def find_wsdir(override=None):
     for path in candidates:
         path = os.path.normpath(os.path.join(path, ".."))
         if _is_wsdir(path): return path
+        path = os.path.normpath(os.path.join(path, ".."))
+        if _is_wsdir(path): return path
     return None
