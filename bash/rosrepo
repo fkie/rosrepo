@@ -37,7 +37,7 @@ _rosrepo_complete()
 			esac
 		else
 			hasWs=0
-			list_cmd+=( -w "$myws" )
+			list_cmd+=( -w "$opt" )
 		fi
 	done
 
