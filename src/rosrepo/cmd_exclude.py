@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import rosrepo.common as common
-from shutil import rmtree
+from subprocess import call
 from .compat import iteritems
 
 def run(args):
@@ -36,7 +36,7 @@ def run(args):
         sys.stderr.write ("cannot find suitable catkin workspace\n")
         sys.exit(1)
     packages = common.find_packages(wsdir)
-    pinned = set([name for name,info in iteritems(packages) if info.meta["pin"]])
+    pinned = set([name for name,info in iteritems(packages) if info.pinned])
     if args.all:
         if pinned:
             sys.stdout.write("The following packages remain pinned:\n%s\n" % common.format_list(pinned))
@@ -50,7 +50,7 @@ def run(args):
         sys.stdout.write("The following packages will be unpinned from workspace:\n%s\n" % common.format_list(unpin))
     pinned = pinned - set(args.package)
     pinned_depends = common.resolve_depends(pinned, packages)
-    disabled = set([name for name,info in iteritems(packages) if not info.enabled])
+    disabled = set([name for name,info in iteritems(packages) if not info.active])
     rdepends = common.resolve_rdepends(set(args.package), packages)
     rdepends = rdepends - disabled - pinned_depends
     obsolete = common.resolve_obsolete(packages, rdepends) - rdepends - pinned_depends
@@ -61,21 +61,12 @@ def run(args):
         rdepends = rdepends | obsolete
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
-        builddir = os.path.join(wsdir, "build")
-        if os.path.isdir(builddir): rmtree(builddir)
-        develdir = os.path.join(wsdir, "devel")
-        if os.path.isdir(develdir): rmtree(develdir)
+        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
     if not rdepends:
         sys.stdout.write("Nothing else to be done\n")
         sys.exit(0)
-    srcdir = os.path.join(wsdir, "src")
     for name in rdepends:
-        dest = os.path.join(srcdir, name)
-        sys.stdout.write ("Excluding %s...\n" % name)
-        packages[name].meta["auto"] = True
-        packages[name].meta["pin"] = False
-        try:
-            os.unlink(dest)
-        except OSError as err:
-            sys.stderr.write ("Cannot unlink %s: %s\n" % ( dest, str(err)))
+        packages[name].selected = False
+        packages[name].active = False
+        packages[name].pinned = False
     common.save_metainfo(wsdir, packages)

@@ -35,24 +35,33 @@ def run(args):
         sys.stderr.write ("cannot find suitable catkin workspace\n")
         sys.exit(1)
     builddir = os.path.join(wsdir, "build")
+    srcdir = os.path.join(wsdir, "src")
     packages = find_packages(wsdir)
     listing = []
     plen = 7
     rlen = 10
     for name, info in packages.items():
+        if info.path is not None:
+            pc = info.path.split(os.sep)
+            if len(pc) > 1:
+                repo = pc[0]
+            else:
+                repo = "-"
+        else:
+            repo = "!"
         if args.glob:
             if not fnmatchcase(name, args.glob): continue
         if plen < len(name): plen = len(name)
-        if rlen < len(info.repo): rlen = len(info.repo)
-        if info.enabled:
-            status = "!" if info.broken else "+"
-            if info.meta["auto"]: status = status + "A"
-            if info.meta["pin"]: status = status + "P"
+        if rlen < len(repo): rlen = len(repo)
+        if info.active:
+            status = "!" if info.path is None else "+"
+            if not info.selected: status = status + "A"
+            if info.pinned: status = status + "P"
         else:
             status = "-"
         if os.path.isdir(os.path.join(builddir, name)):
             status = status + "b"
-        listing.append([ name, status, info.repo ])
+        listing.append([ name, repo, status])
     if plen > 52: plen = 52
     if plen + rlen > 72: rlen = 62 - plen
     fmt = "%%-%ds  %%-%ds  %%-6s\n" % (plen, rlen)
@@ -60,7 +69,7 @@ def run(args):
         sys.stdout.write(fmt % ( "Package", "Repository", "Status" ))
         sys.stdout.write(fmt % ( "-------", "----------", "------" ))
     listing.sort()
-    for name, status, repo in listing:
+    for name, repo, status in listing:
         if not args.all and not args.glob:
             if args.excluded != (status == "-"): continue
             if args.manual and "A" in status: continue

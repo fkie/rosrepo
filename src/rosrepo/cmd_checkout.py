@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
-import subprocess
+from subprocess import call
 from .common import find_wsdir
 
 def run(args):
@@ -39,7 +39,7 @@ def run(args):
             sys.stderr.write("not an existing checkout: %s\n" % args.url)
             sys.exit(1)
         folder = args.name if args.name is not None else os.path.basename(args.url)
-        dest = os.path.join(wsdir, "repos", folder)
+        dest = os.path.join(wsdir, "src", folder)
         if os.path.islink(dest): os.unlink(dest)
         if os.path.exists(dest):
             sys.stderr.write("target already exists and is not a symlink: %s\n" % dest)
@@ -49,6 +49,6 @@ def run(args):
     if (args.git): cmd = [ "git", "clone", args.url ]
     if (args.svn): cmd = [ "svn", "checkout", args.url ]
     if (args.name): cmd.append(args.name)
-    os.chdir(os.path.join(wsdir, "repos"))
-    ret = subprocess.call(cmd)
+    os.chdir(os.path.join(wsdir, "src"))
+    ret = call(cmd)
     sys.exit(ret)
