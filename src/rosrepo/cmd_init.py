@@ -36,7 +36,7 @@ def run(args):
     wsdir = os.path.realpath(args.path)
     if (args.delete): shutil.rmtree(wsdir)
     srcdir = os.path.join(wsdir, "src")
-    rosdir = find_rosdir()
+    rosdir = find_rosdir(args.roshome)
     if rosdir is None:
         sys.stderr.write("Cannot detect ROS installation\n")
         sys.exit(1)
@@ -99,6 +99,14 @@ def run(args):
         save_metainfo(wsdir, new_meta)
     with open(os.path.join(wsdir, ".catkin_workspace"), "w") as f:
         f.write("# This file currently only serves to mark the location of a catkin workspace for tool integration\n")
+    with open(os.path.join(wsdir, "setup.bash"), "w") as f:
+        f.write(textwrap.dedent("""\
+        # workspace configuration
+        # source this file from your ~/.bashrc
+        [ -r "%(rosdir)s/setup.bash ] && source "%(rosdir)s/setup.bash"
+        [ -r "%(wsdir)s/devel/setup.bash ] && source "%(wsdir)s/devel/setup.bash"
+        eval "$(rosrepo bash -w "%(wsdir)s" -e)"
+        """ % { "rosdir" : rosdir, "wsdir" : wsdir }))
     catkin_invoke = ["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo",
                      "--init", "--extend", rosdir,
                      "--cmake-args",
@@ -130,11 +138,9 @@ def run(args):
                 sys.stdout.write ("Error: Will not symlink, %s already exists\n" % dest)
     sys.stdout.write(textwrap.dedent("""\
 
-    Make sure you have the following lines in your .bashrc:
+    Make sure you have the following line in your .bashrc:
     --8<-------
-    source %(rosdir)s/setup.bash
-    source %(wsdir)s/devel/setup.bash
-    eval "$(rosrepo -w %(wsdir)s bash -e)"
+    source %(wsdir)s/setup.bash
     -->8-------
 
     * Add packages to the working set with `rosrepo include'

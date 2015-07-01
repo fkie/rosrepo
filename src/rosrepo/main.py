@@ -35,6 +35,7 @@ def main():
     subparsers = parser.add_subparsers(metavar="command")
 
     p = subparsers.add_parser("init", help="initialize workspace")
+    p.add_argument("-r", "--roshome", help="override ROS installation path (default: autodetect)")
     p.add_argument("-a", "--autolink", action="store_true", help="search for and symlink to ROS-FKIE checkout")
     p.add_argument("--delete", action="store_true", help="delete workspace path if it exists")
     p.add_argument("path", nargs="?", default=".", help="path to the new catkin workspace")
