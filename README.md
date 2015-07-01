@@ -14,26 +14,16 @@ rapid development and testing, yet provides a simple way to build
 the complete workspace if needed. The setup is simpler than multiple
 workspace overlays, but almost as flexible.
 
-The catkin workspace layout is slightly modified as follows:
-
-* `/catkin_ws`
-    * `build`
-    * `devel`
-    * `src`
-    * `repos`
-
-Packages are put in the `repos` folder. **rosrepo** creates
-symlinks from `repos` to `src` for the packages of the current working set.
-Dependencies are resolved and symlinked as needed. The standard ROS tools
-can be used with the caveat that only packages in the current working set
-are accessible unless the `ROS_PACKAGE_PATH` is augmented with the `repos`
-folder.
+Originally, **rosrepo** used to modify the workspace layout and symlink
+packages as needed. Since version 2.0.0, **rosrepo** uses the catkin tools
+backend to build packages and merely keeps track of dependencies in a
+persistent manner.
 
 ## Commands
 
 ### init
-Creates or updates a catkin workspace to the new layout. 
-Existing folders in `src` are moved to `repos`.
+Creates or updates a catkin workspace to the new layout.
+Workspaces created with rosrepo 1.x are upgraded.
 
     rosrepo init [--autolink] [--delete] [path]
 
@@ -79,15 +69,13 @@ Runs `catkin_make`. If packages are specified on the command line,
 these packages and their dependencies replace the current working set as
 if the `use` command had been invoked first.
 
-    rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] \
+    rosrepo build [-w WORKSPACE] [--clean] \
                   [package [package ...]]
-    rosrepo build [-w WORKSPACE] [--clean] [-cc CC] [--cxx CXX] --all
+    rosrepo build [-w WORKSPACE] [--clean] --all
 
 * `package`: package name(s) which are to replace the working set.
 * `--all`: select all available packages as working set.
 * `--clean`: force clean build by removing `build` and `devel` folders first.
-* `--cc`: force C compiler for build
-* `--cxx`: force C++ compiler for build
 
 ### list
 Lists the current working set or all available packages.

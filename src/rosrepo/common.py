@@ -169,7 +169,12 @@ def _is_rosdir(path):
     if not os.path.isfile(os.path.join(path, "setup.sh")): return False
     return True
 
-def find_rosdir():
+def find_rosdir(override=None):
+    if override is not None:
+        if os.path.islink(override):
+            override = os.path.join(os.path.dirname(override), os.readlink(override))
+        if _is_rosdir(override): return override
+        return None
     if "ROS_ROOT" in os.environ:
         rosrootdir = os.environ["ROS_ROOT"]
         if os.path.isdir(rosrootdir):
@@ -181,6 +186,9 @@ def find_rosdir():
         for path in candidates:
             rosdir = os.path.normpath(os.path.join(path, ".."))
             if _is_rosdir(rosdir): return rosdir
+    if os.path.islink("/opt/ros/current"):
+        rosdir = os.path.join("/opt/ros", os.readlink("/opt/ros/current"))
+        if _is_rosdir(rosdir): return rosdir
     return None
 
 _obsolete_warn_once = True

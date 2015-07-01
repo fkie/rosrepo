@@ -46,3 +46,7 @@ def run(args):
         shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "rosrepo"))
     except:
         pass
+    try:
+        os.unlink(os.path.join(wsdir, "setup.bash"))
+    except:
+        pass
