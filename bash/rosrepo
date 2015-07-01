@@ -49,7 +49,7 @@ _rosrepo_complete()
 	if [ "$cmd" = "init" ]; then
 		if [ "${arg:0:1}" = "-" ]
 		then
-			COMPREPLY=( $( compgen -W "-h --help -a --autolink --delete --reinit" -- "$arg" ) )
+			COMPREPLY=( $( compgen -W "-h --help -a --autolink --delete" -- "$arg" ) )
 		elif [ "$nargs" -eq 1 ]
 		then
 			compopt -o filenames 2>/dev/null

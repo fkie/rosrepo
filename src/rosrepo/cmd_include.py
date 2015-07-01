@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import rosrepo.common as common
-from shutil import rmtree
+from subprocess import call
 from .compat import iteritems
 
 def run(args):
@@ -43,7 +43,7 @@ def run(args):
         args.package = common.glob_package_names(args.package, packages)
     if not common.is_valid_selection(args.package, packages):
         sys.exit(1)
-    enabled = set([name for name,info in iteritems(packages) if info.enabled])
+    enabled = set([name for name,info in iteritems(packages) if info.active])
     needed = common.resolve_depends(enabled, packages)
     depends = common.resolve_depends(set(args.package), packages)
     depends = (depends | needed) - enabled
@@ -51,36 +51,24 @@ def run(args):
     dep_manual = depends - dep_auto
     if dep_manual:
         sys.stdout.write("Manually including the following packages:\n%s\n" % common.format_list(dep_manual))
-        for name in dep_manual: packages[name].meta["auto"] = False
+        for name in dep_manual: packages[name].selected = True
     if dep_auto:
         sys.stdout.write("Automatically including to satisfy dependencies:\n%s\n" % common.format_list(dep_auto))
-        for name in dep_auto: packages[name].meta["auto"] = True
+        for name in dep_auto: packages[name].selected = False
     for name in args.package:
-        if args.pin and not packages[name].meta["pin"]:
+        if args.pin and not packages[name].pinned:
             sys.stdout.write("Marking %s as pinned to workspace\n" % name)
-            packages[name].meta["pin"] = True
-        if packages[name].meta["auto"] != args.mark_auto:
+            packages[name].pinned = True
+        if packages[name].selected == args.mark_auto:
             sys.stdout.write("Marking %s as %s included\n" % (name, "automatically" if args.mark_auto else "manually"))
-            packages[name].meta["auto"] = args.mark_auto
+            packages[name].selected = not args.mark_auto
+    for name in depends:
+        packages[name].active = True
     common.save_metainfo(wsdir, packages)
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
-        builddir = os.path.join(wsdir, "build")
-        if os.path.isdir(builddir): rmtree(builddir)
-        develdir = os.path.join(wsdir, "devel")
-        if os.path.isdir(develdir): rmtree(develdir)
+        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
     if not depends:
         sys.stdout.write("Nothing else to be done\n")
         sys.exit(0)
-    reposdir = os.path.join(wsdir, "repos")
-    srcdir = os.path.join(wsdir, "src")
-    for name in depends:
-        info = packages[name]
-        source = os.path.relpath(os.path.join(reposdir, info.path), srcdir)
-        dest = os.path.join(srcdir, name)
-        sys.stdout.write ("Including %s from %s...\n" % ( name, info.repo ))
-        try:
-            if os.path.islink(dest): os.remove(dest)
-            os.symlink(source, dest)
-        except OSError as err:
-            sys.stderr.write ("Cannot create %s: %s\n" % ( dest, str(err)))
+

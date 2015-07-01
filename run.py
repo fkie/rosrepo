@@ -25,9 +25,10 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
-sys.path.insert(0, "src")
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from rosrepo.main import main
 
 if __name__ == "__main__":
-  main()
+    main()

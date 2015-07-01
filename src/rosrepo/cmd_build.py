@@ -27,7 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import rosrepo.common as common
-from shutil import rmtree
 from subprocess import call
 from .compat import iteritems
 
@@ -39,7 +38,7 @@ def run(args):
     includes = set([])
     excludes = set([])
     packages = common.find_packages(wsdir)
-    pinned = set([name for name,info in iteritems(packages) if info.meta["pin"]])
+    pinned = set([name for name,info in iteritems(packages) if info.pinned])
     pinned = common.resolve_depends(pinned, packages)
     if args.all or args.package:
         if args.all:
@@ -50,54 +49,35 @@ def run(args):
             sys.exit(1)
         selected = set(args.package)
         for name,info in iteritems(packages):
-            if name in selected or not info.meta["pin"]:
-                info.meta["auto"] = not name in selected
+            if not info.pinned:
+                info.selected = name in selected
         needed = common.resolve_depends(selected, packages)
-        enabled = set([name for name,info in iteritems(packages) if info.enabled])
+        enabled = set([name for name,info in iteritems(packages) if info.active])
         includes = (pinned | needed) - enabled
         excludes = enabled - (needed | pinned)
     else:
-        enabled = set([name for name,info in iteritems(packages) if info.enabled])
-        disabled = set([name for name,info in iteritems(packages) if not info.enabled])
+        enabled = set([name for name,info in iteritems(packages) if info.active])
+        disabled = set([name for name,info in iteritems(packages) if not info.active])
         includes = (pinned | common.resolve_depends(enabled, packages)) - enabled
         excludes = common.resolve_obsolete(packages) - includes - disabled
         for name,info in iteritems(packages):
-            if not name in enabled: info.meta["auto"] = True
-    common.save_metainfo(wsdir, packages)
+            if not name in enabled: info.selected = False
     if includes:
         sys.stdout.write("The following packages need to be included:\n%s\n" % common.format_list(includes))
     if excludes:
         sys.stdout.write("The following packages are no longer needed:\n%s\n" % common.format_list(excludes))
-    reposdir = os.path.join(wsdir, "repos")
-    srcdir = os.path.join(wsdir, "src")
     for name in includes:
-        info = packages[name]
-        source = os.path.relpath(os.path.join(reposdir, info.path), srcdir)
-        dest = os.path.join(srcdir, name)
-        sys.stdout.write ("Including %s from %s...\n" % ( name, info.repo ))
-        try:
-            if os.path.islink(dest): os.remove(dest)
-            os.symlink(source, dest)
-        except OSError as err:
-            sys.stderr.write ("Cannot create %s: %s\n" % ( dest, str(err)))
-            sys.exit(1)
+        packages[name].active = True
     for name in excludes:
-        dest = os.path.join(srcdir, name)
-        sys.stdout.write ("Excluding %s...\n" % name)
-        try:
-            os.unlink(dest)
-        except OSError as err:
-            sys.stderr.write ("Cannot unlink %s: %s\n" % ( dest, str(err)))
-            sys.exit(1)
-    if args.clean or args.clang or args.gcc:
+        packages[name].active = False
+        packages[name].selected = False
+    common.save_metainfo(wsdir, packages)
+    if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
-        builddir = os.path.join(wsdir, "build")
-        if os.path.isdir(builddir): rmtree(builddir)
-        develdir = os.path.join(wsdir, "devel")
-        if os.path.isdir(develdir): rmtree(develdir)
-    catkin_invoke = [ "catkin_make", "-C", wsdir ]
-    if args.clang: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++" ]
-    if args.gcc: catkin_invoke = catkin_invoke + [ "-DCMAKE_C_COMPILER=gcc", "-DCMAKE_CXX_COMPILER=g++" ]
+        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+    catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
+    catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
     catkin_invoke = catkin_invoke + args.extra_args
-    sys.stdout.write(" ".join(catkin_invoke) + "\n")
-    call(catkin_invoke)
+    ret = call(catkin_invoke)
+    if ret != 0: sys.exit(ret)
+

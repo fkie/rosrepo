@@ -35,7 +35,6 @@ def main():
     subparsers = parser.add_subparsers(metavar="command")
 
     p = subparsers.add_parser("init", help="initialize workspace")
-    p.add_argument("--reinit", action="store_true", help="rewrite CMake files even if they already exist")
     p.add_argument("-a", "--autolink", action="store_true", help="search for and symlink to ROS-FKIE checkout")
     p.add_argument("--delete", action="store_true", help="delete workspace path if it exists")
     p.add_argument("path", nargs="?", default=".", help="path to the new catkin workspace")
@@ -93,9 +92,6 @@ def main():
     p.add_argument("-w", "--workspace", help="set catkin workspace path")
     p.add_argument("-a", "--all", action="store_true", help="add all available packages to working set")
     p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
-    g = p.add_mutually_exclusive_group()
-    g.add_argument("--clang", action="store_true", help="reconfigure with Clang compiler (implies --clean)")
-    g.add_argument("--gcc", action="store_true", help="reconfigure with GCC compiler (implies --clean)")
     p.add_argument("package", nargs="*", help="replace working set with listed packages")
     p.set_defaults(func=cmd_build.run)
 
@@ -107,7 +103,7 @@ def main():
     p.add_argument("-w", "--workspace", help="set catkin workspace path")
     p.add_argument("-t", "--terse", action="store_true", help="only print the value itself")
     p.add_argument("-e", "--export", action="store_true", help="prepend variable definition with export keyword")
-    p.add_argument("var", nargs="+", help="environment variable is to be queried")
+    p.add_argument("var", nargs="*", help="environment variable is to be queried")
     p.set_defaults(func=cmd_bash.run)
 
     raw_args = sys.argv[1:]

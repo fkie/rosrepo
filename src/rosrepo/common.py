@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import os
 import sys
-import yaml
+import pickle
 from fnmatch import fnmatchcase
 from copy import copy
 from textwrap import fill
@@ -35,11 +35,10 @@ from .compat import iteritems
 
 class PkgInfo:
     path = None
-    enabled = False
-    broken = False
     manifest = None
-    meta = None
-    repo = None
+    active = False
+    selected = False
+    pinned = False
 
 def format_list(packages):
     return fill(", ".join(sorted(list(packages))), initial_indent="    ", subsequent_indent="    ")
@@ -96,71 +95,54 @@ def resolve_rdepends(selected, packages):
     return rdepends
 
 def resolve_obsolete(packages, removed=None):
-    manual = set([ name for name,info in iteritems(packages) if info.enabled and not info.meta["auto"] ])
-    automatic = set([ name for name,info in iteritems(packages) if info.enabled and info.meta["auto"] ])
+    manual = set([name for name,info in iteritems(packages) if info.active and info.selected])
+    automatic = set([name for name,info in iteritems(packages) if info.active and not info.selected])
     if not removed is None:
         manual = manual - removed
     depends = resolve_depends(manual, packages)
     return automatic - depends
 
 def find_packages(wsdir):
-    reposdir = os.path.join(wsdir, "repos")
+    found = set([])
+    result = load_metainfo(wsdir)
     srcdir = os.path.join(wsdir, "src")
-    result = {}
-    meta = {}
-    metainfo = os.path.join(reposdir, ".metainfo")
-    if os.path.isfile(metainfo):
-        try:
-            f = open(metainfo, "r")
-            meta = yaml.safe_load(f)
-            f.close()
-        except:
-            meta = {}
     try:
-        packages = find_catkin_packages(reposdir, exclude_subspaces=True)
+        packages = find_catkin_packages(srcdir, exclude_subspaces=True)
         for path, pkg in packages.items():
-            parts = path.split(os.path.sep)
-            linkpath = os.path.join(srcdir, pkg.name)
-            pkgpath = os.path.join(reposdir, path)
-            info = PkgInfo()
-            if os.path.islink(linkpath) and os.path.realpath(linkpath) == os.path.realpath(pkgpath):
-                info.enabled = True
-            if os.path.exists(linkpath) and not info.enabled:
-                info.broken = True
+            if not pkg.name in result:
+                result[pkg.name] = PkgInfo()
+            info = result[pkg.name]
             info.path = path
             info.manifest = pkg
-            info.repo = parts[0]
-            info.meta = { "auto": not info.enabled, "pin": False }
-            if pkg.name in meta:
-                info.meta.update(meta[pkg.name])
-            result[pkg.name] = info
-        for f in os.listdir(srcdir):
-            fp = os.path.join(srcdir, f)
-            if f in result: continue
-            if os.path.isfile(fp): continue
-            if not os.path.islink(fp): continue
-            info = PkgInfo()
-            info.enabled = True
-            info.broken = True
-            info.repo = ""
-            info.meta = { "auto": True, "pin": False }
-            if f in meta:
-                info.meta.update(meta[f])
-            result[f] = info
+            found.add(pkg.name)
+        for name,info in iteritems(result):
+            if name not in found: info.path = None
     except Exception as err:
         sys.stderr.write("Error: %s\n" % str(err))
         sys.exit(1)
     return result
 
+def load_metainfo(wsdir):
+    infodir = os.path.join(wsdir, ".rosrepo")
+    infofile = os.path.join(infodir, "info")
+    packages = {}
+    if os.path.isfile(infofile):
+        try:
+            with open(infofile, "r") as f:
+                packages = pickle.load(f)
+        except:
+            pass
+    return packages
+
 def save_metainfo(wsdir, packages):
-    metainfo = os.path.join(wsdir, "repos", ".metainfo")
-    meta = {}
-    for name,info in iteritems(packages):
-        meta[name] = info.meta
+    infodir = os.path.join(wsdir, ".rosrepo")
+    infofile = os.path.join(infodir, "info")
+    obsolete = [name for name,info in iteritems(packages) if not info.active and not info.selected and info.path is None]
+    for key in obsolete: del packages[key]
     try:
-        f = open(metainfo, "w")
-        yaml.dump(meta, f)
-        f.close()
+        if not os.path.isdir(infodir): os.mkdir(infodir)
+        with open(infofile, "w") as f:
+            pickle.dump(packages, f, -1)
     except OSError as e:
         sys.stderr.write("cannot write meta info: %s\n" % str(e))
 
@@ -201,12 +183,18 @@ def find_rosdir():
             if _is_rosdir(rosdir): return rosdir
     return None
 
+_obsolete_warn_once = True
+
 def _is_wsdir(path):
     if not os.path.isdir(os.path.join(path, "src")): return False
-    if not os.path.isdir(os.path.join(path, "repos")): return False
-    if not os.path.isfile(os.path.join(path, "src", "CMakeLists.txt")): return False
-    if not os.path.islink(os.path.join(path, "src", "CMakeLists.txt")) and not os.path.islink(os.path.join(path, "src", "toplevel.cmake")): return False
-    return True
+    if os.path.isdir(os.path.join(path, "repos")):
+        global _obsolete_warn_once
+        if _obsolete_warn_once:
+            sys.stderr.write("obsolete workspace layout detected\nplease re-run `rosrepo init %s'\n" % path)
+            _obsolete_warn_once = False
+        return False
+    if not os.path.isdir(os.path.join(path, ".catkin_tools", "rosrepo")): return False
+    return os.path.isfile(os.path.join(path, ".catkin_workspace"))
 
 def find_wsdir(override=None):
     if override is not None:
@@ -216,6 +204,10 @@ def find_wsdir(override=None):
     if not "ROS_PACKAGE_PATH" in os.environ: return None
     candidates = os.environ["ROS_PACKAGE_PATH"].split(":")
     for path in candidates:
-        path = os.path.normpath(os.path.join(path, ".."))
-        if _is_wsdir(path): return path
+        head, tail = os.path.split(path)
+        while head != "/" and head != "" and tail != "src":
+            head, tail = os.path.split(head)
+        if tail != "src": continue
+        if _is_wsdir(head): return head
     return None
+
