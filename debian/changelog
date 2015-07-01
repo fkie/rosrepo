@@ -1,3 +1,10 @@
+rosrepo (2.0.0-1) unstable; urgency=medium
+
+  * New major release.
+  * Switched to catkin_tools as backend
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 01 Jul 2015 12:53:53 +0200
+
 rosrepo (1.0.28-1) unstable; urgency=medium
 
   * list: mark previously built packages with "b"
