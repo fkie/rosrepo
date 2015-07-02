@@ -1,3 +1,9 @@
+rosrepo (2.0.2-1) unstable; urgency=medium
+
+  * build: additional options
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 02 Jul 2015 15:29:01 +0200
+
 rosrepo (2.0.1-1) unstable; urgency=medium
 
   * bash: bugfix
