@@ -63,6 +63,10 @@ _rosrepo_complete()
 			COMPREPLY=( $( compgen -d -- "$arg" ) )
 			return 0
 			;;
+		--compiler)
+			COMPREPLY=( $(compgen -W default -- "$arg") $( compgen -c -- "$arg" | grep '\b\(clang\|gcc\|icc\)\(-[0-9].*\)\?$' ) )
+			return 0
+			;;
 	esac
 	if [ "$cmd" = "uninit" ]; then
 		COMPREPLY=( $( compgen -W "-h --help -w --workspace" -- "$arg" ) )
@@ -118,7 +122,7 @@ _rosrepo_complete()
 		fi
 		if [ "$cmd" = "build" ]
 		then
-			COMPREPLY+=( $( compgen -W "--clang --gcc" -- "$arg" ) )
+			COMPREPLY+=( $( compgen -W "--compiler -k --keep-going -v --verbose" -- "$arg" ) )
 		fi
 		if [ "${arg:0:1}" != "-" -a ! $hasAll -eq 1 ]
 		then
