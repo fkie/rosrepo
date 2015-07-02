@@ -30,7 +30,7 @@ import shutil
 import textwrap
 from subprocess import call
 
-from .common import find_rosdir, find_ros_fkie, save_metainfo, PkgInfo, DEFAULT_CMAKE_ARGS
+from .common import find_rosdir, find_ros_fkie, save_metainfo, PkgInfo, DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
 
 def run(args):
     wsdir = os.path.realpath(args.path)
@@ -107,11 +107,22 @@ def run(args):
         [ -r "%(wsdir)s/devel/setup.bash ] && source "%(wsdir)s/devel/setup.bash"
         eval "$(rosrepo bash -w "%(wsdir)s" -e)"
         """ % { "rosdir" : rosdir, "wsdir" : wsdir }))
-    catkin_invoke = ["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo",
-                     "--init", "--extend", rosdir,
-                     "--cmake-args"
-    ] + DEFAULT_CMAKE_ARGS
-    ret = call(catkin_invoke)
+    catkin_config = ["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo",
+                     "--init", "--extend", rosdir
+    ]
+    if args.jobs:
+        catkin_config = catkin_config + ["--jobs", args.jobs]
+
+    catkin_config = catkin_config + ["--cmake-args"] + DEFAULT_CMAKE_ARGS
+    if args.compiler:
+        cc = get_c_compiler(args.compiler)
+        cxx = get_cxx_compiler(args.compiler)
+        if cc is not None:
+            catkin_config = catkin_config + ["-DCMAKE_C_COMPILER=%s" % cc]
+        if cxx is not None:
+            catkin_config = catkin_config + ["-DCMAKE_CXX_COMPILER=%s" % cxx]
+    catkin_config = catkin_config + ["--"] + args.extra_args
+    ret = call(catkin_config)
     if ret != 0: sys.exit(ret)
     if args.autolink:
         sys.stdout.write("Searching for ROS-FKIE checkout\n")

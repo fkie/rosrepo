@@ -37,6 +37,8 @@ def main():
     p = subparsers.add_parser("init", help="initialize workspace")
     p.add_argument("-r", "--roshome", help="override ROS installation path (default: autodetect)")
     p.add_argument("-a", "--autolink", action="store_true", help="search for and symlink to ROS-FKIE checkout")
+    p.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
+    p.add_argument("--compiler", help="force a specific compiler")
     p.add_argument("--delete", action="store_true", help="delete workspace path if it exists")
     p.add_argument("path", nargs="?", default=".", help="path to the new catkin workspace")
     p.set_defaults(func=cmd_init.run)
@@ -95,7 +97,7 @@ def main():
     p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
     p.add_argument("-v", "--verbose", action="store_true", help="verbose build log")
     p.add_argument("-k", "--keep-going", action="store_true", help="continue as much as possible after errors")
-    p.add_argument("--compiler", help="force a specific compiler")
+    p.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
     p.add_argument("package", nargs="*", help="replace working set with listed packages")
     p.set_defaults(func=cmd_build.run)
 

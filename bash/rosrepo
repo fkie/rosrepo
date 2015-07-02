@@ -49,7 +49,7 @@ _rosrepo_complete()
 	if [ "$cmd" = "init" ]; then
 		if [ "${arg:0:1}" = "-" ]
 		then
-			COMPREPLY=( $( compgen -W "-h --help -a --autolink --delete -r --roshome" -- "$arg" ) )
+			COMPREPLY=( $( compgen -W "-h --help -a --autolink --delete -r --roshome --compiler -j --jobs" -- "$arg" ) )
 		elif [ "$nargs" -eq 1 ]
 		then
 			compopt -o filenames 2>/dev/null
@@ -64,7 +64,11 @@ _rosrepo_complete()
 			return 0
 			;;
 		--compiler)
-			COMPREPLY=( $(compgen -W default -- "$arg") $( compgen -c -- "$arg" | grep '\b\(clang\|gcc\|icc\)\(-[0-9].*\)\?$' ) )
+			COMPREPLY=( $( compgen -c -- "$arg" | grep '\b\(clang\|gcc\|icc\)\(-[0-9].*\)\?$' ) )
+			return 0
+			;;
+		-j|--jobs)
+			COMPREPLY=( $(compgen -W "$(seq $(grep ^processor /proc/cpuinfo | wc -l))" -- "$arg") )
 			return 0
 			;;
 	esac
@@ -122,7 +126,7 @@ _rosrepo_complete()
 		fi
 		if [ "$cmd" = "build" ]
 		then
-			COMPREPLY+=( $( compgen -W "--compiler -k --keep-going -v --verbose" -- "$arg" ) )
+			COMPREPLY+=( $( compgen -W "-j --jobs -k --keep-going -v --verbose" -- "$arg" ) )
 		fi
 		if [ "${arg:0:1}" != "-" -a ! $hasAll -eq 1 ]
 		then

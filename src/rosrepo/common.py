@@ -27,11 +27,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 import sys
 import pickle
+import re
 from fnmatch import fnmatchcase
 from copy import copy
 from textwrap import fill
 from catkin_pkg.packages import find_packages as find_catkin_packages
 from .compat import iteritems
+
+COMPILER_LIST = [
+    [r"gcc|gnu","gcc","g++"],
+    [r"intel|icc|icpc","icc","icpc"],
+    [r"clang","clang","clang++"],
+]
 
 DEFAULT_CMAKE_ARGS = [
      "-DCMAKE_BUILD_TYPE=Devel",
@@ -225,5 +232,19 @@ def find_wsdir(override=None):
             head, tail = os.path.split(head)
         if tail != "src": continue
         if _is_wsdir(head): return head
+    return None
+
+def get_c_compiler(s):
+    global COMPILER_LIST
+    for compiler in COMPILER_LIST:
+        m = re.match(r"^(.*)\b(?:%s)\b(.*)$" % compiler[0], s, re.IGNORECASE)
+        if m is not None: return "%s%s%s" % (m.group(1), compiler[1], m.group(2))
+    return None
+
+def get_cxx_compiler(s):
+    global COMPILER_LIST
+    for compiler in COMPILER_LIST:
+        m = re.match(r"^(.*)\b(?:%s)\b(.*)$" % compiler[0], s, re.IGNORECASE)
+        if m is not None: return "%s%s%s" % (m.group(1), compiler[2], m.group(2))
     return None
 
