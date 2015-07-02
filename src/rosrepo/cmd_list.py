@@ -73,6 +73,7 @@ def run(args):
         if not args.all and not args.glob:
             if args.excluded != (status == "-"): continue
             if args.manual and "A" in status: continue
+            if args.broken and not "!" in status: continue
         if args.name_only:
             sys.stdout.write("%s\n" % name)
         else:

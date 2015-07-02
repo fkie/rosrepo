@@ -94,7 +94,7 @@ _rosrepo_complete()
 	fi
 	if [ "$cmd" = "list" ]
 	then
-		COMPREPLY=( $( compgen -W "-h --help -w --workspace -a --all -n --name-only -m --manual -x --excluded" -- "$arg" ) )
+		COMPREPLY=( $( compgen -W "-h --help -w --workspace -a --all -b --broken -n --name-only -m --manual -x --excluded" -- "$arg" ) )
 		return 0
 	fi
 	if [ "$cmd" = "find" ]
