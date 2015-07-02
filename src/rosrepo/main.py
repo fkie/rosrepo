@@ -93,6 +93,9 @@ def main():
     p.add_argument("-w", "--workspace", help="set catkin workspace path")
     p.add_argument("-a", "--all", action="store_true", help="add all available packages to working set")
     p.add_argument("-c", "--clean", action="store_true", help="clean workspace")
+    p.add_argument("-v", "--verbose", action="store_true", help="verbose build log")
+    p.add_argument("-k", "--keep-going", action="store_true", help="continue as much as possible after errors")
+    p.add_argument("--compiler", help="force a specific compiler")
     p.add_argument("package", nargs="*", help="replace working set with listed packages")
     p.set_defaults(func=cmd_build.run)
 

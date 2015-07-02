@@ -33,6 +33,14 @@ from textwrap import fill
 from catkin_pkg.packages import find_packages as find_catkin_packages
 from .compat import iteritems
 
+DEFAULT_CMAKE_ARGS = [
+     "-DCMAKE_BUILD_TYPE=Devel",
+     "-DCMAKE_CXX_FLAGS_DEVEL=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -O3 -g",
+     "-DCMAKE_C_FLAGS_DEVEL=-Wall -Wextra -Wno-unused-parameter -O3 -g",
+     "-DCMAKE_SHARED_LINKER_FLAGS_DEVEL=-Wl,-z,defs",
+     "-DCMAKE_EXE_LINKER_FLAGS_DEVEL=-Wl,-z,defs"
+]
+
 class PkgInfo:
     path = None
     manifest = None

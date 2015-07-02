@@ -26,9 +26,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
+import re
 import rosrepo.common as common
 from subprocess import call
 from .compat import iteritems
+
+COMPILER_LIST = [
+    [r"gcc|gnu","gcc","g++"],
+    [r"intel|icc|icpc","icc","icpc"],
+    [r"clang","clang","clang++"],
+]
+
+def get_c_compiler(s):
+    global COMPILER_LIST
+    for compiler in COMPILER_LIST:
+        m = re.match(r"^(.*)\b(?:%s)\b(.*)$" % compiler[0], s, re.IGNORECASE)
+        if m is not None: return "%s%s%s" % (m.group(1), compiler[1], m.group(2))
+    return None
+
+def get_cxx_compiler(s):
+    global COMPILER_LIST
+    for compiler in COMPILER_LIST:
+        m = re.match(r"^(.*)\b(?:%s)\b(.*)$" % compiler[0], s, re.IGNORECASE)
+        if m is not None: return "%s%s%s" % (m.group(1), compiler[2], m.group(2))
+    return None
+
 
 def run(args):
     wsdir = common.find_wsdir(args.workspace)
@@ -72,11 +94,24 @@ def run(args):
         packages[name].active = False
         packages[name].selected = False
     common.save_metainfo(wsdir, packages)
+    if args.compiler:
+        catkin_config = ["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--cmake-args"] + common.DEFAULT_CMAKE_ARGS
+        cc = get_c_compiler(args.compiler)
+        cxx = get_cxx_compiler(args.compiler)
+        if cc is not None:
+            catkin_config = catkin_config + ["-DCMAKE_C_COMPILER=%s" % cc]
+        if cxx is not None:
+            catkin_config = catkin_config + ["-DCMAKE_CXX_COMPILER=%s" % cxx]
+        args.clean = True
+        call(catkin_config)
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
         call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
     catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
+    if args.verbose: catkin_invoke = catkin_invoke + ["--verbose"]
+    if args.keep_going: catkin_invoke = catkin_invoke + ["--continue-on-failure"]
     catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
+    if args.verbose: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
     catkin_invoke = catkin_invoke + args.extra_args
     ret = call(catkin_invoke)
     if ret != 0: sys.exit(ret)
