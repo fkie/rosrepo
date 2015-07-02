@@ -38,16 +38,16 @@ def run(args):
     packages = common.find_packages(wsdir)
     if args.all:
         args.pin = False
-        args.package = packages.keys()
+        args.package = set(packages.keys())
     else:
         args.package = common.glob_package_names(args.package, packages)
     if not common.is_valid_selection(args.package, packages):
         sys.exit(1)
     enabled = set([name for name,info in iteritems(packages) if info.active])
     needed = common.resolve_depends(enabled, packages)
-    depends = common.resolve_depends(set(args.package), packages)
+    depends = common.resolve_depends(args.package, packages)
     depends = (depends | needed) - enabled
-    dep_auto = depends - set(args.package)
+    dep_auto = depends - args.package
     dep_manual = depends - dep_auto
     if dep_manual:
         sys.stdout.write("Manually including the following packages:\n%s\n" % common.format_list(dep_manual))
@@ -68,6 +68,9 @@ def run(args):
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
         call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+    broken = set([name for name,info in iteritems(packages) if info.active and info.path is None])
+    if broken:
+        sys.stdout.write("You have BROKEN packages:\n%s\nRemove them with `rosrepo exclude'\n" % common.format_list(broken))
     if not depends:
         sys.stdout.write("Nothing else to be done\n")
         sys.exit(0)
