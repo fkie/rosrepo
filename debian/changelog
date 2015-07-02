@@ -1,3 +1,12 @@
+rosrepo (2.0.3-1) unstable; urgency=medium
+
+  * init: move --compiler option here and add --jobs option
+  * list: filter for broken packages
+  * include: warn about broken packages
+  * exclude: automatically exclude broken packages
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 02 Jul 2015 17:00:12 +0200
+
 rosrepo (2.0.2-1) unstable; urgency=medium
 
   * build: additional options
