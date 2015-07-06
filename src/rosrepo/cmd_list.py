@@ -71,7 +71,7 @@ def run(args):
     listing.sort()
     for name, repo, status in listing:
         if not args.all and not args.glob:
-            if args.excluded != (status == "-"): continue
+            if args.excluded != ("-" in status): continue
             if args.manual and "A" in status: continue
             if args.broken and not "!" in status: continue
         if args.name_only:
