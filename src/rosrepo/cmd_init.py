@@ -103,8 +103,8 @@ def run(args):
         f.write(textwrap.dedent("""\
         # workspace configuration
         # source this file from your ~/.bashrc
-        [ -r "%(rosdir)s/setup.bash ] && source "%(rosdir)s/setup.bash"
-        [ -r "%(wsdir)s/devel/setup.bash ] && source "%(wsdir)s/devel/setup.bash"
+        [ -r "%(rosdir)s/setup.bash" ] && source "%(rosdir)s/setup.bash"
+        [ -r "%(wsdir)s/devel/setup.bash" ] && source "%(wsdir)s/devel/setup.bash"
         eval "$(rosrepo bash -w "%(wsdir)s" -e)"
         """ % { "rosdir" : rosdir, "wsdir" : wsdir }))
     catkin_config = ["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo",
