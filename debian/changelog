@@ -1,3 +1,10 @@
+rosrepo (2.0.4-1) unstable; urgency=medium
+
+  * init: fix setup.bash
+  * list: fix -x option
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 08 Jul 2015 15:01:10 +0200
+
 rosrepo (2.0.3-1) unstable; urgency=medium
 
   * init: move --compiler option here and add --jobs option
