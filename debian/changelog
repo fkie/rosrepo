@@ -1,3 +1,9 @@
+rosrepo (2.0.5-1) unstable; urgency=medium
+
+  * Prevent accidental workspace creation in home folder
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 16 Sep 2015 15:42:18 +0200
+
 rosrepo (2.0.4-1) unstable; urgency=medium
 
   * init: fix setup.bash
