@@ -41,6 +41,9 @@ def run(args):
         sys.stderr.write("Cannot detect ROS installation\n")
         sys.exit(1)
     repodir = os.path.join(wsdir, "repos")
+    if os.path.realpath(os.path.expanduser("~")) == wsdir:
+        sys.stderr.write("You are trying to convert your home directory into a ROS workspace.\nThis is almost certainly not what you want.\n")
+        sys.exit(1)
     if not os.path.exists(srcdir): os.makedirs(srcdir)
     if os.path.isdir(repodir):
         metainfo = os.path.join(repodir, ".metainfo")
