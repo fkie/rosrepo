@@ -115,6 +115,10 @@ def run(args):
     ]
     if args.jobs:
         catkin_config = catkin_config + ["--jobs", args.jobs]
+    if args.install:
+        catkin_config = catkin_config + ["--install"]
+    if args.no_install:
+        catkin_config = catkin_config + ["--no-install"]
 
     catkin_config = catkin_config + ["--cmake-args"] + DEFAULT_CMAKE_ARGS
     if args.compiler:

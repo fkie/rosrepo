@@ -76,6 +76,10 @@ def run(args):
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
         call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+    if args.install:
+        call(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--install"])
+    if args.no_install:
+        call(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--no-install"])
     catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
     if args.verbose: catkin_invoke = catkin_invoke + ["--verbose"]
     if args.keep_going: catkin_invoke = catkin_invoke + ["--continue-on-failure"]
