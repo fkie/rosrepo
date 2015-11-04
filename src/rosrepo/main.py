@@ -47,6 +47,7 @@ def main():
     p.set_defaults(func=cmd_init.run)
 
     p = subparsers.add_parser("config", help="configure workspace")
+    p.add_argument("-w", "--workspace", help="set catkin workspace path")
     p.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
     p.add_argument("--compiler", help="force a specific compiler")
     g = p.add_mutually_exclusive_group(required=False)
