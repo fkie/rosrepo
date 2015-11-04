@@ -73,6 +73,12 @@ def run(args):
         packages[name].active = False
         packages[name].selected = False
     common.save_metainfo(wsdir, packages)
+    if args.install:
+        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build"])
+        call(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--install"])
+    if args.no_install:
+        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--install"])
+        call(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--no-install"])
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
         call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
