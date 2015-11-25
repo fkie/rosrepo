@@ -41,11 +41,13 @@ COMPILER_LIST = [
 ]
 
 DEFAULT_CMAKE_ARGS = [
-     "-DCMAKE_BUILD_TYPE=Devel",
-     "-DCMAKE_CXX_FLAGS_DEVEL=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -O3 -g -fno-omit-frame-pointer",
-     "-DCMAKE_C_FLAGS_DEVEL=-Wall -Wextra -Wno-unused-parameter -O3 -g -fno-omit-frame-pointer",
-     "-DCMAKE_SHARED_LINKER_FLAGS_DEVEL=-Wl,-z,defs",
-     "-DCMAKE_EXE_LINKER_FLAGS_DEVEL=-Wl,-z,defs"
+     "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+     "-DCMAKE_CXX_FLAGS=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer",
+     "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O3 -g",
+     "-DCMAKE_C_FLAGS=-Wall -Wextra -Wno-unused-parameter -fno-omit-frame-pointer",
+     "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O3 -g",
+     "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,defs",
+     "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,defs"
 ]
 
 class PkgInfo:
