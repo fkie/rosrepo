@@ -1,3 +1,10 @@
+rosrepo (2.1.1-1) unstable; urgency=medium
+
+  * Use cmake build type 'RelWithDebInfo'
+  * Add -fno-omit-frame-pointer flag for better debugging experience
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 25 Nov 2015 14:15:08 +0100
+
 rosrepo (2.1.0-1) unstable; urgency=medium
 
   * Add new config command
