@@ -42,8 +42,8 @@ COMPILER_LIST = [
 
 DEFAULT_CMAKE_ARGS = [
      "-DCMAKE_BUILD_TYPE=Devel",
-     "-DCMAKE_CXX_FLAGS_DEVEL=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -O3 -g",
-     "-DCMAKE_C_FLAGS_DEVEL=-Wall -Wextra -Wno-unused-parameter -O3 -g",
+     "-DCMAKE_CXX_FLAGS_DEVEL=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -O3 -g -fno-omit-frame-pointer",
+     "-DCMAKE_C_FLAGS_DEVEL=-Wall -Wextra -Wno-unused-parameter -O3 -g -fno-omit-frame-pointer",
      "-DCMAKE_SHARED_LINKER_FLAGS_DEVEL=-Wl,-z,defs",
      "-DCMAKE_EXE_LINKER_FLAGS_DEVEL=-Wl,-z,defs"
 ]
