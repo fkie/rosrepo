@@ -83,11 +83,12 @@ def run(args):
         sys.stdout.write("Cleaning workspace...\n")
         call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
     catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
-    if args.verbose: catkin_invoke = catkin_invoke + ["--verbose"]
+    if args.verbose or args.rosclipse: catkin_invoke = catkin_invoke + ["--verbose"]
     if args.keep_going: catkin_invoke = catkin_invoke + ["--continue-on-failure"]
+    if args.rosclipse: catkin_invoke = catkin_invoke + ["--no-status", "--interleave-output", "--no-summary"]
     if args.jobs: catkin_invoke = catkin_invoke + ["--jobs", args.jobs]
     catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
-    if args.verbose: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
+    if args.verbose or args.rosclipse: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
     catkin_invoke = catkin_invoke + args.extra_args
     ret = call(catkin_invoke)
     if ret != 0: sys.exit(ret)
