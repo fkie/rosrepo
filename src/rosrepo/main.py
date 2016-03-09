@@ -111,6 +111,7 @@ def main():
     p.add_argument("-v", "--verbose", action="store_true", help="verbose build log")
     p.add_argument("-k", "--keep-going", action="store_true", help="continue as much as possible after errors")
     p.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
+    p.add_argument("--no-status", action="store_true", help="suppress status line")
     g = p.add_mutually_exclusive_group(required=False)
     g.add_argument("--install", action="store_true", help="install packages to install space")
     g.add_argument("--no-install", action="store_true", help="do not install packages to install space")

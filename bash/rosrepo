@@ -131,7 +131,7 @@ _rosrepo_complete()
 		fi
 		if [ "$cmd" = "build" ]
 		then
-			COMPREPLY+=( $( compgen -W "-j --jobs -k --keep-going -v --verbose --install --no-install" -- "$arg" ) )
+			COMPREPLY+=( $( compgen -W "-j --jobs -k --keep-going -v --verbose --no-status --install --no-install" -- "$arg" ) )
 		fi
 		if [ "${arg:0:1}" != "-" -a ! $hasAll -eq 1 ]
 		then

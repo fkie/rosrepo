@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
+import re
 import rosrepo.common as common
 from subprocess import call
 from .compat import iteritems
@@ -84,11 +85,26 @@ def run(args):
         call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
     catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
     if args.verbose: catkin_invoke = catkin_invoke + ["--verbose"]
+    if args.no_status: catkin_invoke = catkin_invoke + ["--no-status"]
     if args.keep_going: catkin_invoke = catkin_invoke + ["--continue-on-failure"]
     if args.jobs: catkin_invoke = catkin_invoke + ["--jobs", args.jobs]
     catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
     if args.verbose: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
     catkin_invoke = catkin_invoke + args.extra_args
     ret = call(catkin_invoke)
+    build_logdir = os.path.join(wsdir, "build", "build_logs")
+    if os.path.isdir(build_logdir):
+        try:
+            re_warn = re.compile(r"warning:")
+            re_error = re.compile(r"error:")
+            for logfile in os.listdir(build_logdir):
+                with open(os.path.join(build_logdir, logfile), "r") as f:
+                    for line in iter(f):
+                        if re_warn.search(line):
+                            sys.stdout.write("%s [%s]\n" % (line.strip(), logfile))
+                        if re_error.search(line):
+                            sys.stdout.write("%s [%s]\n" % (line.strip(), logfile))
+        except:
+            pass
     if ret != 0: sys.exit(ret)
 
