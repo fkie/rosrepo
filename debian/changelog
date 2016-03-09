@@ -1,3 +1,10 @@
+rosrepo (2.1.2-1) unstable; urgency=medium
+
+  * build: add --no-status option
+  * build: show compiler warnings and errors after build
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 09 Mar 2016 10:15:54 +0100
+
 rosrepo (2.1.1-1) unstable; urgency=medium
 
   * Use cmake build type 'RelWithDebInfo'
