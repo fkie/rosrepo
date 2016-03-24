@@ -95,16 +95,23 @@ def run(args):
     build_logdir = os.path.join(wsdir, "build", "build_logs")
     if os.path.isdir(build_logdir):
         try:
-            re_warn = re.compile(r"warning:")
-            re_error = re.compile(r"error:")
+            re_show = re.compile(r"warning:|error:")
             for logfile in os.listdir(build_logdir):
                 with open(os.path.join(build_logdir, logfile), "r") as f:
                     for line in iter(f):
-                        if re_warn.search(line):
-                            sys.stdout.write("%s [%s]\n" % (line.strip(), logfile))
-                        if re_error.search(line):
+                        if re_show.search(line):
                             sys.stdout.write("%s [%s]\n" % (line.strip(), logfile))
         except:
             pass
+    rosclipse = common.find_program("rosclipse")
+    if rosclipse is not None:
+        for name,info in iteritems(packages):
+            if info.active and not info.manifest.is_metapackage():
+                pkgdir = os.path.join(wsdir, "src", info.path)
+                p_time = max(common.getmtime(os.path.join(pkgdir, "CMakeLists.txt")), common.getmtime(os.path.join(pkgdir, "package.xml")))
+                e_time = min(common.getmtime(os.path.join(pkgdir, ".project")), common.getmtime(os.path.join(pkgdir, ".cproject")), common.getmtime(os.path.join(pkgdir, ".settings", "language.settings.xml")))
+                if e_time < p_time:
+                    sys.stdout.write("Updating project files for %s...\n" % name)
+                    call([rosclipse, name])
     if ret != 0: sys.exit(ret)
 

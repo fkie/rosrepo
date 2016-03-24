@@ -250,3 +250,21 @@ def get_cxx_compiler(s):
         if m is not None: return "%s%s%s" % (m.group(1), compiler[2], m.group(2))
     return None
 
+def find_program(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            fpath = path.strip('"')
+            candidate = os.path.join(fpath, program)
+            if is_exe(candidate):
+                return candidate
+    return None
+
+def getmtime(path):
+    return os.path.getmtime(path) if os.path.exists(path) else 0
+
