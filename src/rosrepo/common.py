@@ -43,9 +43,9 @@ COMPILER_LIST = [
 DEFAULT_CMAKE_ARGS = [
      "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
      "-DCMAKE_CXX_FLAGS=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer",
-     "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O3 -g",
+     "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -g",
      "-DCMAKE_C_FLAGS=-Wall -Wextra -Wno-unused-parameter -fno-omit-frame-pointer",
-     "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O3 -g",
+     "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O2 -g",
      "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,defs",
      "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,defs"
 ]
