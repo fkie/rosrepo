@@ -43,9 +43,9 @@ COMPILER_LIST = [
 DEFAULT_CMAKE_ARGS = [
      "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
      "-DCMAKE_CXX_FLAGS=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer",
-     "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O3 -g",
+     "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -g",
      "-DCMAKE_C_FLAGS=-Wall -Wextra -Wno-unused-parameter -fno-omit-frame-pointer",
-     "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O3 -g",
+     "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O2 -g",
      "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,defs",
      "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,defs"
 ]
@@ -249,4 +249,22 @@ def get_cxx_compiler(s):
         m = re.match(r"^(.*)\b(?:%s)\b(.*)$" % compiler[0], s, re.IGNORECASE)
         if m is not None: return "%s%s%s" % (m.group(1), compiler[2], m.group(2))
     return None
+
+def find_program(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            fpath = path.strip('"')
+            candidate = os.path.join(fpath, program)
+            if is_exe(candidate):
+                return candidate
+    return None
+
+def getmtime(path):
+    return os.path.getmtime(path) if os.path.exists(path) else 0
 
