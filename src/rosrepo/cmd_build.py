@@ -95,7 +95,7 @@ def run(args):
     build_logdir = os.path.join(wsdir, "build", "build_logs")
     if os.path.isdir(build_logdir):
         try:
-            re_show = re.compile(r"warning:|error:")
+            re_show = re.compile(r"error:") if args.no_warn else re.compile(r"warning:|error:")
             for logfile in os.listdir(build_logdir):
                 with open(os.path.join(build_logdir, logfile), "r") as f:
                     for line in iter(f):
