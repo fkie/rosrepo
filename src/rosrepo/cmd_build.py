@@ -91,7 +91,9 @@ def run(args):
     catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
     if args.verbose: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
     catkin_invoke = catkin_invoke + args.extra_args
-    ret = call(catkin_invoke)
+    unbuffered_stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
+    unbuffered_stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
+    ret = call(catkin_invoke, stdout=unbuffered_stdout, stderr=unbuffered_stderr)
     build_logdir = os.path.join(wsdir, "build", "build_logs")
     if os.path.isdir(build_logdir):
         try:
