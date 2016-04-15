@@ -106,13 +106,13 @@ def run(args):
         except:
             pass
     rosclipse = common.find_program("rosclipse")
-    if rosclipse is not None:
+    if rosclipse is not None and not args.no_rosclipse:
         for name,info in iteritems(packages):
             if info.active and not info.manifest.is_metapackage():
                 pkgdir = os.path.join(wsdir, "src", info.path)
                 p_time = max(common.getmtime(os.path.join(pkgdir, "CMakeLists.txt")), common.getmtime(os.path.join(pkgdir, "package.xml")))
                 e_time = min(common.getmtime(os.path.join(pkgdir, ".project")), common.getmtime(os.path.join(pkgdir, ".cproject")), common.getmtime(os.path.join(pkgdir, ".settings", "language.settings.xml")))
-                if e_time < p_time:
+                if e_time < p_time or args.force_rosclipse:
                     sys.stdout.write("Updating project files for %s...\n" % name)
                     call([rosclipse, name])
     if ret != 0: sys.exit(ret)
