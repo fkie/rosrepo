@@ -27,7 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import rosrepo.common as common
-from subprocess import call
 from .compat import iteritems
 
 def run(args):
@@ -65,7 +64,7 @@ def run(args):
         rdepends = rdepends | obsolete
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+        common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all", "--yes"])
     if not rdepends:
         sys.stdout.write("Nothing else to be done\n")
         sys.exit(0)

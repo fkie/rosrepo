@@ -29,7 +29,6 @@ import os
 import shutil
 import textwrap
 import rosrepo.common as common
-from subprocess import call
 from .compat import iteritems
 
 def run(args):
@@ -37,7 +36,7 @@ def run(args):
     if wsdir is None:
         sys.stderr.write ("cannot find suitable catkin workspace\n")
         sys.exit(1)
-    call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+    common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all", "--yes"])
     try:
         shutil.rmtree(os.path.join(wsdir, ".rosrepo"))
     except:
@@ -50,3 +49,4 @@ def run(args):
         os.unlink(os.path.join(wsdir, "setup.bash"))
     except:
         pass
+

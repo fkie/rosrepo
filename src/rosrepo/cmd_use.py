@@ -27,7 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 import os
 import rosrepo.common as common
-from subprocess import call
 from .compat import iteritems
 
 def run(args):
@@ -68,4 +67,4 @@ def run(args):
     common.save_metainfo(wsdir, packages)
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+        common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all", "--yes"])

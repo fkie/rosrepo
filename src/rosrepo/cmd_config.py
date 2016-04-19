@@ -25,9 +25,8 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
-from subprocess import call
 from .compat import iteritems
-from .common import find_wsdir, DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
+from .common import find_wsdir, DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler, call_process
 
 
 def run(args):
@@ -39,13 +38,13 @@ def run(args):
     if args.jobs:
         catkin_config = catkin_config + ["--jobs", args.jobs]
     if args.install:
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build"])
+        call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--yes"])
         catkin_config = catkin_config + ["--install"]
     if args.no_install:
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--install"])
+        call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--install", "--yes"])
         catkin_config = catkin_config + ["--no-install"]
     if args.compiler:
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build"])
+        call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--yes"])
         catkin_config = catkin_config + ["--cmake-args"] + DEFAULT_CMAKE_ARGS
         cc = get_c_compiler(args.compiler)
         cxx = get_cxx_compiler(args.compiler)
@@ -55,6 +54,6 @@ def run(args):
             catkin_config = catkin_config + ["-DCMAKE_CXX_COMPILER=%s" % cxx]
         catkin_config = catkin_config + ["--"]
     catkin_config = catkin_config + args.extra_args
-    ret = call(catkin_config)
+    ret = call_process(catkin_config)
     if ret != 0: sys.exit(ret)
 

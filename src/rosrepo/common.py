@@ -33,6 +33,7 @@ from copy import copy
 from textwrap import fill
 from catkin_pkg.packages import find_packages as find_catkin_packages
 from .compat import iteritems
+from subprocess import Popen
 
 COMPILER_LIST = [
     [r"gcc|gnu","gcc","g++"],
@@ -267,4 +268,21 @@ def find_program(program):
 
 def getmtime(path):
     return os.path.getmtime(path) if os.path.exists(path) else 0
+
+
+def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None, env=None):
+    p = Popen(args, bufsize=bufsize, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, env=env)
+    p.wait()
+    return p.returncode
+
+
+def ascii_env(env):
+    result = {}
+    for key in env.keys():
+        try:
+            env[key].decode("ascii")
+            result[key] = env[key]
+        except UnicodeDecodeError:
+            pass
+    return result
 
