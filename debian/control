@@ -9,7 +9,7 @@ Standards-Version: 3.9.4
 
 Package: python-rosrepo
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python-catkin-pkg, python-catkin-tools, cmake (>= 2.8.3)
+Depends: ${python:Depends}, ${misc:Depends}, python-catkin-pkg, python-catkin-tools (>= 0.4.0), cmake (>= 2.8.3)
 Description: Repository management tool for catkin workspaces
  Only build those packages you actually need from the repository
 
