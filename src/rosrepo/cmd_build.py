@@ -28,7 +28,6 @@ import sys
 import os
 import re
 import rosrepo.common as common
-from subprocess import call
 from .compat import iteritems
 
 
@@ -75,14 +74,14 @@ def run(args):
         packages[name].selected = False
     common.save_metainfo(wsdir, packages)
     if args.install:
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build"])
-        call(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--install"])
+        common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--yes"])
+        common.call_process(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--install"])
     if args.no_install:
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--install"])
-        call(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--no-install"])
+        common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--build", "--install", "--yes"])
+        common.call_process(["catkin", "config", "--workspace", wsdir, "--profile", "rosrepo", "--no-install"])
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
-        call(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all"])
+        common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all", "--yes"])
     catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
     if args.verbose: catkin_invoke = catkin_invoke + ["--verbose"]
     if args.no_status: catkin_invoke = catkin_invoke + ["--no-status"]
@@ -91,20 +90,7 @@ def run(args):
     catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
     if args.verbose: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
     catkin_invoke = catkin_invoke + args.extra_args
-    unbuffered_stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
-    unbuffered_stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
-    ret = call(catkin_invoke, stdout=unbuffered_stdout, stderr=unbuffered_stderr)
-    build_logdir = os.path.join(wsdir, "build", "build_logs")
-    if os.path.isdir(build_logdir):
-        try:
-            re_show = re.compile(r"error:") if args.no_warn else re.compile(r"warning:|error:")
-            for logfile in os.listdir(build_logdir):
-                with open(os.path.join(build_logdir, logfile), "r") as f:
-                    for line in iter(f):
-                        if re_show.search(line):
-                            sys.stdout.write("%s [%s]\n" % (line.strip(), logfile))
-        except:
-            pass
+    ret = common.call_process(catkin_invoke, env=common.ascii_env(os.environ))
     rosclipse = common.find_program("rosclipse")
     if rosclipse is not None and not args.no_rosclipse:
         for name,info in iteritems(packages):
@@ -114,6 +100,6 @@ def run(args):
                 e_time = min(common.getmtime(os.path.join(pkgdir, ".project")), common.getmtime(os.path.join(pkgdir, ".cproject")), common.getmtime(os.path.join(pkgdir, ".settings", "language.settings.xml")))
                 if e_time < p_time or args.force_rosclipse:
                     sys.stdout.write("Updating project files for %s...\n" % name)
-                    call([rosclipse, name])
+                    common.call_process([rosclipse, name])
     if ret != 0: sys.exit(ret)
 

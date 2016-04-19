@@ -26,8 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
 import os
-from subprocess import call
-from .common import find_wsdir
+from .common import find_wsdir, call_process
 
 def run(args):
     wsdir = find_wsdir(args.workspace)
@@ -50,5 +49,5 @@ def run(args):
     if (args.svn): cmd = [ "svn", "checkout", args.url ]
     if (args.name): cmd.append(args.name)
     os.chdir(os.path.join(wsdir, "src"))
-    ret = call(cmd)
+    ret = call_process(cmd)
     sys.exit(ret)

@@ -28,9 +28,8 @@ import os
 import sys
 import shutil
 import textwrap
-from subprocess import call
 
-from .common import find_rosdir, find_ros_fkie, save_metainfo, PkgInfo, DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
+from .common import find_rosdir, find_ros_fkie, save_metainfo, PkgInfo, DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler, call_process
 
 def run(args):
     wsdir = os.path.realpath(args.path)
@@ -129,7 +128,7 @@ def run(args):
         if cxx is not None:
             catkin_config = catkin_config + ["-DCMAKE_CXX_COMPILER=%s" % cxx]
     catkin_config = catkin_config + ["--"] + args.extra_args
-    ret = call(catkin_config)
+    ret = call_process(catkin_config)
     if ret != 0: sys.exit(ret)
     if args.autolink:
         sys.stdout.write("Searching for ROS-FKIE checkout\n")
