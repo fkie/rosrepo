@@ -218,7 +218,7 @@ def _is_wsdir(path):
             sys.stderr.write("obsolete workspace layout detected\nplease re-run `rosrepo init %s'\n" % path)
             _obsolete_warn_once = False
         return False
-    if not os.path.isdir(os.path.join(path, ".catkin_tools", "rosrepo")): return False
+    if not os.path.isdir(os.path.join(path, ".catkin_tools", "rosrepo")) and not os.path.isdir(os.path.join(path, ".catkin_tools", "profiles", "rosrepo")): return False
     return os.path.isfile(os.path.join(path, ".catkin_workspace"))
 
 def find_wsdir(override=None):
