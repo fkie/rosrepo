@@ -33,7 +33,7 @@ from copy import copy
 from textwrap import fill
 from catkin_pkg.packages import find_packages as find_catkin_packages
 from .compat import iteritems
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 COMPILER_LIST = [
     [r"gcc|gnu","gcc","g++"],
@@ -270,9 +270,13 @@ def getmtime(path):
     return os.path.getmtime(path) if os.path.exists(path) else 0
 
 
-def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None, env=None):
+def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None, env=None, input_data=None):
     p = Popen(args, bufsize=bufsize, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, env=env)
-    p.wait()
+    if stdin == PIPE or stdout == PIPE or stderr == PIPE:
+        stdoutdata, stderrdata = p.communicate(input_data)
+        return p.returncode, stdoutdata, stderrdata
+    else:
+        p.wait()
     return p.returncode
 
 
