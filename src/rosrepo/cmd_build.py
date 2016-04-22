@@ -90,7 +90,7 @@ def run(args):
     catkin_invoke = catkin_invoke + [name for name,info in iteritems(packages) if info.active]
     if args.verbose: catkin_invoke = catkin_invoke + ["--make-args", "VERBOSE=ON", "--"]
     catkin_invoke = catkin_invoke + args.extra_args
-    ret = common.call_process(catkin_invoke, env=common.ascii_env(os.environ))
+    ret = common.call_process(catkin_invoke)
     rosclipse = common.find_program("rosclipse")
     if rosclipse is not None and not args.no_rosclipse:
         for name,info in iteritems(packages):
