@@ -1,3 +1,10 @@
+rosrepo (2.1.7-1) unstable; urgency=medium
+
+  * Revert workaround.
+  * Skip rosclipse if Eclipse is not installed
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Fri, 22 Apr 2016 15:09:15 +0200
+
 rosrepo (2.1.6-1) unstable; urgency=medium
 
   * Workaround for non-ASCII environment bug
