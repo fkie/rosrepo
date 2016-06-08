@@ -82,6 +82,14 @@ def run(args):
     if args.clean:
         sys.stdout.write("Cleaning workspace...\n")
         common.call_process(["catkin", "clean", "--workspace", wsdir, "--profile", "rosrepo", "--all", "--yes"])
+    catkin_lint = common.find_program("catkin_lint")
+    if catkin_lint is not None and not args.no_lint:
+        lint_invoke = ["catkin_lint"]
+        for name,info in iteritems(packages):
+            if info.active:
+                lint_invoke += ["--pkg", name]
+        ret = common.call_process(lint_invoke)
+        if ret != 0: sys.exit(ret)
     catkin_invoke = ["catkin", "build", "--workspace", wsdir, "--profile", "rosrepo"]
     if args.verbose: catkin_invoke = catkin_invoke + ["--verbose"]
     if args.no_status: catkin_invoke = catkin_invoke + ["--no-status"]
