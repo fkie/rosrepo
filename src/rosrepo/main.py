@@ -119,6 +119,7 @@ def main():
     g = p.add_mutually_exclusive_group(required=False)
     g.add_argument("--install", action="store_true", help="install packages to install space")
     g.add_argument("--no-install", action="store_true", help="do not install packages to install space")
+    p.add_argument("--no-lint", action="store_true", help="do not run catkin_lint on packages")
     p.add_argument("package", nargs="*", help="replace working set with listed packages")
     p.set_defaults(func=cmd_build.run)
 
