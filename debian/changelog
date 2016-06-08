@@ -1,3 +1,9 @@
+rosrepo (2.1.8-1) unstable; urgency=medium
+
+  * build: invoke catkin_lint
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Wed, 08 Jun 2016 14:26:15 +0200
+
 rosrepo (2.1.7-1) unstable; urgency=medium
 
   * Revert workaround.
