@@ -53,14 +53,11 @@ def run(args):
             if not fnmatchcase(name, args.glob): continue
         if plen < len(name): plen = len(name)
         if rlen < len(repo): rlen = len(repo)
-        if info.active:
-            status = "!" if info.path is None else "+"
-            if not info.selected: status = status + "A"
-            if info.pinned: status = status + "P"
-        else:
-            status = "-"
-        if os.path.isdir(os.path.join(builddir, name)):
-            status = status + "b"
+        status = ("I" if info.active and info.selected else ".") + \
+                 ("A" if info.active and not info.selected else ".") + \
+                 ("P" if info.pinned else ".") + \
+                 ("B" if os.path.isdir(os.path.join(builddir, name)) else ".") + \
+                 ("!" if info.path is None else " ")
         listing.append([ name, repo, status])
     if plen > 52: plen = 52
     if plen + rlen > 72: rlen = 62 - plen
@@ -71,11 +68,13 @@ def run(args):
     listing.sort()
     for name, repo, status in listing:
         if not args.all and not args.glob:
-            if args.excluded != ("-" in status): continue
+            if args.excluded != (status[:2] == ".."): continue
             if args.manual and "A" in status: continue
+            if args.pinned and not "P" in status: continue
             if args.broken and not "!" in status: continue
         if args.name_only:
             sys.stdout.write("%s\n" % name)
         else:
             sys.stdout.write(fmt % (name[:plen], repo[:rlen], status))
-    if not args.name_only: sys.stdout.write("\n")
+    if not args.name_only:
+        sys.stdout.write("\nStatus: I=Included, A=Auto-Included, P=Pinned, B=Built, !=Broken\n\n")
