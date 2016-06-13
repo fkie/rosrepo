@@ -1,3 +1,9 @@
+rosrepo (2.1.9-1) unstable; urgency=medium
+
+  * list: improve status info
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Mon, 13 Jun 2016 14:39:49 +0200
+
 rosrepo (2.1.8-1) unstable; urgency=medium
 
   * build: invoke catkin_lint
