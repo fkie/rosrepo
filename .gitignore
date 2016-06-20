@@ -1,0 +1,8 @@
+.project
+.cproject
+.pydevproject
+.settings/
+__pycache__/
+*.py[cod]
+.coverage
+
