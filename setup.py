@@ -25,7 +25,7 @@ setup(
     package_dir  = {"": "src"},
     data_files   = [("/etc/bash_completion.d", ["bash/rosrepo"])],
     version      = rosrepo_version,
-    requires     = ["catkin_pkg", "yaml"],
+    requires     = ["catkin_pkg", "git", "yaml"],
     entry_points = {
         "console_scripts": ["rosrepo = rosrepo.main:main"]
     },

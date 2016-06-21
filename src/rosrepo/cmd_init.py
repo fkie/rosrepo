@@ -6,7 +6,7 @@ import os
 import sys
 from subprocess import call as call_program
 from shutil import rmtree
-from .workspace import find_ros_root
+from .workspace import find_ros_root, is_workspace
 from .util import makedirs, UserError
 from .config import Config
 
@@ -15,7 +15,7 @@ def run(args):
     wsdir = os.path.normpath(args.path)
     if os.path.isdir(wsdir) and os.path.realpath(wsdir) == os.path.realpath(os.path.expanduser("~")):
         raise UserError("I'm not turning your $HOME directory into a catkin workspace")
-    if args.reset and os.path.isdir(wsdir):
+    if args.reset and is_workspace(wsdir, require_rosrepo=False):
         sys.stdout.write("Resetting workspace\n")
         rmtree(os.path.join(wsdir, ".rosrepo"), ignore_errors=True)
         rmtree(os.path.join(wsdir, ".catkin_tools"), ignore_errors=True)

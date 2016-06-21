@@ -6,6 +6,28 @@ import os
 from tempfile import mkstemp
 
 
+class NamedTuple(object):
+    __slots__= ()
+    def __init__(self, *args, **kwargs):
+        slots = self.__slots__
+        for k in slots:
+            setattr(self, k, kwargs.get(k))
+        if args:
+            for k, v in zip(slots, args):
+                setattr(self, k, v)
+    def __str__(self):
+        clsname = self.__class__.__name__
+        values = ", ".join("%s=%r" % (k, getattr(self, k)) for k in self.__slots__)
+        return "%s(%s)" % (clsname, values)
+    __repr__ = __str__
+    def __getitem__(self, item):
+        return getattr(self, self.__slots__[item])
+    def __setitem__(self, item, value):
+        return setattr(self, self.__slots__[item], value)
+    def __len__(self):
+        return len(self.__slots__)
+
+
 try:
     iteritems = dict.iteritems
 except AttributeError:

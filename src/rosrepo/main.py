@@ -9,7 +9,8 @@ from pickle import PickleError
 
 
 def add_common_options(parser):
-    pass
+    g = parser.add_argument_group("Common options")
+    g.add_argument("-w", "--workspace", help="override workspace location (default: autodetect)")
 
 
 def prepare_arguments(parser):
@@ -25,6 +26,28 @@ def prepare_arguments(parser):
     from .cmd_init import run as init_func
     p.set_defaults(func=init_func)
 
+    # config
+    p = cmds.add_parser("config", help="configuration settings")
+    add_common_options(p)
+    p.add_argument("--set-ros-root", metavar="PATH", help="override ROS installation path (default: autodetect)")
+    g = p.add_argument_group("Gitlab options")
+    g.add_argument("--set-gitlab-url", nargs=2, metavar=("LABEL", "URL"), help="add or change a Gitlab server named LABEL")
+    g.add_argument("--unset-gitlab-url", metavar="LABEL", help="remove the Gitlab server named LABEL")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--login-for-private-token", action="store_true", help="login with username and password to acquire the account's private token (default)")
+    m.add_argument("--with-private-token", metavar="TOKEN", help="specify private token for Gitlab server access")
+    m.add_argument("--without-private-token", action="store_true", help="do not store authentication token at all")
+    from .cmd_config import run as config_func
+    p.set_defaults(func=config_func)
+
+    # list
+    p = cmds.add_parser("list", help="list packages in workspace")
+    add_common_options(p)
+    p.add_argument("-A", "--all", "--available", help="list all available packages")
+    p.add_argument("-B", "--build", help="list packages which will be built by the \"build\" command by default")
+    from .cmd_list import run as list_func
+    p.set_deffaults(func=list_func)
+
     return parser
 
 
@@ -33,17 +56,19 @@ def run_rosrepo (args):
         if hasattr(args, "func"):
             return args.func(args)
         else:
-            sys.stderr.write("Internal error: undefined command\n\n")
+            sys.stderr.write("%s: Internal error: undefined command\n\n" % sys.argv[0])
     except UserError as e:
-        sys.stderr.write("%s\n\n" % str(e))
+        sys.stderr.write("%s: error: %s\n\n" % (sys.argv[0], str(e)))
     except YAMLError as e:
-        sys.stderr.write("YAML Error: %s\n\n" % str(e))
+        sys.stderr.write("%s: YAML error: %s\n\n" % (sys.argv[0], str(e)))
     except PickleError as e:
-        sys.stderr.write("Pickle Error: %s\n\n" % str(e))
+        sys.stderr.write("%s: pickle error: %s\n\n" % (sys.argv[0], str(e)))
     except OSError as e:
-        sys.stderr.write("OS Error: %s\n\n" % str(e))
+        sys.stderr.write("%s: OS error: %s\n\n" % (sys.argv[0], str(e)))
     except IOError as e:
-        sys.stderr.write("I/O Error: %s\n\n" % str(e))
+        sys.stderr.write("%s: I/O error: %s\n\n" % (sys.argv[0], str(e)))
+    except KeyboardInterrupt:
+        sys.stderr.write("\n%s: interrupted by user\n" % sys.argv[0])
     return 1
 
 

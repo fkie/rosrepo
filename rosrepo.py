@@ -14,6 +14,7 @@ else:
     sys.stderr.write("This script is supposed to run from the rosrepo source tree")
     sys.exit(1)
 
+
 from rosrepo.main import main
 
 if __name__ == "__main__":
