@@ -2,7 +2,7 @@
 Copyright (c) 2016 Fraunhofer FKIE
 
 """
-from .ui import get_workspace_location
+from .workspace import get_workspace_location
 
 
 def run(args):

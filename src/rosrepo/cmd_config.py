@@ -2,7 +2,7 @@
 Copyright (c) 2016 Fraunhofer FKIE
 
 """
-from .ui import get_workspace_location
+from .workspace import get_workspace_location
 from .gitlab import find_available_gitlab_projects, acquire_gitlab_private_token
 from .config import Config
 from .cache import Cache

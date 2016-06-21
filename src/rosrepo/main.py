@@ -46,7 +46,7 @@ def prepare_arguments(parser):
     p.add_argument("-A", "--all", "--available", help="list all available packages")
     p.add_argument("-B", "--build", help="list packages which will be built by the \"build\" command by default")
     from .cmd_list import run as list_func
-    p.set_deffaults(func=list_func)
+    p.set_defaults(func=list_func)
 
     return parser
 

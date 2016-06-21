@@ -10,10 +10,13 @@ from dateutil.parser import parse as date_parse
 from git import Repo
 from urllib import quote as urlquote
 from catkin_pkg.package import parse_package_string, InvalidPackage, PACKAGE_MANIFEST_FILENAME
+
 try:
     from urlparse import urljoin, urlsplit
 except ImportError:
     from urllib.parse import urljoin, urlsplit
+
+from .ui import get_credentials
 from .util import iteritems, NamedTuple
 
 
@@ -26,9 +29,14 @@ class GitlabPackage(NamedTuple):
     __slots__ = ("manifest", "project", "project_path", "manifest_blob", "manifest_xml")
 
 
-def url_to_cache_name(url):
-    _, tail = url.split("://", 1)
-    return "_".join(["gitlab_projects", urlquote(tail, safe="")])
+def url_to_cache_name(label, url):
+    tmp = ["gitlab_projects"]
+    if label is not None:
+        tmp.append(urlquote(label, safe=""))
+    if url is not None:
+        _, tail = url.split("://", 1)
+        tmp.append(urlquote(tail, safe=""))
+    return "_".join(tmp)
 
 
 def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
@@ -49,30 +57,24 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
     return []
 
 
-def acquire_gitlab_private_token(url):
-    from getpass import getpass
-    sys.stderr.write ("Authentication required for %s\n" % url)
-    sys.stderr.flush()
-    while True:
-        login = raw_input("Username: ")
-        if login == "": continue
-        passwd = getpass("Password: ")
-        if passwd == "":
-            sys.stderr.write("Starting over\n\n") 
-            continue
+def acquire_gitlab_private_token(url, credentials_callback=get_credentials):
+    retries = 3
+    while retries > 0:
+        retries -= 1
+        login, passwd = credentials_callback(url)
         r = requests.post(urljoin(url, "api/v3/session"), data={"login": login, "password": passwd})
         if r.status_code == 401:
             sys.stderr.write("Access denied\n")
             continue
-        r.raise_for_status()
         break
+    r.raise_for_status()
     return r.json()["private_token"]
 
 
-def find_available_gitlab_projects(url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, verbose=True):
+def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, verbose=True):
     server_name = urlsplit(url)[1]
     if cache is not None:
-        cached_projects = cache.get_object(url_to_cache_name(url), GITLAB_PACKAGE_CACHE_VERSION, [])
+        cached_projects = cache.get_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, [])
     else:
         cached_projects = []
     if not cache_only and private_token is not None:
@@ -120,7 +122,7 @@ def find_available_gitlab_projects(url, private_token=None, cache=None, timeout=
     else:
         projects = cached_projects
     if cache is not None:
-        cache.set_object(url_to_cache_name(url), GITLAB_PACKAGE_CACHE_VERSION, projects)
+        cache.set_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, projects)
     return projects
 
 
