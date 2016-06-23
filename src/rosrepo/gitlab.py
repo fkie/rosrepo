@@ -62,7 +62,11 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
     return []
 
 
+_cached_tokens = {}
+
 def acquire_gitlab_private_token(url, credentials_callback=get_credentials):
+    global _cached_tokens
+    if url in _cached_tokens: return _cached_tokens[url]
     retries = 3
     while retries > 0:
         retries -= 1
@@ -73,7 +77,9 @@ def acquire_gitlab_private_token(url, credentials_callback=get_credentials):
             continue
         break
     r.raise_for_status()
-    return r.json()["private_token"]
+    token = r.json()["private_token"]
+    _cached_tokens[url] = token
+    return token
 
 
 def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, verbose=True):
