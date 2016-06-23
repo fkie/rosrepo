@@ -130,7 +130,7 @@ def sanitize(msg):
     return msg
 
 
-def fmt(msg, reset=True):
+def fmt(msg, use_color=True, reset=True):
     """Replaces color annotations with ansi escape sequences"""
     global _ansi
     msg = msg.replace('@!', '@{boldon}')
@@ -138,12 +138,7 @@ def fmt(msg, reset=True):
     msg = msg.replace('@_', '@{ulon}')
     msg = msg.replace('@|', '@{reset}')
     t = ColorTemplate(msg)
-    return t.substitute(_ansi) + (ansi('reset') if reset else '')
-
-
-def color_strip(msg):
-    t = ColorTemplate(msg)
-    return t.substitute(_no_ansi)
+    return t.substitute(_ansi if use_color else _no_ansi) + (ansi('reset') if reset and use_color else '')
 
 
 def test_colors():
@@ -159,41 +154,3 @@ def test_colors():
     cprint("| @{cf}Cyan       @|| @!@{cf}Cyan Bold")
     cprint("| White      | @!White Bold")
 
-
-class ColorMapper(object):
-
-    """This class encapsulates a set of human-readable format strings and the
-    functionality to convert them into colorized version.
-    """
-
-    # This map translates more human reable format strings into colorized versions
-    default_color_translation_map = {
-        # 'output': 'colorized_output'
-        '': fmt('@!' + sanitize('') + '@|')
-    }
-
-    def __init__(self, color_map={}):
-        """Create a color mapper with a given map.
-
-        :param color_map: A dictionary of format strings and colorized verisons
-        :type color_map: dict
-        """
-        self.color_map = ColorMapper.default_color_translation_map
-        self.color_map.update(color_map)
-
-    def clr(self, key):
-        """Returns a colorized version of the string given.
-
-        This is occomplished by either returning a hit from the color translation
-        map or by calling :py:func:`fmt` on the string and returning it.
-
-        :param key: string to be colorized
-        :type key: str
-        """
-        global _color_on
-        if not _color_on:
-            return fmt(key)
-        val = self.color_map.get(key, None)
-        if val is None:
-            return fmt(key)
-        return val

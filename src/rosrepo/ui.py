@@ -5,10 +5,9 @@ Copyright (c) 2016 Fraunhofer FKIE
 import sys
 from getpass import getpass
 import textwrap
+from itertools import chain
 from .util import get_terminal_size
-from .terminal_color import ColorMapper, color_strip
-
-color_mapper = ColorMapper()
+from .terminal_color import fmt as color_fmt
 
 terminal_width = {}
 try:
@@ -22,7 +21,7 @@ except OSError:
 
 
 def msg(text, max_width=None, wrap=True, fd=sys.stdout, initial_indent="", subsequent_indent=""):
-    lines = color_mapper.clr(text).split("\n")
+    lines = text.split("\n")
     if wrap:
         try:
             if max_width is None:
@@ -31,19 +30,19 @@ def msg(text, max_width=None, wrap=True, fd=sys.stdout, initial_indent="", subse
             pass
         if max_width is not None:
             lines = [textwrap.fill(line, width=max_width, initial_indent=initial_indent, subsequent_indent=subsequent_indent) for line in lines]
-    fd.write("\n".join(lines))
+    fd.write(color_fmt("\n".join(lines), use_color=fd.isatty()))
 
 
 def error(text):
-    msg ("@!@{rf}%s: error: %s@|\n" % (sys.argv[0], text), fd=sys.stderr, subsequent_indent=" " * (len(sys.argv[0]) + 9))
+    msg ("@!@{rf}%s: error: %s\n" % (sys.argv[0], text), fd=sys.stderr, subsequent_indent=" " * (len(sys.argv[0]) + 9))
 
 
 def warning(text):
-    msg ("@!@{yf}%s: warning: %s@|\n" % (sys.argv[0], text), fd=sys.stderr, subsequent_indent=" " * (len(sys.argv[0]) + 11))
+    msg ("@!@{yf}%s: warning: %s\n" % (sys.argv[0], text), fd=sys.stderr, subsequent_indent=" " * (len(sys.argv[0]) + 11))
 
 
 def get_credentials(domain):
-    msg("@!Authentication required for @{cf}%s@|\n" % domain, fd=sys.stderr)
+    msg("@!Authentication required for @{cf}%s\n" % domain, fd=sys.stderr)
     while True:
         login = raw_input("Username: ")
         if login == "": continue
@@ -74,23 +73,27 @@ class TableView(object):
     def write(self, fd=sys.stdout):
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
-        try:
-            total_width = terminal_width.get(fd.fileno(), get_terminal_size(fd))[0] - 1
-        except OSError:
+        use_color = fd.isatty()
+        if fd.isatty():
+            try:
+                total_width = terminal_width.get(fd.fileno(), get_terminal_size(fd))[0] - 1
+            except OSError:
+                total_width = 79
+        else:
             total_width = None
         if total_width is not None:
             while actual_width > total_width:
                 max_width = max(width)
                 width = [min(max_width - 1, w) for w in width]
                 actual_width = sum(width) + 3 * len(width) + 1
-        fmt = " "+" @{pf}|@| ".join(["%%-%ds" % (w + 4) for w in (width)]) + "\n"
-        sep = "@{pf}-" + "-+-".join(["-" * w for w in width]) + "-@|\n"
-        fd.write(color_mapper.clr(sep))
-        fd.write(color_mapper.clr(fmt % tuple("@!%s@|" % r[:w] for r, w in zip(self.columns, width))))
-        fd.write(color_mapper.clr(sep))
+        fmt = " "+" @{pf}|@| ".join(["%%s%%-%ds%%s" % w for w in (width)]) + "\n"
+        sep = "@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n"
+        fd.write(color_fmt(sep, use_color=use_color))
+        fd.write(color_fmt(fmt % tuple(chain(*(("@!", r[:w], "@|") for r, w in zip(self.columns, width)))), use_color=use_color))
+        fd.write(color_fmt(sep, use_color=use_color))
         for row in self.rows:
             for line in map(None, *row):
                 chunks = (self._chunk(r if r is not None else "", w) for r,w in zip(line, width))
                 for chunk in map(None, *chunks):
-                    fd.write(color_mapper.clr(fmt % tuple(("@|%s@|" % r[:w] if r is not None else "@|@|") for r, w in zip(chunk, width))))
-        fd.write(color_mapper.clr(sep))
+                    fd.write(color_fmt(fmt % tuple(chain(*(("", r[:w] if r is not None else "", "") for r, w in zip(chunk, width)))), use_color=use_color))
+        fd.write(color_fmt(sep, use_color=use_color))
