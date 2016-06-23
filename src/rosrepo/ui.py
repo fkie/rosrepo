@@ -64,6 +64,9 @@ class TableView(object):
         self.rows.append(row)
         self.width = [max(w, *(len(r) for r in rs)) for w,rs in zip(self.width, row)]
 
+    def empty(self):
+        return len(self.rows) == 0
+
     def sort(self, column_index):
         self.rows.sort(key=lambda x: x[column_index])
 

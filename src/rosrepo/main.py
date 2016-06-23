@@ -44,11 +44,15 @@ def prepare_arguments(parser):
     # list
     p = cmds.add_parser("list", help="list packages in workspace")
     add_common_options(p)
-    m = p.add_mutually_exclusive_group(required=False)
-    m.add_argument("-a", "--all", "--available", action="store_true", help="list all available packages")
-    m.add_argument("-b", "--build", action="store_true", help="list packages which will be built by the \"build\" command if no other argument is given (default)")
-    m.add_argument("-p", "--pinned", action="store_true", help="list packages which are pinned and will always be built")
-    p.add_argument("-n", "--name-only", action="store_true", help="only display the package names")
+    p.add_argument("-a", "--all", "--available", action="store_true", help="list all available packages")
+    p.add_argument("-v", "--invert", action="store_true", help="invert the meaning of package selectors")
+    p.add_argument("-n", "--package-names", action="store_true", help="only display the package names")
+    g = p.add_argument_group("package selectors")
+    g.add_argument("-S", "--default-set-only", action="store_true", help="list only packages in the default set")
+    g.add_argument("-P", "--pinned-set-only", action="store_true", help="list only packages in the pinned set")
+    g.add_argument("-B", "--built-only", action="store_true", help="list only packages which have been built in this workspace")
+    g.add_argument("-W", "--workspace-only", action="store_true", help="list only packages which are in the workspace")
+    g.add_argument("-D", "--dependees", action="store_true", help="also list dependees for default and pinned set")
     from .cmd_list import run as list_func
     p.set_defaults(func=list_func)
 

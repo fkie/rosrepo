@@ -36,7 +36,7 @@ def get_rosdep():
         return Rosdep(view=None)
 
 
-def find_depends(packages, ws_avail, gitlab_avail):
+def find_dependees(packages, ws_avail, gitlab_avail):
     rosdep = get_rosdep()
     depends = set()
     missing = set()
