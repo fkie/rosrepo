@@ -118,18 +118,6 @@ class ColorTemplate(string.Template):
     delimiter = '@'
 
 
-def sanitize(msg):
-    """Sanitizes the existing msg, use before adding color annotations"""
-    msg = msg.replace('@', '@@')
-    msg = msg.replace('{', '{{')
-    msg = msg.replace('}', '}}')
-    msg = msg.replace('@@!', '@{atexclimation}')
-    msg = msg.replace('@@/', '@{atfwdslash}')
-    msg = msg.replace('@@_', '@{atunderscore}')
-    msg = msg.replace('@@|', '@{atbar}')
-    return msg
-
-
 def fmt(msg, use_color=True, reset=True):
     """Replaces color annotations with ansi escape sequences"""
     global _ansi
