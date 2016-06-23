@@ -49,6 +49,15 @@ def prepare_arguments(parser):
     from .cmd_list import run as list_func
     p.set_defaults(func=list_func)
 
+    # bash
+    p = cmds.add_parser("bash", help="print environment variables")
+    add_common_options(p)
+    p.add_argument("-t", "--terse", action="store_true", help="only print the value itself")
+    p.add_argument("-e", "--export", action="store_true", help="prepend variable definition with export keyword")
+    p.add_argument("var", nargs="*", help="environment variable is to be queried")
+    from .cmd_bash import run as bash_func
+    p.set_defaults(func=bash_func)
+
     return parser
 
 
