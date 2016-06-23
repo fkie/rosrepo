@@ -3,7 +3,11 @@ Copyright (c) 2016 Fraunhofer FKIE
 
 """
 import os
+import fcntl
+import termios
+import struct
 from tempfile import mkstemp
+from subprocess import Popen, PIPE
 
 
 class NamedTuple(object):
@@ -73,3 +77,41 @@ def write_atomic(filepath, data, mode=0644, ignore_fail=False):
                 if not ignore_fail: raise
     except (IOError, OSError):
         if not ignore_fail: raise
+
+
+def get_terminal_size(fd):
+    try:
+        cr = struct.unpack('hh', fcntl.ioctl(fd.fileno(), termios.TIOCGWINSZ, '1234'))
+    except (IOError, struct.error):
+        raise OSError("Cannot determine terminal size")
+    return int(cr[1]), int(cr[0])
+
+
+def find_program(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            fpath = path.strip('"')
+            candidate = os.path.join(fpath, fname)
+            if is_exe(candidate):
+                return candidate
+    return None
+
+
+def getmtime(path):
+    return os.path.getmtime(path) if os.path.exists(path) else 0
+
+
+def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None, env=None, input_data=None):
+    p = Popen(args, bufsize=bufsize, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, env=env)
+    if stdin == PIPE or stdout == PIPE or stderr == PIPE:
+        stdoutdata, stderrdata = p.communicate(input_data)
+        return p.returncode, stdoutdata, stderrdata
+    else:
+        p.wait()
+    return p.returncode

@@ -6,11 +6,12 @@ import sys
 from .util import UserError
 from yaml import YAMLError
 from pickle import PickleError
-
+from .ui import error
 
 def add_common_options(parser):
-    g = parser.add_argument_group("Common options")
+    g = parser.add_argument_group("common options")
     g.add_argument("-w", "--workspace", help="override workspace location (default: autodetect)")
+    g.add_argument("--offline", "--offline-mode", action="store_true", help="assume no network connection; do not contact Gitlab servers")
 
 
 def prepare_arguments(parser):
@@ -56,19 +57,19 @@ def run_rosrepo (args):
         if hasattr(args, "func"):
             return args.func(args)
         else:
-            sys.stderr.write("%s: Internal error: undefined command\n\n" % sys.argv[0])
+            error("internal error: undefined command\n", fd=sys.stderr)
     except UserError as e:
-        sys.stderr.write("%s: error: %s\n\n" % (sys.argv[0], str(e)))
+        error("%s\n" % str(e))
     except YAMLError as e:
-        sys.stderr.write("%s: YAML error: %s\n\n" % (sys.argv[0], str(e)))
+        error("YAML: %s\n" % str(e))
     except PickleError as e:
-        sys.stderr.write("%s: pickle error: %s\n\n" % (sys.argv[0], str(e)))
+        error("Pickle: %s\n" % str(e))
     except OSError as e:
-        sys.stderr.write("%s: OS error: %s\n\n" % (sys.argv[0], str(e)))
+        error("OS: %s\n" % str(e))
     except IOError as e:
-        sys.stderr.write("%s: I/O error: %s\n\n" % (sys.argv[0], str(e)))
+        error("IO: %s\n" % str(e))
     except KeyboardInterrupt:
-        sys.stderr.write("\n%s: interrupted by user\n" % sys.argv[0])
+        error("interrupted by user\n")
     return 1
 
 

@@ -16,7 +16,7 @@ try:
 except ImportError:
     from urllib.parse import urljoin, urlsplit
 
-from .ui import get_credentials
+from .ui import get_credentials, msg, warning, error
 from .util import iteritems, NamedTuple
 
 
@@ -24,6 +24,11 @@ GITLAB_PACKAGE_CACHE_VERSION = 1
 
 class GitlabProject(NamedTuple):
     __slots__ = ("server", "name", "id", "website", "url", "packages", "last_modified", "workspace_path")
+    def __cmp__(self, other):
+        if not hasattr(other, "server") or not hasattr(other, "id"): return NotImplemented
+        c = cmp(self.server, other.server)
+        if c != 0: return c
+        return cmp(self.id, other.id)
 
 class GitlabPackage(NamedTuple):
     __slots__ = ("manifest", "project", "project_path", "manifest_blob", "manifest_xml")
@@ -50,7 +55,7 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
             if e["type"] == "blob" and e["name"] == PACKAGE_MANIFEST_FILENAME:
                 return [(path, e["id"])]
         if depth == 0: return []
-        result = [] 
+        result = []
         for d in dirs:
             result += crawl_project_for_packages(session, url, project_id, os.path.join(path, d), depth - 1, timeout)
         return result
@@ -64,7 +69,7 @@ def acquire_gitlab_private_token(url, credentials_callback=get_credentials):
         login, passwd = credentials_callback(url)
         r = requests.post(urljoin(url, "api/v3/session"), data={"login": login, "password": passwd})
         if r.status_code == 401:
-            sys.stderr.write("Access denied\n")
+            msg("@!@{rf}Access denied@!\n", fd=sys.stderr)
             continue
         break
     r.raise_for_status()
@@ -77,11 +82,10 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
         cached_projects = cache.get_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, [])
     else:
         cached_projects = []
-    if not cache_only and private_token is not None:
+    if not cache_only and url is not None and private_token is not None:
         projects = []
         try:
             with requests.Session() as s:
-                if verbose: sys.stdout.write("Fetching: %s\n" % url)
                 s.headers.update({"PRIVATE-TOKEN": private_token})
                 r = s.get(urljoin(url, "api/v3/projects"), timeout=timeout)
                 r.raise_for_status()
@@ -112,12 +116,12 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                             try:
                                 manifest = parse_package_string(xml_data, filename)
                             except InvalidPackage as e:
-                                sys.stdout.write("Ignoring %s: %s\n" % (filename, str(e)))
+                                warning("'%s' hosts invalid package '%s': %s\n" % (p.website, filename, str(e)))
                                 manifest = None
                             p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
                     projects.append(p)
         except IOError as e:
-            if verbose: sys.stdout.write("Error while updating from %s: %s\n" % (url, e))
+            error("cannot update from %s: %s\n" % (url, e))
             projects = cached_projects
     else:
         projects = cached_projects

@@ -6,8 +6,9 @@ import os
 import sys
 from .config import Config, ConfigError, Version
 from .cache import Cache
-from .gitlab import find_available_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects
+from .gitlab import find_available_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects, acquire_gitlab_private_token
 from .util import path_has_prefix, iteritems, NamedTuple, UserError
+from .ui import msg, warning
 
 
 WORKSPACE_PACKAGE_CACHE_VERSION = 1
@@ -81,6 +82,8 @@ def find_workspace(override=None):
     if override is not None:
         if is_workspace(override): return os.path.realpath(override)
         return None
+    wsdir = os.getcwd()
+    if is_workspace(wsdir): return os.path.realpath(wsdir)
     if "ROS_PACKAGE_PATH" in os.environ:
         candidates = os.environ["ROS_PACKAGE_PATH"].split(os.pathsep)
         for path in candidates:
@@ -135,64 +138,66 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
 def get_workspace_location(override):
     wsdir = find_workspace(override)
     if wsdir is not None:
-        type, version = detect_workspace_type(wsdir)
-        if type == 3:
+        wstype, wsversion = detect_workspace_type(wsdir)
+        if wstype == 3:
             return wsdir
-        sys.stderr.write("catkin workspace detected in %s\n\n" % wsdir)
-        if type == -1:
-            sys.stderr.write(
+        msg("catkin workspace detected in @{cf}%s@|\n\n" % wsdir, fd=sys.stderr)
+        if wstype == -1:
+            msg(
                 "I found a catkin workspace, but it seems to be broken.\n\n"
-                "You can delete any corrupted settings and reinitialize the\n"
+                "You can delete any corrupted settings and reinitialize the "
                 "workspace for rosrepo with the command\n\n"
-                "    rosrepo init --reset %(path)s\n\n"
-                % {"path": wsdir}
+                "    @!rosrepo init --reset %(path)s@|\n\n"
+                % {"path": wsdir}, fd=sys.stderr
             )
-        if type == 0:
-            sys.stderr.write(
+        if wstype == 0:
+            msg(
                 "I found a catkin workspace, but it is not configured with rosrepo.\n\n"
                 "If you wish to use rosrepo with this workspace, run the command\n\n"
-                "    rosrepo init %(path)s\n\n"
-                % {"path": wsdir}
+                "    @!rosrepo init %(path)s@|\n\n"
+                % {"path": wsdir}, fd=sys.stderr
             )
-        if type == 4:
-            sys.stderr.write(
+        if wstype == 4:
+            msg(
                 "This catkin workspace has been configured by a newer version of rosrepo.\n\n"
-                "Please upgrade rosrepo to at least version %(new_version)s\n\n"
-                % {"new_version": version}
+                "Please upgrade rosrepo to at least version @{cf}%(new_version)s@|\n\n"
+                % {"new_version": wsversion}, fd=sys.stderr
             )
-        if type == 1 or type == 2:
-            sys.stderr.write(
-                "This catkin workspace has been configured by rosrepo %(version)s\n\n"
-                "If you wish to use this version of rosrepo, you need to reinitialize the\n"
+        if wstype == 1 or wstype == 2:
+            from . import __version__
+            msg(
+                "This catkin workspace has been configured by rosrepo @{cf}%(old_version)s@|, "
+                "but you are currently running version @{cf}%(new_version)s@|\n\n"
+                "If you wish to use the new version of rosrepo, you need to reinitialize the "
                 "workspace with the command\n\n"
-                "    rosrepo init %(path)s\n\n"
-                % {"version": version, "path": wsdir}
+                "    @!rosrepo init %(path)s@|\n\n"
+                % {"old_version": wsversion, "new_version": __version__, "path": wsdir}, fd=sys.stderr
             )
         if override is None:
-            sys.stderr.write(
-                "If this is not the workspace location you were looking for, try\n"
-                "the --workspace option to override the automatic detection.\n\n"
+            msg(
+                "If this is not the workspace location you were looking for, try "
+                "the @{cf}--workspace@| option to override the automatic detection.\n\n",
+                fd=sys.stderr
             )
     else:
         if override is not None:
-            sys.stderr.write(
+            msg(
                 "There is no catkin workspace in %(path)s\n\n"
                 "You can create a new workspace there by running\n\n"
                 "    rosrepo init %(path)s\n\n"
-                "If you are really sure that there is a workspace there already,\n"
-                "it is possible that the marker file has been deleted by accident.\n"
-                "In that case, you can repair the workspace with\n\n"
-                "    touch %(path)/.catkin_workspace\n\n" 
-                % {"path": override}
+                "If you are really sure that there is a workspace there already, "
+                "it is possible that the marker file has been deleted by accident. "
+                "In that case, the above command will restore your workspace.\n\n"
+                % {"path": override}, fd=sys.stderr
             )
         else:
-            sys.stderr.write(
+            msg(
                 "I cannot find any catkin workspace.\n\n"
-                "Please make sure that you have sourced the setup.bash file of\n"
-                "your workspace or use the --workspace option to override the\n"
-                "automatic detection. If you have never created a workspace yet,\n"
-                "you can initialize one in your home directory with"
-                "    rosrepo init %s/ros\n\n"
+                "Please make sure that you have sourced the @{cf}setup.bash@| file of "
+                "your workspace or use the @{cf}--workspace@| option to override the "
+                "automatic detection. If you have never created a workspace yet, "
+                "you can initialize one in your home directory with\n\n"
+                "    @!rosrepo init %s/ros@|\n\n"
                 % os.path.expanduser("~")
             )
     raise UserError("valid workspace location required")
@@ -201,17 +206,17 @@ def get_workspace_location(override):
 def migrate_workspace(wsdir):
     import shutil
     import pickle
-    type, version = detect_workspace_type(wsdir)
+    wstype, wsversion = detect_workspace_type(wsdir)
     srcdir = os.path.join(wsdir, "src")
-    if type == 1 or type == 2:
+    if wstype == 1 or wstype == 2:
         builddir = os.path.join(wsdir, "build")
         develdir = os.path.join(wsdir, "devel")
         installdir = os.path.join(wsdir, "install")
         if os.path.isdir(builddir): shutil.rmtree(builddir)
         if os.path.isdir(develdir): shutil.rmtree(develdir)
         if os.path.isdir(installdir): shutil.rmtree(installdir)
-        sys.stdout.write("Migrating workspace format %s...\n" % version)
-    if type == 1:
+        msg("Migrating workspace format @{cf}%s@|...\n" % wsversion)
+    if wstype == 1:
         repodir = os.path.normpath(os.path.join(wsdir, "repos"))
         metainfo = os.path.join(repodir, ".metainfo")
         toplevel_cmake = os.path.join(srcdir, "toplevel.cmake")
@@ -225,10 +230,10 @@ def migrate_workspace(wsdir):
                 with open(metainfo, "r") as f:
                     old_meta = yaml.safe_load(f)
             except Exception as e:
-                pass
+                warning("cannot migrate metadata: %s\n" % str(e))
         cfg = Config(wsdir)
         cfg["pinned_build"] = []
-        cfg["default_build"] = [] 
+        cfg["default_build"] = []
         try:
             srcfiles = os.listdir(srcdir)
             for entry in srcfiles:
@@ -253,10 +258,10 @@ def migrate_workspace(wsdir):
             sys.stderr.write("Error: %s" % str(e))
             sys.exit(1)
         cfg.write()
-    if type == 2:
+    if wstype == 2:
         cfg = Config(wsdir)
         cfg["pinned_build"] = []
-        cfg["default_build"] = [] 
+        cfg["default_build"] = []
         infodir = os.path.join(wsdir, ".rosrepo")
         infofile = os.path.join(infodir, "info")
         packages = {}
@@ -266,34 +271,39 @@ def migrate_workspace(wsdir):
                     packages = pickle.load(f)
                 os.unlink(infofile)
             except Exception as e:
-                sys.stderr.write("Cannot migrate metadata: %s\n" % str(e))
+                warning("cannot migrate metadata: %s\n" % str(e))
         for name, info in iteritems(packages):
-            if info.pinned: 
+            if info.pinned:
                 cfg["pinned_build"].append(name)
             elif info.selected:
-                cfg["default_build"].append(name)    
+                cfg["default_build"].append(name)
         cfg.write()
         try:
             os.unlink(os.path.join(wsdir, "setup.bash"))
         except OSError:
             pass
-        shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "rosrepo"), ignore_errors=True)      
+        shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "rosrepo"), ignore_errors=True)
         shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "profiles", "rosrepo"), ignore_errors=True)
-        
+
 
 def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verbose=True):
     if config is None: config = Config(wsdir)
     if cache is None: cache = Cache(wsdir)
-    pkg_avail = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
+    ws_avail = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
     gitlab_projects = []
-    if "gitlab_servers" in config.data:
-        for gitlab_cfg in config.data["gitlab_servers"]:
-            if not "url" in gitlab_cfg: continue
-            gitlab_projects += find_available_gitlab_projects(gitlab_cfg["url"], private_token=gitlab_cfg.get("private_token", None), cache=cache, cache_only=offline_mode, verbose=verbose)
-    gitlab_avail = find_catkin_packages_from_gitlab_projects(gitlab_projects)
+    if "gitlab_servers" in config:
+        for gitlab_cfg in config["gitlab_servers"]:
+            label = gitlab_cfg.get("label", None)
+            url = gitlab_cfg.get("url", None)
+            private_token = gitlab_cfg.get("private_token", None)
+            if url is not None and private_token is None:
+                private_token = acquire_gitlab_private_token("%s [%s]" % (label, url))
+            gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, verbose=verbose)
     cloned_projects = find_cloned_gitlab_projects(gitlab_projects, os.path.join(wsdir, "src"))
-    for _, pkg in iteritems(pkg_avail):
-        for prj in cloned_projects:
-            if path_has_prefix(pkg.workspace_path, prj.workspace_path):
-                pkg.project = prj
-    return pkg_avail, gitlab_avail
+    gitlab_avail = find_catkin_packages_from_gitlab_projects(gitlab_projects)
+    for _, pkg_list in iteritems(ws_avail):
+        for pkg in pkg_list:
+            for prj in cloned_projects:
+                if path_has_prefix(pkg.workspace_path, prj.workspace_path):
+                    pkg.project = prj
+    return ws_avail, gitlab_avail

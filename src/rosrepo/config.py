@@ -31,7 +31,7 @@ class Config(object):
                 raise ConfigError("Workspace was configured by newer version of rosrepo")
         else:
             self._data = {"version": __version__}
-    
+
     def write(self):
         if self.read_only: raise RuntimeError("Cannot write config file marked as read only")
         if not os.path.isdir(self.config_dir):
@@ -40,15 +40,20 @@ class Config(object):
 
     def _migrate(self, old_version):
         self._data["version"] = __version__
-    
+
+    def set_default(self, key, value):
+        if not key in self._data: self._data[key] = value
+
+    def get(self, key, default=None): return self._data.get(key, default)
+
     def __getitem__(self, key): return self._data[key]
-    
+
     def __setitem__(self, key, value):
-        if self.read_only: raise ValueError("Cannot change read-only configuration") 
+        if self.read_only: raise ValueError("Cannot change read-only configuration")
         self._data[key] = value
-    
+
     def __iter__(self): return self._data.__iter__()
-    
+
     def __len__(self): return len(self._data)
-    
+
     def __contains__(self, key): return key in self._data

@@ -3,24 +3,27 @@ Copyright (c) 2016 Fraunhofer FKIE
 
 """
 import os
-import sys
-from subprocess import call as call_program
 from shutil import rmtree
 from .workspace import find_ros_root, is_workspace, migrate_workspace
-from .util import makedirs, UserError
+from .util import makedirs, UserError, call_process, path_has_prefix
 from .config import Config
+from .ui import msg
+from .common import DEFAULT_CMAKE_ARGS
 
 
 def run(args):
     wsdir = os.path.normpath(args.path)
-    if os.path.isdir(wsdir) and os.path.realpath(wsdir) == os.path.realpath(os.path.expanduser("~")):
-        raise UserError("I'm not turning your $HOME directory into a catkin workspace")
+    if os.path.isdir(wsdir):
+        if os.path.realpath(wsdir) == os.path.realpath(os.path.expanduser("~")):
+            raise UserError("I'm not turning your $HOME directory into a catkin workspace")
+        if path_has_prefix(os.path.realpath(wsdir), os.path.realpath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))):
+            raise UserError("I'm not turning your rosrepo source folder into a catkin workspace")
     ros_rootdir = find_ros_root(args.ros_root)
     if ros_rootdir is None:
-        raise UserError("Cannot detect ROS distribution. Please source setup.bash or use --ros-root option.")
+        raise UserError("cannot detect ROS distribution. Please source setup.bash or use --ros-root option")
     if is_workspace(wsdir):
         if args.reset:
-            sys.stdout.write("Resetting workspace\n")
+            msg("Resetting workspace\n")
             rmtree(os.path.join(wsdir, ".rosrepo"), ignore_errors=True)
             rmtree(os.path.join(wsdir, ".catkin_tools"), ignore_errors=True)
             rmtree(os.path.join(wsdir, "build"), ignore_errors=True)
@@ -46,5 +49,5 @@ def run(args):
     cfg = Config(wsdir)
     if args.ros_root: cfg.data["ros_root"] = ros_rootdir
     cfg.write()
-    catkin_init = ["catkin", "config", "--workspace", wsdir, "--extend", ros_rootdir]
-    return call_program(catkin_init)
+    catkin_init = ["catkin", "config", "--workspace", wsdir, "--extend", ros_rootdir, "--cmake-args"] + DEFAULT_CMAKE_ARGS
+    return call_process(catkin_init)
