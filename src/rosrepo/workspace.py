@@ -4,6 +4,7 @@ Copyright (c) 2016 Fraunhofer FKIE
 """
 import os
 import sys
+from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_FILENAME
 from .config import Config, ConfigError, Version
 from .cache import Cache
 from .gitlab import find_available_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects, acquire_gitlab_private_token
@@ -95,7 +96,6 @@ def find_workspace(override=None):
 
 
 def find_catkin_packages(srcdir, subdir=None, cache=None):
-    from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_FILENAME
     cached_paths = {}
     if cache is not None:
         cached_paths = cache.get_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, cached_paths)
