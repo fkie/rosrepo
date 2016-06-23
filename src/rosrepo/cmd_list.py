@@ -89,7 +89,7 @@ def run(args):
             "@!D@|=Dependee   "
             "@!P@|=Pinned   "
             "@!U@|=Upstream   "
-            "\n", initial_indent="  ", subsequent_indent="  "
+            "\n", indent_first=2, indent_next=2
             )
         sys.stdout.write("\n")
     return 0

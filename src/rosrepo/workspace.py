@@ -198,7 +198,7 @@ def get_workspace_location(override):
                 "automatic detection. If you have never created a workspace yet, "
                 "you can initialize one in your home directory with\n\n"
                 "    @!rosrepo init %s/ros@|\n\n"
-                % os.path.expanduser("~")
+                % os.path.expanduser("~"), fd=sys.stderr
             )
     raise UserError("valid workspace location required")
 
