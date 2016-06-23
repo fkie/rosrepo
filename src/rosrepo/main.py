@@ -44,8 +44,11 @@ def prepare_arguments(parser):
     # list
     p = cmds.add_parser("list", help="list packages in workspace")
     add_common_options(p)
-    p.add_argument("-A", "--all", "--available", help="list all available packages")
-    p.add_argument("-B", "--build", help="list packages which will be built by the \"build\" command by default")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("-a", "--all", "--available", action="store_true", help="list all available packages")
+    m.add_argument("-b", "--build", action="store_true", help="list packages which will be built by the \"build\" command if no other argument is given (default)")
+    m.add_argument("-p", "--pinned", action="store_true", help="list packages which are pinned and will always be built")
+    p.add_argument("-n", "--name-only", action="store_true", help="only display the package names")
     from .cmd_list import run as list_func
     p.set_defaults(func=list_func)
 
