@@ -7,7 +7,7 @@ import sys
 from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_FILENAME
 from .config import Config, ConfigError, Version
 from .cache import Cache
-from .gitlab import find_available_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects, acquire_gitlab_private_token
+from .gitlab import get_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects
 from .util import path_has_prefix, iteritems, NamedTuple, UserError
 from .ui import msg, warning
 
@@ -287,19 +287,13 @@ def migrate_workspace(wsdir):
 
 
 def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verbose=True):
-    if config is None: config = Config(wsdir)
-    if cache is None: cache = Cache(wsdir)
+    if config is None:
+        config = Config(wsdir)
+    if cache is None:
+        cache = Cache(wsdir)
     ws_avail = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
-    gitlab_projects = []
-    if "gitlab_servers" in config:
-        for gitlab_cfg in config["gitlab_servers"]:
-            label = gitlab_cfg.get("label", None)
-            url = gitlab_cfg.get("url", None)
-            private_token = gitlab_cfg.get("private_token", None)
-            if url is not None and private_token is None:
-                private_token = acquire_gitlab_private_token("%s [%s]" % (label, url))
-            gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, verbose=verbose)
-    cloned_projects = find_cloned_gitlab_projects(gitlab_projects, os.path.join(wsdir, "src"))
+    gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
+    cloned_projects, other_git = find_cloned_gitlab_projects(gitlab_projects, os.path.join(wsdir, "src"))
     gitlab_avail = find_catkin_packages_from_gitlab_projects(gitlab_projects)
     for _, pkg_list in iteritems(ws_avail):
         for pkg in pkg_list:

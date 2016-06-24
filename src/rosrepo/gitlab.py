@@ -64,13 +64,15 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
 
 _cached_tokens = {}
 
-def acquire_gitlab_private_token(url, credentials_callback=get_credentials):
+
+def acquire_gitlab_private_token(label, url, credentials_callback=get_credentials):
     global _cached_tokens
-    if url in _cached_tokens: return _cached_tokens[url]
+    if url in _cached_tokens:
+        return _cached_tokens[url]
     retries = 3
     while retries > 0:
         retries -= 1
-        login, passwd = credentials_callback(url)
+        login, passwd = credentials_callback("%s [%s]" % (label, url))
         r = requests.post(urljoin(url, "api/v3/session"), data={"login": login, "password": passwd})
         if r.status_code == 401:
             msg("@!@{rf}Access denied@!\n", fd=sys.stderr)
@@ -154,6 +156,7 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
         return False
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
     result = []
+    foreign = []
     for curdir, subdirs, _ in os.walk(base_path, followlinks=True):
         if ".git" in subdirs:
             repo = Repo(curdir)
@@ -163,8 +166,26 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
                     assert project.workspace_path is None or project.workspace_path == path
                     project.workspace_path = path
                     result.append(project)
-        subdirs = [s for s in subdirs if not s.startswith(".")]
-    return result
+                    break
+            else:
+                foreign.append(os.path.relpath(curdir, srcdir))
+            del subdirs[:]
+        else:
+            subdirs = [s for s in subdirs if not s.startswith(".")]
+    return result, foreign
+
+
+def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, verbose=True):
+    gitlab_projects = []
+    if "gitlab_servers" in config:
+        for gitlab_cfg in config["gitlab_servers"]:
+            label = gitlab_cfg.get("label", None)
+            url = gitlab_cfg.get("url", None)
+            private_token = gitlab_cfg.get("private_token", None)
+            if url is not None and private_token is None:
+                private_token = acquire_gitlab_private_token(label, url)
+            gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, verbose=verbose)
+    return gitlab_projects
 
 
 def make_gitlab_distfile(url, private_token=None, cache=None, timeout=None, verbose=True):
