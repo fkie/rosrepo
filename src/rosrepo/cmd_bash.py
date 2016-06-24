@@ -7,12 +7,15 @@ import sys
 from .workspace import get_workspace_location
 from .util import path_has_prefix
 
-def print_var (key, value, terse, export):
+
+def print_var(key, value, terse, export):
     sys.stdout.write("%s\n" % value if terse else "%s%s=%s\n" % ("export " if export else "", key, value))
+
 
 def run(args):
     wsdir = get_workspace_location(args.workspace)
-    if not args.var: args.var = ["ROS_WORKSPACE","ROS_PACKAGE_PATH"]
+    if not args.var:
+        args.var = ["ROS_WORKSPACE", "ROS_PACKAGE_PATH"]
     for key in args.var:
         if key == "ROS_WORKSPACE":
             print_var(key, wsdir, args.terse, args.export)
@@ -35,4 +38,5 @@ def run(args):
             if key in os.environ:
                 print_var(key, os.environ[key], args.terse, args.export)
             else:
-                if not args.terse: sys.stdout.write ("# variable %s is not set\n" % key)
+                if not args.terse:
+                    sys.stdout.write("# variable %s is not set\n" % key)

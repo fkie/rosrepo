@@ -25,6 +25,7 @@ import os
 _ansi = {}
 _no_ansi = {}
 
+
 def ansi(key):
     """Returns the escape sequence for a given ansi color key"""
     global _ansi
@@ -141,4 +142,3 @@ def test_colors():
     cprint("| @{pf}Purple     @|| @!@{pf}Purple Bold")
     cprint("| @{cf}Cyan       @|| @!@{cf}Cyan Bold")
     cprint("| White      | @!White Bold")
-

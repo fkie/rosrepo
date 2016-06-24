@@ -22,16 +22,26 @@ from .util import iteritems, NamedTuple
 
 GITLAB_PACKAGE_CACHE_VERSION = 1
 
+
 class GitlabProject(NamedTuple):
-    __slots__ = ("server", "name", "id", "website", "url", "packages", "last_modified", "workspace_path")
+    __slots__ = (
+        "server", "name", "id", "website", "url", "packages",
+        "last_modified", "workspace_path"
+    )
+
     def __cmp__(self, other):
-        if not hasattr(other, "server") or not hasattr(other, "id"): return NotImplemented
+        if not hasattr(other, "server") or not hasattr(other, "id"):
+            return NotImplemented
         c = cmp(self.server, other.server)
-        if c != 0: return c
+        if c != 0:
+            return c
         return cmp(self.id, other.id)
 
+
 class GitlabPackage(NamedTuple):
-    __slots__ = ("manifest", "project", "project_path", "manifest_blob", "manifest_xml")
+    __slots__ = (
+        "manifest", "project", "project_path", "manifest_blob", "manifest_xml"
+    )
 
 
 def url_to_cache_name(label, url):
@@ -50,11 +60,13 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
         entries = r.json()
         files = [e["name"] for e in entries if e["type"] == "blob"]
         dirs = [e["name"] for e in entries if e["type"] == "tree" and not e["name"].startswith(".")]
-        if "CATKIN_IGNORE" in files: return []
+        if "CATKIN_IGNORE" in files:
+            return []
         for e in entries:
             if e["type"] == "blob" and e["name"] == PACKAGE_MANIFEST_FILENAME:
                 return [(path, e["id"])]
-        if depth == 0: return []
+        if depth == 0:
+            return []
         result = []
         for d in dirs:
             result += crawl_project_for_packages(session, url, project_id, os.path.join(path, d), depth - 1, timeout)
@@ -64,9 +76,11 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
 
 _cached_tokens = {}
 
+
 def acquire_gitlab_private_token(label, url, credentials_callback=get_credentials):
     global _cached_tokens
-    if url in _cached_tokens: return _cached_tokens[url]
+    if url in _cached_tokens:
+        return _cached_tokens[url]
     retries = 3
     while retries > 0:
         retries -= 1
@@ -111,11 +125,12 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                     if cached_p is not None and cached_p.last_modified == p.last_modified:
                         p.packages = cached_p.packages
                     else:
-                        if verbose: sys.stdout.write ("Fetching: %s\n" % p.website)
+                        if verbose:
+                            sys.stdout.write("Fetching: %s\n" % p.website)
                         manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
                         p.packages = []
                         for path, blob in manifests:
-                            r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s"% (p.id, blob)), timeout=timeout)
+                            r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s" % (p.id, blob)), timeout=timeout)
                             r.raise_for_status()
                             filename = os.path.join(path, PACKAGE_MANIFEST_FILENAME)
                             xml_data = r.content
@@ -137,10 +152,12 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
 
 
 def find_catkin_packages_from_gitlab_projects(projects, result=None):
-    if result is None: result = {}
+    if result is None:
+        result = {}
     for prj in projects:
         for pkg in prj.packages:
-            if not pkg.manifest.name in result: result[pkg.manifest.name] = []
+            if pkg.manifest.name not in result:
+                result[pkg.manifest.name] = []
             result[pkg.manifest.name].append(pkg)
     return result
 
@@ -178,7 +195,8 @@ def make_gitlab_distfile(url, private_token=None, cache=None, timeout=None, verb
                 "project_path": pkg.project_path,
                 "manifest": {"blob": pkg.manifest_blob, "xml": pkg.manifest_xml},
             })
-        if not prj.server in result: result[prj.server] = []
+        if prj.server not in result:
+            result[prj.server] = []
         result[prj.server].append({
             "id": prj.id,
             "name": prj.name,
@@ -188,4 +206,3 @@ def make_gitlab_distfile(url, private_token=None, cache=None, timeout=None, verb
             "packages": packages,
         })
     return yaml.safe_dump(result, default_flow_style=False)
-

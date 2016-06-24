@@ -7,8 +7,10 @@ import pickle
 import zlib
 from .util import write_atomic, makedirs, NamedTuple
 
+
 class CacheFile(NamedTuple):
     __slots__ = ("version", "obj")
+
 
 class Cache(object):
 

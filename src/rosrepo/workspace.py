@@ -20,33 +20,43 @@ class Package(NamedTuple):
 
 
 def is_ros_root(path):
-    if not os.path.isdir(os.path.join(path, "bin")): return False
-    if not os.path.isdir(os.path.join(path, "etc")): return False
-    if not os.path.isdir(os.path.join(path, "include")): return False
-    if not os.path.isdir(os.path.join(path, "lib")): return False
-    if not os.path.isdir(os.path.join(path, "share")): return False
-    if not os.path.isfile(os.path.join(path, "setup.sh")): return False
+    if not os.path.isdir(os.path.join(path, "bin")):
+        return False
+    if not os.path.isdir(os.path.join(path, "etc")):
+        return False
+    if not os.path.isdir(os.path.join(path, "include")):
+        return False
+    if not os.path.isdir(os.path.join(path, "lib")):
+        return False
+    if not os.path.isdir(os.path.join(path, "share")):
+        return False
+    if not os.path.isfile(os.path.join(path, "setup.sh")):
+        return False
     return True
 
 
 def find_ros_root(override=None):
     if override is not None:
-        if is_ros_root(override): return os.path.realpath(override)
+        if is_ros_root(override):
+            return os.path.realpath(override)
         return None
     if "ROS_ROOT" in os.environ:
         rosrootdir = os.environ["ROS_ROOT"]
         if os.path.isdir(rosrootdir):
             rosdir = os.path.normpath(os.path.join(rosrootdir, os.pardir, os.pardir))
-            if is_ros_root(rosdir): return os.path.realpath(rosdir)
+            if is_ros_root(rosdir):
+                return os.path.realpath(rosdir)
     if "ROS_PACKAGE_PATH" in os.environ:
         candidates = os.environ["ROS_PACKAGE_PATH"].split(os.pathsep)
         candidates.reverse()
         for path in candidates:
             rosdir = os.path.normpath(os.path.join(path, os.pardir))
-            if is_ros_root(rosdir): return os.path.realpath(rosdir)
+            if is_ros_root(rosdir):
+                return os.path.realpath(rosdir)
     if os.path.islink("/opt/ros/current"):
         rosdir = os.path.join("/opt/ros", os.readlink("/opt/ros/current"))
-        if is_ros_root(rosdir): return os.path.realpath(rosdir)
+        if is_ros_root(rosdir):
+            return os.path.realpath(rosdir)
     return None
 
 
@@ -55,43 +65,54 @@ def is_workspace(path):
 
 
 def detect_workspace_type(path):
-    if not is_workspace(path): return -2, None
+    if not is_workspace(path):
+        return -2, None
     isdir = os.path.isdir
     isfile = os.path.isfile
     join = os.path.join
-    if not isdir(join(path, "src")): return -1, None
+    if not isdir(join(path, "src")):
+        return -1, None
     if isfile(join(path, ".rosrepo", "config")):
         try:
             from . import __version__
             cfg = Config(path, True)
             this_version = Version(__version__)
             ws_version = Version(cfg["version"])
-            if this_version < ws_version: return 4, cfg["version"]
+            if this_version < ws_version:
+                return 4, cfg["version"]
             return 3, cfg["version"]
         except ConfigError:
             return -1, None
-    if isdir(join(path, ".catkin_tools", "rosrepo")): return 2, "2.x"
-    if isdir(join(path, ".catkin_tools", "profiles", "rosrepo")): return 2, "2.1.5+"
+    if isdir(join(path, ".catkin_tools", "rosrepo")):
+        return 2, "2.x"
+    if isdir(join(path, ".catkin_tools", "profiles", "rosrepo")):
+        return 2, "2.1.5+"
     if isdir(join(path, "repos")):
-        if not isfile(join(path, "src", "CMakeLists.txt")): return -1, None
-        if not isfile(join(path, "src", "toplevel.cmake")): return -1, None
+        if not isfile(join(path, "src", "CMakeLists.txt")):
+            return -1, None
+        if not isfile(join(path, "src", "toplevel.cmake")):
+            return -1, None
         return 1, "1.x"
     return 0, None
 
 
 def find_workspace(override=None):
     if override is not None:
-        if is_workspace(override): return os.path.realpath(override)
+        if is_workspace(override):
+            return os.path.realpath(override)
         return None
     wsdir = os.getcwd()
-    if is_workspace(wsdir): return os.path.realpath(wsdir)
+    if is_workspace(wsdir):
+        return os.path.realpath(wsdir)
     if "ROS_PACKAGE_PATH" in os.environ:
         candidates = os.environ["ROS_PACKAGE_PATH"].split(os.pathsep)
         for path in candidates:
             wsdir = os.path.normpath(os.path.join(path, os.pardir))
-            if is_workspace(wsdir): return os.path.realpath(wsdir)
+            if is_workspace(wsdir):
+                return os.path.realpath(wsdir)
     wsdir = os.path.join(os.path.expanduser("~"), "ros")
-    if is_workspace(wsdir): return os.path.realpath(wsdir)
+    if is_workspace(wsdir):
+        return os.path.realpath(wsdir)
     return None
 
 
@@ -121,8 +142,9 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
                 if old_ts == cur_ts:
                     manifest = cached_paths[path]["m"]
             if manifest is None:
-                manifest = parse_package(os.path.join (srcdir, path, PACKAGE_MANIFEST_FILENAME))
-            if not manifest.name in result: result[manifest.name] = []
+                manifest = parse_package(os.path.join(srcdir, path, PACKAGE_MANIFEST_FILENAME))
+            if manifest.name not in result:
+                result[manifest.name] = []
             result[manifest.name].append(Package(manifest=manifest, workspace_path=path))
             discovered_paths[path] = {"t": cur_ts, "m": manifest}
         except InvalidPackage:
@@ -134,6 +156,7 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
     if cache is not None:
         cache.set_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, discovered_paths)
     return result
+
 
 def get_workspace_location(override):
     wsdir = find_workspace(override)
@@ -212,17 +235,22 @@ def migrate_workspace(wsdir):
         builddir = os.path.join(wsdir, "build")
         develdir = os.path.join(wsdir, "devel")
         installdir = os.path.join(wsdir, "install")
-        if os.path.isdir(builddir): shutil.rmtree(builddir)
-        if os.path.isdir(develdir): shutil.rmtree(develdir)
-        if os.path.isdir(installdir): shutil.rmtree(installdir)
+        if os.path.isdir(builddir):
+            shutil.rmtree(builddir)
+        if os.path.isdir(develdir):
+            shutil.rmtree(develdir)
+        if os.path.isdir(installdir):
+            shutil.rmtree(installdir)
         msg("Migrating workspace format @{cf}%s@|...\n" % wsversion)
     if wstype == 1:
         repodir = os.path.normpath(os.path.join(wsdir, "repos"))
         metainfo = os.path.join(repodir, ".metainfo")
         toplevel_cmake = os.path.join(srcdir, "toplevel.cmake")
         cmakelists_txt = os.path.join(srcdir, "CMakeLists.txt")
-        if os.path.exists(toplevel_cmake): os.unlink(toplevel_cmake)
-        if os.path.exists(cmakelists_txt): os.unlink(cmakelists_txt)
+        if os.path.exists(toplevel_cmake):
+            os.unlink(toplevel_cmake)
+        if os.path.exists(cmakelists_txt):
+            os.unlink(cmakelists_txt)
         old_meta = {}
         if os.path.isfile(metainfo):
             import yaml
@@ -248,7 +276,8 @@ def migrate_workspace(wsdir):
                                 elif not old_meta[entry]["auto"]:
                                     cfg["default_build"].append(entry)
                             os.unlink(path)
-            if os.path.isfile(metainfo): os.unlink(metainfo)
+            if os.path.isfile(metainfo):
+                os.unlink(metainfo)
             repofiles = os.listdir(repodir)
             for entry in repofiles:
                 path = os.path.join(repodir, entry)
@@ -287,8 +316,10 @@ def migrate_workspace(wsdir):
 
 
 def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verbose=True):
-    if config is None: config = Config(wsdir)
-    if cache is None: cache = Cache(wsdir)
+    if config is None:
+        config = Config(wsdir)
+    if cache is None:
+        cache = Cache(wsdir)
     ws_avail = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
     gitlab_projects = []
     if "gitlab_servers" in config:

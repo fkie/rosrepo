@@ -11,7 +11,8 @@ from subprocess import Popen, PIPE
 
 
 class NamedTuple(object):
-    __slots__= ()
+    __slots__ = ()
+
     def __init__(self, *args, **kwargs):
         slots = self.__slots__
         for k in slots:
@@ -19,15 +20,19 @@ class NamedTuple(object):
         if args:
             for k, v in zip(slots, args):
                 setattr(self, k, v)
+
     def __str__(self):
         clsname = self.__class__.__name__
         values = ", ".join("%s=%r" % (k, getattr(self, k)) for k in self.__slots__)
         return "%s(%s)" % (clsname, values)
     __repr__ = __str__
+
     def __getitem__(self, item):
         return getattr(self, self.__slots__[item])
+
     def __setitem__(self, item, value):
         return setattr(self, self.__slots__[item], value)
+
     def __len__(self):
         return len(self.__slots__)
 
@@ -45,16 +50,19 @@ class UserError(RuntimeError):
 def path_has_prefix(path, prefix):
     p = os.path.normpath(path)
     q = os.path.normpath(prefix)
-    if p == q: return True
+    if p == q:
+        return True
     head, tail = os.path.split(p)
     while tail != "":
-        if head == q: return True
+        if head == q:
+            return True
         head, tail = os.path.split(head)
     return False
 
 
 def makedirs(path):
-    if not os.path.isdir(path): os.makedirs(path)
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
 
 def write_atomic(filepath, data, mode=0644, ignore_fail=False):
@@ -64,19 +72,21 @@ def write_atomic(filepath, data, mode=0644, ignore_fail=False):
         with os.fdopen(fd, "wb") as f:
             f.write(data)
         try:
-            os.rename (filepath_tmp, filepath)
+            os.rename(filepath_tmp, filepath)
         except OSError:
             try:
                 os.unlink(filepath)
             except OSError:
                 pass
             try:
-                os.rename (filepath_tmp, filepath)
+                os.rename(filepath_tmp, filepath)
             except OSError:
-                os.unlink (filepath_tmp)
-                if not ignore_fail: raise
+                os.unlink(filepath_tmp)
+                if not ignore_fail:
+                    raise
     except (IOError, OSError):
-        if not ignore_fail: raise
+        if not ignore_fail:
+            raise
 
 
 def get_terminal_size(fd):

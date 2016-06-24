@@ -47,7 +47,8 @@ def run(args):
         f.write("# This file currently only serves to mark the location of a catkin workspace for tool integration\n")
     makedirs(os.path.join(wsdir, "src"))
     cfg = Config(wsdir)
-    if args.ros_root: cfg.data["ros_root"] = ros_rootdir
+    if args.ros_root:
+        cfg.data["ros_root"] = ros_rootdir
     cfg.write()
     catkin_init = ["catkin", "config", "--workspace", wsdir, "--extend", ros_rootdir, "--cmake-args"] + DEFAULT_CMAKE_ARGS
     return call_process(catkin_init)

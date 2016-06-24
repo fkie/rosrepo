@@ -8,6 +8,7 @@ from yaml import YAMLError
 from pickle import PickleError
 from .ui import error
 
+
 def add_common_options(parser):
     g = parser.add_argument_group("common options")
     g.add_argument("-w", "--workspace", help="override workspace location (default: autodetect)")
@@ -68,7 +69,7 @@ def prepare_arguments(parser):
     return parser
 
 
-def run_rosrepo (args):
+def run_rosrepo(args):
     try:
         if hasattr(args, "func"):
             return args.func(args)
