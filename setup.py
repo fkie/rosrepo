@@ -4,6 +4,7 @@ Copyright (c) 2016 Fraunhofer FKIE
 
 """
 from setuptools import setup
+import os
 import sys
 srcdir = os.path.normpath(os.path.join(os.path.dirname(__file__), "src"))
 if os.path.isfile(os.path.join(srcdir, "rosrepo", "__init__.py")) and os.path.isfile(os.path.join(srcdir, "rosrepo", "main.py")):
