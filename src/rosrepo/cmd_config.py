@@ -30,7 +30,7 @@ def run(args):
             private_token = None
         else:
             if args.offline: raise UserError("cannot acquire Gitlab private token in offline mode")
-            private_token = acquire_gitlab_private_token("%s [%s]" % (label, url))
+            private_token = acquire_gitlab_private_token(label, url)
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
             if srv.get("label", None) == label:

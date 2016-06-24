@@ -64,13 +64,13 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
 
 _cached_tokens = {}
 
-def acquire_gitlab_private_token(url, credentials_callback=get_credentials):
+def acquire_gitlab_private_token(label, url, credentials_callback=get_credentials):
     global _cached_tokens
     if url in _cached_tokens: return _cached_tokens[url]
     retries = 3
     while retries > 0:
         retries -= 1
-        login, passwd = credentials_callback(url)
+        login, passwd = credentials_callback("%s [%s]" % (label, url))
         r = requests.post(urljoin(url, "api/v3/session"), data={"login": login, "password": passwd})
         if r.status_code == 401:
             msg("@!@{rf}Access denied@!\n", fd=sys.stderr)
