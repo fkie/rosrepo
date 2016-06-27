@@ -70,8 +70,10 @@ def prepare_arguments(parser):
     p = cmds.add_parser("git", help="manage Git repositories")
     add_common_options(p)
     git_cmds = p.add_subparsers(metavar="COMMAND", title="Git commands", dest="git_cmd")
+    # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
-    q.add_argument("package", metavar="PACKAGE", default=[], nargs="*", help="show status for projects that contain PACKAGE")
+    q.add_argument("-m", "--modified", action="store_true", help="only show packages which are not up-to-date")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to show")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 
