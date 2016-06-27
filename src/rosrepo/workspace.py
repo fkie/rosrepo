@@ -322,7 +322,7 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
         cache = Cache(wsdir)
     ws_avail = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
     gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
-    cloned_projects, other_git = find_cloned_gitlab_projects(gitlab_projects, os.path.join(wsdir, "src"))
+    cloned_projects, _ = find_cloned_gitlab_projects(gitlab_projects, os.path.join(wsdir, "src"))
     gitlab_avail = find_catkin_packages_from_gitlab_projects(gitlab_projects)
     for _, pkg_list in iteritems(ws_avail):
         for pkg in pkg_list:
