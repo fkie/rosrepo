@@ -83,6 +83,9 @@ def prepare_arguments(parser):
     q = git_cmds.add_parser("pull", help="pull commits from upstream repository")
     q.add_argument("--no-depends", action="store_true", help="do not pull dependent packages")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")
+    # git commit
+    q = git_cmds.add_parser("commit", help="commit local changes for a package")
+    q.add_argument("package", metavar="PACKAGE", help="package to commit")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 

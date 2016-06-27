@@ -173,6 +173,10 @@ def run(args):
     gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=args.offline)
     projects, other_git = find_cloned_gitlab_projects(gitlab_projects, srcdir)
     ws_avail, gitlab_avail = get_workspace_state(wsdir, config, cache=cache, offline_mode=args.offline, gitlab_projects=gitlab_projects, cloned_projects=projects)
+    if args.git_cmd == "commit":
+        if args.package not in ws_avail:
+            fatal("package '%s' is not in workspace" % escape(args.package))
+        return call_process(["git-cola", "--repo", os.path.join(srcdir, ws_avail[args.package][0].workspace_path)])
     if args.packages:
         for p in args.packages:
             if p not in ws_avail:
