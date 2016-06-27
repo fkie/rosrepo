@@ -3,7 +3,10 @@ Copyright (c) 2016 Fraunhofer FKIE
 
 """
 import os
-import pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import zlib
 from .util import write_atomic, makedirs, NamedTuple
 

@@ -101,6 +101,7 @@ _updated_urls = set()
 
 def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, verbose=True):
     server_name = urlsplit(url)[1]
+    cache_update = False
     if cache is not None:
         cached_projects = cache.get_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, [])
     else:
@@ -128,6 +129,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                     if cached_p is not None and cached_p.last_modified == p.last_modified:
                         p.packages = cached_p.packages
                     else:
+                        cache_update = True
                         if verbose:
                             sys.stdout.write("Fetching: %s\n" % p.website)
                         manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
@@ -147,12 +149,14 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
         except IOError as e:
             error("cannot update from %s: %s\n" % (url, e))
             projects = cached_projects
+            cache_update = False
         if cache is not None:
             _updated_urls.add(url)
     else:
         projects = cached_projects
     if cache is not None:
-        cache.set_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, projects)
+        if cache_update or len(projects) != len(cached_projects):
+            cache.set_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, projects)
     return projects
 
 

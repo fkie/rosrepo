@@ -118,6 +118,7 @@ def find_workspace(override=None):
 
 def find_catkin_packages(srcdir, subdir=None, cache=None):
     cached_paths = {}
+    cache_update = False
     if cache is not None:
         cached_paths = cache.get_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, cached_paths)
     package_paths = []
@@ -142,6 +143,7 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
                 if old_ts == cur_ts:
                     manifest = cached_paths[path]["m"]
             if manifest is None:
+                cache_update = True
                 manifest = parse_package(os.path.join(srcdir, path, PACKAGE_MANIFEST_FILENAME))
             if manifest.name not in result:
                 result[manifest.name] = []
@@ -154,7 +156,8 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
             if not path_has_prefix(path, subdir):
                 discovered_paths[path] = entry
     if cache is not None:
-        cache.set_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, discovered_paths)
+        if cache_update or len(cached_paths) != len(discovered_paths):
+            cache.set_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, discovered_paths)
     return result
 
 
