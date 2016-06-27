@@ -5,7 +5,7 @@ Copyright (c) 2016 Fraunhofer FKIE
 import sys
 from getpass import getpass
 import re
-from .util import get_terminal_size
+from .util import get_terminal_size, UserError
 from .terminal_color import fmt as color_fmt
 
 terminal_width = {}
@@ -98,7 +98,12 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
     return "\n".join(result)
 
 
+def escape(msg):
+    return msg.replace("@", "@@")
+
+
 def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stdout, indent_first=0, indent_next=0):
+    from .terminal_color import _ansi
     ansi_text = color_fmt(text, use_color=isatty(fd) if use_color is None else use_color)
     if wrap:
         try:
@@ -106,15 +111,19 @@ def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stdout, indent_f
                 max_width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
         except OSError:
             pass
-    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next))
+    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (_ansi['reset'] if use_color else ""))
+
+
+def fatal(text):
+    raise UserError(text)
 
 
 def error(text, use_color=None):
-    msg("@!@{rf}%s: error: %s\n" % (sys.argv[0], text), fd=sys.stderr, indent_next=len(sys.argv[0]) + 9)
+    msg("@!@{rf}%s: error: %s" % (sys.argv[0], text), fd=sys.stderr, indent_next=len(sys.argv[0]) + 9)
 
 
 def warning(text, use_color=None):
-    msg("@!@{yf}%s: warning: %s\n" % (sys.argv[0], text), use_color=use_color, fd=sys.stderr, indent_next=len(sys.argv[0]) + 11)
+    msg("@!@{yf}%s: warning: %s" % (sys.argv[0], text), use_color=use_color, fd=sys.stderr, indent_next=len(sys.argv[0]) + 11)
 
 
 def get_credentials(domain):

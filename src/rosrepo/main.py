@@ -89,13 +89,13 @@ def run_rosrepo(args):
     except UserError as e:
         error("%s\n" % str(e))
     except YAMLError as e:
-        error("YAML: %s\n" % str(e))
+        error("YAML: %s\n\n" % str(e))
     except PickleError as e:
-        error("Pickle: %s\n" % str(e))
+        error("Pickle: %s\n\n" % str(e))
     except OSError as e:
-        error("OS: %s\n" % str(e))
+        error("OS: %s\n\n" % str(e))
     except IOError as e:
-        error("IO: %s\n" % str(e))
+        error("IO: %s\n\n" % str(e))
     except KeyboardInterrupt:
         error("interrupted by user\n")
     return 1

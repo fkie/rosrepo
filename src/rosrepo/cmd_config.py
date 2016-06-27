@@ -6,7 +6,7 @@ from .workspace import get_workspace_location
 from .gitlab import find_available_gitlab_projects, acquire_gitlab_private_token
 from .config import Config
 from .cache import Cache
-from .util import UserError
+from .ui import fatal
 try:
     from urlparse import urlsplit, urlunsplit
 except ImportError:
@@ -31,7 +31,7 @@ def run(args):
             private_token = None
         else:
             if args.offline:
-                raise UserError("cannot acquire Gitlab private token in offline mode")
+                fatal("cannot acquire Gitlab private token in offline mode\n")
             private_token = acquire_gitlab_private_token(label, url)
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
