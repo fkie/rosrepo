@@ -127,7 +127,7 @@ def fmt(msg, use_color=True, reset=True):
     msg = msg.replace('@_', '@{ulon}')
     msg = msg.replace('@|', '@{reset}')
     t = ColorTemplate(msg)
-    return t.substitute(_ansi if use_color else _no_ansi) + (ansi('reset') if reset and use_color else '')
+    return t.safe_substitute(_ansi if use_color else _no_ansi) + (ansi('reset') if reset and use_color else '')
 
 
 def test_colors():
