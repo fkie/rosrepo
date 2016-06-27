@@ -18,7 +18,7 @@ def add_common_options(parser):
 def prepare_arguments(parser):
     from . import __version__
     parser.add_argument("--version", action="version", version="%s" % __version__)
-    cmds = parser.add_subparsers(metavar="action", title="Actions", description="The following actions are available:")
+    cmds = parser.add_subparsers(metavar="ACTION", title="Actions", description="The following actions are available:")
 
     # init
     p = cmds.add_parser("init", help="initialize workspace")
@@ -65,6 +65,15 @@ def prepare_arguments(parser):
     p.add_argument("var", nargs="*", help="environment variable is to be queried")
     from .cmd_bash import run as bash_func
     p.set_defaults(func=bash_func)
+
+    # git
+    p = cmds.add_parser("git", help="manage Git repositories")
+    add_common_options(p)
+    git_cmds = p.add_subparsers(metavar="COMMAND", title="Git commands", dest="git_cmd")
+    q = git_cmds.add_parser("status", help="show status of Git repositories")
+    q.add_argument("package", metavar="PACKAGE", default=[], nargs="*", help="show status for projects that contain PACKAGE")
+    from .cmd_git import run as git_func
+    p.set_defaults(func=git_func)
 
     return parser
 
