@@ -96,13 +96,16 @@ def acquire_gitlab_private_token(label, url, credentials_callback=get_credential
     return token
 
 
+_updated_urls = set()
+
+
 def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, verbose=True):
     server_name = urlsplit(url)[1]
     if cache is not None:
         cached_projects = cache.get_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, [])
     else:
         cached_projects = []
-    if not cache_only and url is not None and private_token is not None:
+    if not cache_only and url is not None and private_token is not None and url not in _updated_urls:
         projects = []
         try:
             with requests.Session() as s:
@@ -144,6 +147,8 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
         except IOError as e:
             error("cannot update from %s: %s\n" % (url, e))
             projects = cached_projects
+        if cache is not None:
+            _updated_urls.add(url)
     else:
         projects = cached_projects
     if cache is not None:
