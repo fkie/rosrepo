@@ -26,7 +26,7 @@ GITLAB_PACKAGE_CACHE_VERSION = 1
 class GitlabProject(NamedTuple):
     __slots__ = (
         "server", "name", "id", "website", "url", "packages",
-        "last_modified", "workspace_path"
+        "last_modified", "workspace_path", "master_branch"
     )
 
     def __cmp__(self, other):
@@ -122,6 +122,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                         id=yaml_p["id"],
                         website=yaml_p["web_url"],
                         url={"ssh": yaml_p["ssh_url_to_repo"], "http": yaml_p["http_url_to_repo"]},
+                        master_branch=yaml_p["default_branch"],
                         packages=None,
                         last_modified=date_parse(yaml_p["last_activity_at"]),
                         workspace_path=None

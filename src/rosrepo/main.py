@@ -73,7 +73,16 @@ def prepare_arguments(parser):
     # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
     q.add_argument("-m", "--modified", action="store_true", help="only show packages which are not up-to-date")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to show")
+    q.add_argument("--no-depends", action="store_true", help="do not include dependent packages")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
+    # git push
+    q = git_cmds.add_parser("push", help="push commits to upstream repository")
+    q.add_argument("--no-depends", action="store_true", help="do not push dependent packages")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to push")
+    # git pull
+    q = git_cmds.add_parser("pull", help="pull commits from upstream repository")
+    q.add_argument("--no-depends", action="store_true", help="do not pull dependent packages")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 
