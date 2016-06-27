@@ -103,7 +103,7 @@ def escape(msg):
 
 
 def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stdout, indent_first=0, indent_next=0):
-    from .terminal_color import _ansi
+    from .terminal_color import ansi
     ansi_text = color_fmt(text, use_color=isatty(fd) if use_color is None else use_color)
     if wrap:
         try:
@@ -111,7 +111,7 @@ def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stdout, indent_f
                 max_width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
         except OSError:
             pass
-    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (_ansi['reset'] if use_color else ""))
+    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if (isatty(fd) if use_color is None else use_color) else ""))
 
 
 def fatal(text):
