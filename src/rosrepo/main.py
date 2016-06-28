@@ -74,7 +74,7 @@ def prepare_arguments(parser):
     p.set_defaults(func=list_func)
 
     # bash
-    p = cmds.add_parser("bash", help=SUPPRESS)
+    p = cmds.add_parser("bash", help="internal command")
     add_common_options(p)
     p.add_argument("-t", "--terse", action="store_true", help="only print the value itself")
     p.add_argument("-e", "--export", action="store_true", help="prepend variable definition with export keyword")
@@ -130,6 +130,12 @@ def prepare_arguments(parser):
     q.add_argument("package", metavar="PACKAGE", help="package to commit")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
+
+    # clean
+    p = cmds.add_parser("clean", help="clean workspace")
+    add_common_options(p)
+    from .cmd_clean import run as clean_func
+    p.set_defaults(func=clean_func)
 
     return parser
 

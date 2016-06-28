@@ -319,6 +319,10 @@ def migrate_workspace(wsdir):
             pass
         shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "rosrepo"), ignore_errors=True)
         shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "profiles", "rosrepo"), ignore_errors=True)
+        shutil.rmtree(os.path.join(wsdir, "build"), ignore_errors=True)
+        shutil.rmtree(os.path.join(wsdir, "devel"), ignore_errors=True)
+        shutil.rmtree(os.path.join(wsdir, "install"), ignore_errors=True)
+        shutil.rmtree(os.path.join(wsdir, "logs"), ignore_errors=True)
 
 
 WSFL_WS_PACKAGES = 1

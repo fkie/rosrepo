@@ -32,7 +32,9 @@ def run(args):
         return 0
 
     need_clean = False
+
     if args.set_ros_root:
+        need_clean = True
         if args.set_ros_root.lower() == "auto":
             if "ros_root" in config:
                 del config["ros_root"]
