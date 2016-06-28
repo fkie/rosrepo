@@ -74,6 +74,8 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     resolver_msgs.append("is needed to resolve dependencies of package @{cf}%s@|" % escape(root_depender))
                 if depender is not None:
                     resolver_msgs.append("is dependee of package @{cf}%s@|" % escape(depender))
+                if root_depender is None:
+                    root_depender = name
                 if name in ws_state.ws_packages:
                     # If the package is in the workspace, we assume it's unique and take the first in the list
                     depends[name] = ws_state.ws_packages[name][0]
@@ -142,9 +144,13 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                         resolver_msgs.append("is not installable as system package")
                         conflicts[name] = resolver_msgs
                     return depends, fallback, conflicts
+                elif name in rosdep and depender is None:
+                    resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
+                    resolver_msgs.append("is not available from a configured Gitlab server")
+                    conflicts[name] = resolver_msgs
                 elif name not in rosdep:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                    resolver_msgs.append("is not available from any Gitlab project")
+                    resolver_msgs.append("is not available from a configured Gitlab server")
                     resolver_msgs.append("is not installable as system package")
                     conflicts[name] = resolver_msgs
         return depends, fallback, conflicts

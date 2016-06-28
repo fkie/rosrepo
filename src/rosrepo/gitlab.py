@@ -134,7 +134,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                     else:
                         cache_update = True
                         if verbose:
-                            msg("@{cf}Fetching: %s@|\n" % p.website)
+                            msg("@{cf}Fetching@|: %s\n" % p.website)
                         manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
                         p.packages = []
                         for path, blob in manifests:

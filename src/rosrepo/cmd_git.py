@@ -128,11 +128,11 @@ def update_projects(srcdir, packages, projects, other_git, update_op, dry_run=Fa
             tracking_remote = repo.remote(tracking_branch.remote_name)
         try:
             if master_remote is not None:
-                msg("@{cf}Fetching: %s\n" % escape(master_remote.url))
+                msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
                 if not dry_run:
                     master_remote.fetch()
             if tracking_remote is not None and master_remote != tracking_remote:
-                msg("@{cf}Fetching: %s\n" % escape(tracking_remote.url))
+                msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
                 if not dry_run:
                     tracking_remote.fetch()
             if tracking_branch is not None:
@@ -145,7 +145,7 @@ def update_projects(srcdir, packages, projects, other_git, update_op, dry_run=Fa
         if tracking_branch is not None:
             tracking_remote = repo.remote(tracking_branch.remote_name)
             try:
-                msg("@{cf}Fetching: %s\n" % escape(tracking_remote.url))
+                msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
                 if not dry_run:
                     tracking_remote.fetch()
                 update_op(repo, path, None, None, tracking_remote, tracking_branch)
@@ -192,18 +192,21 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", dry_run=False):
         return
     msg("@{cf}The following packages have to be cloned from Gitlab@|:\n")
     msg(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n", indent_first=4, indent_next=4)
-    for name, pkg in iteritems(packages):
-        if name not in ws_state.ws_packages and pkg.project not in ws_state.ws_projects:
-            git_subdir = compute_git_subdir(srcdir, pkg.server_path)
-            gitdir = os.path.join(srcdir, git_subdir)
-            msg("@{cf}Initializing %s@|\n" % escape(git_subdir))
-            if protocol not in pkg.url:
-                fatal("unsupported procotol type: %s\n" % protocol)
-            if not dry_run:
-                makedirs(gitdir)
-                if call_process(["git", "-C", srcdir, "clone", pkg.url[protocol], git_subdir]) != 0:
-                    shutil.rmtree(gitdir, ignore_errors=True)
-                    fatal("failed to clone repository")
+    projects = list(set(p.project for _, p in need_cloning))
+    for project in projects:
+        git_subdir = compute_git_subdir(srcdir, project.server_path)
+        gitdir = os.path.join(srcdir, git_subdir)
+        msg("@{cf}Cloning@|: %s\n" % escape(git_subdir))
+        if protocol not in project.url:
+            fatal("unsupported procotol type: %s\n" % protocol)
+        invoke = ["git", "-C", srcdir, "clone", project.url[protocol], git_subdir]
+        if not dry_run:
+            makedirs(gitdir)
+            if call_process(invoke) != 0:
+                shutil.rmtree(gitdir, ignore_errors=True)
+                fatal("failed to clone repository")
+        else:
+            msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
 
 
 def run(args):

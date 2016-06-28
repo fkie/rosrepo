@@ -5,10 +5,18 @@ Copyright (c) 2016 Fraunhofer FKIE
 import os
 from shutil import rmtree
 from .workspace import find_ros_root, is_workspace, migrate_workspace
-from .util import makedirs, call_process, path_has_prefix
+from .util import makedirs, path_has_prefix
 from .config import Config
 from .ui import msg, fatal
-from .common import DEFAULT_CMAKE_ARGS
+from .cmd_config import run as config_run
+
+
+class FakeArgs:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __getattr__(self, name):
+        return self.__dict__.get(name, None)
 
 
 def run(args):
@@ -49,6 +57,9 @@ def run(args):
     cfg = Config(wsdir)
     if args.ros_root:
         cfg.data["ros_root"] = ros_rootdir
+    elif "ros_root" in cfg:
+        del cfg["ros_root"]
+    cfg.set_default("install", False)
+    cfg.set_default("rosclipse", True)
     cfg.write()
-    catkin_init = ["catkin", "config", "--workspace", wsdir, "--extend", ros_rootdir, "--cmake-args"] + DEFAULT_CMAKE_ARGS
-    return call_process(catkin_init)
+    return config_run(FakeArgs(workspace=wsdir))

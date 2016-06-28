@@ -336,7 +336,7 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
     if cache is None:
         cache = Cache(wsdir)
     link_projects = False
-    if flags & WSFL_WS_PACKAGES and ws_state.ws_packages is None:
+    if flags & WSFL_WS_PACKAGES:
         link_projects = True
         ws_state.ws_packages = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
         for name, pkg_list in iteritems(ws_state.ws_packages):
@@ -350,15 +350,12 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                     "in its path to disable it.\n\n"
                 )
                 fatal("workspace has conflicting packages")
-    if flags & WSFL_GITLAB_PROJECTS and ws_state.gitlab_projects is None:
+    if flags & WSFL_GITLAB_PROJECTS:
         ws_state.gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
-    if flags & WSFL_WS_PROJECTS and ws_state.ws_projects is None or ws_state.other_git is None:
-        if ws_state.gitlab_projects is None and ws_state.other_git is None:
-            _, ws_state.other_git = find_cloned_gitlab_projects({}, os.path.join(wsdir, "src"))
-        if ws_state.gitlab_projects is not None and ws_state.ws_projects is None:
-            link_projects = True
-            ws_state.ws_projects, ws_state.other_git = find_cloned_gitlab_projects(ws_state.gitlab_projects, os.path.join(wsdir, "src"))
-    if flags & WSFL_GITLAB_PACKAGES and ws_state.gitlab_packages is None and ws_state.gitlab_projects is not None:
+    if flags & WSFL_WS_PROJECTS and ws_state.gitlab_projects is not None:
+        link_projects = True
+        ws_state.ws_projects, ws_state.other_git = find_cloned_gitlab_projects(ws_state.gitlab_projects, os.path.join(wsdir, "src"))
+    if flags & WSFL_GITLAB_PACKAGES and ws_state.gitlab_projects is not None:
         ws_state.gitlab_packages = find_catkin_packages_from_gitlab_projects(ws_state.gitlab_projects)
     if link_projects and ws_state.ws_packages is not None and ws_state.ws_projects is not None:
         for _, pkg_list in iteritems(ws_state.ws_packages):
