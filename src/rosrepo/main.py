@@ -9,6 +9,8 @@ from .ui import error
 
 
 def add_common_options(parser):
+    from argparse import SUPPRESS
+    parser.add_argument("--autocomplete", action="store_true", help=SUPPRESS)
     g = parser.add_argument_group("common options")
     g.add_argument("-w", "--workspace", help="override workspace location (default: autodetect)")
     g.add_argument("--offline", "--offline-mode", action="store_true", help="assume no network connection; do not contact Gitlab servers")
@@ -34,16 +36,18 @@ def prepare_arguments(parser):
     p.add_argument("--set-ros-root", metavar="PATH", help="override ROS installation path (default: autodetect)")
     g = p.add_argument_group("Gitlab options")
     g.add_argument("--set-gitlab-url", nargs=2, metavar=("LABEL", "URL"), help="add or change a Gitlab server named LABEL")
+    g.add_argument("--get-gitlab-url", metavar="LABEL", help="show the Gitlab server named LABEL")
     g.add_argument("--unset-gitlab-url", metavar="LABEL", help="remove the Gitlab server named LABEL")
     g.add_argument("--show-gitlab-urls", action="store_true", help="show all configured Gitlab servers")
+    g.add_argument("--gitlab-login", metavar="LABEL", help="acquire private token for the Gitlab server named LABEL")
+    g.add_argument("--gitlab-logout", metavar="LABEL", help="delete private token for the Gitlab server named LABEL")
     m = g.add_mutually_exclusive_group(required=False)
-    m.add_argument("--login-for-private-token", action="store_true", help="login with username and password to acquire the account's private token (default)")
-    m.add_argument("--with-private-token", metavar="TOKEN", help="specify private token for Gitlab server access")
-    m.add_argument("--without-private-token", action="store_true", help="do not store authentication token at all")
+    m.add_argument("--private-token", metavar="TOKEN", help="specify private token for Gitlab server access")
+    m.add_argument("--no-private-token", action="store_true", help="do not store authentication token at all")
     g = p.add_argument_group("build options")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("-j", "--job-limit", type=int, help="limit number of concurrent build jobs (0 for unlimited)")
-    m.add_argument("--no-job-limit", type=int, help="remove job limit (same as -j0)")
+    m.add_argument("--no-job-limit", action="store_true", help="remove job limit (same as -j0)")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--install", action="store_true", help="run installation routine for packages")
     m.add_argument("--no-install", action="store_true", help="do not run installation routine for packages")
@@ -154,6 +158,7 @@ def prepare_arguments(parser):
     # exclude
     p = cmds.add_parser("exclude", help="remove packages from default set or pinned set")
     add_common_options(p)
+    p.add_argument("-l", "--list", action="store_true", help="list packages but do not change anything")
     p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--pin", "--pinned", action="store_true", help="add packages to pinned set")

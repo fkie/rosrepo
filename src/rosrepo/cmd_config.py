@@ -7,7 +7,7 @@ from .workspace import find_ros_root, get_workspace_location
 from .gitlab import find_available_gitlab_projects, acquire_gitlab_private_token
 from .config import Config
 from .cache import Cache
-from .ui import TableView, fatal, escape
+from .ui import TableView, msg, fatal, escape
 from .common import DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
 from .util import call_process
 
@@ -23,8 +23,15 @@ def run(args):
     config = Config(wsdir)
     cache = Cache(wsdir)
 
+    if args.get_gitlab_url:
+        servers = config.get("gitlab_servers", [])
+        sys.stdout.write("\n".join([s.get("url", "") for s in servers if s.get("label", "") == args.get_gitlab_url]) + "\n")
+        return 0
     if args.show_gitlab_urls:
         servers = config.get("gitlab_servers", [])
+        if args.autocomplete:
+            sys.stdout.write("\n".join([s.get("label", "") for s in servers]) + "\n")
+            return 0
         table = TableView("Label", "Gitlab URL", "Credentials")
         for srv in servers:
             table.add_row(escape(srv.get("label", "")), escape(srv.get("url", "")), "@{gf}yes" if srv.get("private_token", None) is not None else "@{rf}no")
@@ -41,11 +48,41 @@ def run(args):
         else:
             config["ros_root"] = args.set_ros_root
 
+    if args.gitlab_logout:
+        config.set_default("gitlab_servers", [])
+        for srv in config["gitlab_servers"]:
+            if srv.get("label", None) == args.gitlab_logout:
+                if "private_token" in srv:
+                    del srv["private_token"]
+                    msg("Private token removed\n")
+                break
+        else:
+            fatal("no such Gitlab server")
+    if args.gitlab_login:
+        config.set_default("gitlab_servers", [])
+        for srv in config["gitlab_servers"]:
+            label = srv.get("label", None)
+            if label == args.gitlab_login:
+                url = srv.get("url", None)
+                if url is None:
+                    fatal("cannot acquire token for Gitlab server without URL")
+                if args.private_token:
+                    private_token = args.private_token
+                elif args.no_private_token:
+                    private_token = None
+                else:
+                    if args.offline:
+                        fatal("cannot acquire Gitlab private token in offline mode\n")
+                    private_token = acquire_gitlab_private_token(label, url)
+                srv["private_token"] = private_token
+                break
+        else:
+            fatal("no such Gitlab server")
     if args.set_gitlab_url:
         label, url = args.set_gitlab_url[0], urlunsplit(urlsplit(args.set_gitlab_url[1]))
-        if args.with_private_token:
-            private_token = args.with_private_token
-        elif args.without_private_token:
+        if args.private_token:
+            private_token = args.private_token
+        elif args.no_private_token:
             private_token = None
         else:
             if args.offline:
@@ -65,8 +102,8 @@ def run(args):
             config["gitlab_servers"].append(srv)
         find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=args.offline, verbose=True)
     if args.unset_gitlab_url:
-        if "gitlab_servers" in config:
-            config["gitlab_servers"] = [srv for srv in config["gitlab_servers"] if srv["label"] != args.unset_gitlab_url]
+        config.set_default("gitlab_servers", [])
+        config["gitlab_servers"] = [srv for srv in config["gitlab_servers"] if srv["label"] != args.unset_gitlab_url]
 
     if args.job_limit:
         if args.job_limit > 0:
@@ -77,8 +114,10 @@ def run(args):
         del config["job_limit"]
 
     if args.install:
+        need_clean = need_clean or not config.get("install", False)
         config["install"] = True
     if args.no_install:
+        need_clean = need_clean or config.get("install", False)
         config["install"] = False
 
     if args.set_compiler:

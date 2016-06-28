@@ -95,10 +95,10 @@ def run(args):
         if filter_table_entry(name, pkg_list, status, location):
             table.add_row(name, status, location)
             names.add(name)
-    if table.empty():
+    if table.empty() and not args.autocomplete:
         warning("no packages matched your search filter\n")
         return 0
-    if args.package_names:
+    if args.package_names or args.autocomplete:
         sys.stdout.write("\n".join(sorted(names)) + "\n")
     else:
         table.sort(0)

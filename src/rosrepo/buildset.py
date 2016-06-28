@@ -21,6 +21,8 @@ def run(args):
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
     if args.all:
         args.packages = ws_state.ws_packages.keys()
+        if args.command == "exclude":
+            config[set_name] = []
 
     if args.list:
         selected = set(config.get(set_name, []))
@@ -42,7 +44,10 @@ def run(args):
             msg("@{cf}The following packages are built by default@|:\n")
         else:
             msg("@{cf}The following packages are going to be built by default from now on@|:\n")
-    msg(", ".join(sorted(list(selected))) + "\n\n", indent_first=4, indent_next=4)
+    if selected:
+        msg(", ".join(sorted(list(selected))) + "\n\n", indent_first=4, indent_next=4)
+    else:
+        msg("(none)\n\n", indent_first=4, indent_next=4)
 
     depends, fallback, conflicts = find_dependees(selected, ws_state)
     show_fallback(fallback)

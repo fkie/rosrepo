@@ -5,36 +5,53 @@ if type rosrepo &> /dev/null; then
 
 _rosrepo_complete()
 {
-    local arg prev cmd list_cmd nargs common_opts
+    local arg prev prev2 cmd cmd2 rosrepo_cmd nargs common_opts tmp
+    local -A has_opt
     COMPREPLY=()
     arg="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    cmd="${COMP_WORDS[1]}"
-    list_cmd=(rosrepo list --offline --package-names)
-    nargs=-2
-    common_opts="-h --help -w --workspace --offline --offline-mode"
-    set -- "${COMP_WORDS[@]}"
+    prev2="${COMP_WORDS[COMP_CWORD-2]}"
+    cmd=
+    rosrepo_cmd=(rosrepo list --offline --autocomplete)
+    nargs=0
+    common_opts="-h --help -w --workspace --offline --offline-mode --dry-run"
+    set -- "${COMP_WORDS[@]:0:COMP_CWORD}"
     while [ $# -gt 0 ]
     do
+        has_opt["$1"]=1
         case "$1" in
             -w|--workspace)
-                list_cmd+=(--workspace "$2")
+                eval tmp="$2"
+                rosrepo_cmd+=(--workspace "$tmp")
                 shift
                 ;;
             -r|--ros-root)
+                [ "$cmd" = "init" ] && shift
+                ;;
+            --with-private-token|--unset-gitlab-url|-j|--job-limit|--set-compiler)
                 shift
+                ;;
+            --set-gitlab-url)
+                shift 2
                 ;;
             -*)
                 ;;
             *)
+                if [ "$nargs" -eq 1 ]
+                then
+                    cmd="$1"
+                elif [ "$nargs" -eq 2 ]
+                then
+                    cmd2="$1"
+                fi
                 let nargs++
                 ;;
         esac
         shift
     done
-    if [ "$COMP_CWORD" -eq 1 ]
+    if [ "$nargs" -eq 1 ]
     then
-        COMPREPLY=($(compgen -W "-h --help --version init config list bash" -- "$arg"))
+        COMPREPLY=($(compgen -W "-h --help --version init config list git bash build include exclude clean" -- "$arg"))
         return 0
     fi
     case "$prev" in
@@ -43,24 +60,46 @@ _rosrepo_complete()
             COMPREPLY=($(compgen -d -- "$arg"))
             return 0
             ;;
+        -p|--protocol)
+            COMPREPLY=($(compgen -W "ssh http" -- "$arg"))
+            return 0
+            ;;
+        --private-token)
+            COMPREPLY=()
+            return 0
+            ;;
+        --set-gitlab-url|--unset-gitlab-url|--get-gitlab-url|--gitlab-login|--gitlab-logout)
+            rosrepo_cmd[1]="config"
+            rosrepo_cmd+=("--show-gitlab-urls")
+            COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            return 0
+            ;;
+    esac
+    case "$prev2" in
+         --set-gitlab-url)
+            rosrepo_cmd[1]="config"
+            rosrepo_cmd+=("--get-gitlab-url" "$prev")
+            COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            return 0
+            ;;
     esac
     ####
     if [ "$cmd" = "init" ]
     then
-        if [ "${arg:0:1}" = "-" ]
+        if [ "${args:0:1}" = "-" ]
         then
             COMPREPLY=($(compgen -W "-h --help -r --ros-root --reset" -- "$arg"))
-        elif [ "$nargs" -eq 1 ]
+        elif [ "$nargs" -eq 2 ]
         then
             compopt -o filenames 2>/dev/null
-            COMPREPLY=($(compgen -d -- "$arg"))
+            COMPREPLY+=($(compgen -d -- "$arg"))
         fi
         return 0
     fi
     ####
     if [ "$cmd" = "config" ]
     then
-        #TODO
+	COMPREPLY=($(compgen -W "$common_opts --set-gitlab-url --unset-gitlab-url --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse" -- "$arg"))
         return 0
     fi
     ####
@@ -68,6 +107,88 @@ _rosrepo_complete()
     then
         COMPREPLY=($(compgen -W "$common_opts -a --all --available -v --invert -n --package-names -S --default-set-only -P --pinned-set-only -B --built-only -W --workspace-only -D --dependees" -- "$arg"))
         return 0
+    fi
+    ####
+    if [ "$cmd" = "build" ]
+    then
+        rosrepo_cmd[1]="list"
+        rosrepo_cmd+=("-a")
+        if [ "${arg:0:1}" = "-" ]
+        then
+            COMPREPLY=($(compgen -W "$common_opts --set-default --set-pinned -a --all -c --clean -v --verbose -k --keep-going -j --jobs --no-status --no-rosclipse --force-rosclipse" -- "$arg"))
+        else
+            COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+        fi
+        return 0
+    fi
+    ####
+    if [ "$cmd" = "clean" ]
+    then
+        COMPREPLY=($(compgen -W "$common_opts" -- "$arg"))
+        return 0
+    fi
+    ####
+    if [ "$cmd" = "include" -o "$cmd" = "exclude" ]
+    then
+            buildset="-S"
+            [ "${has_opt["--pin"]}" = 1 ] && buildset="-P"
+            [ "${has_opt["--pinned"]}" = 1 ] && buildset="-P"
+            rosrepo_cmd[1]="list"
+            [ "${has_opt["--replace"]}" = 1 ] || rosrepo_cmd+=("$buildset")
+            [ "$cmd" = "include" ] && rosrepo_cmd+=("-v")
+            if [ "${arg:0:1}" = "-" ]
+            then
+                COMPREPLY=($(compgen -W "-p --protocol --pin --pinned --default -a --all -l --list" -- "$arg"))
+            else
+                [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            fi
+            return 0
+    fi
+    ####
+    if [ "$cmd" = "git" ]
+    then
+        if [ "$nargs" -eq 2 ]
+        then
+            COMPREPLY=($(compgen -W "$common_opts clone status push pull commit" -- "$arg"))
+            return 0
+        fi
+        case "$cmd2" in
+            status)
+                COMPREPLY=($(compgen -W "-m --modified --no-depends" -- "$arg"))
+                return 0
+                ;;
+            clone)
+                rosrepo_cmd[1]="list"
+                rosrepo_cmd+=("-W" "-v")
+                if [ "${arg:0:1}" = "-" ]
+                then
+                        COMPREPLY=($(compgen -W "-p --protocol" -- "$arg"))
+                else
+                        COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+                fi
+                return 0
+                ;;
+            push|pull)
+                rosrepo_cmd[1]="list"
+                rosrepo_cmd+=("-W")
+                if [ "${arg:0:1}" = "-" ]
+                then
+                        COMPREPLY=($(compgen -W "--no-depends" -- "$arg"))
+                else
+                        COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+                fi
+                return 0
+                ;;
+            commit)
+                if [ "$nargs" -eq 3 ]
+                then
+                    rosrepo_cmd[1]="list"
+                    rosrepo_cmd+=("-W")
+                    COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+                fi
+                return 0
+                ;;
+        esac
     fi
 }
 

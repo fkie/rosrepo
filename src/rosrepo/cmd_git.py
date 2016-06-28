@@ -41,7 +41,7 @@ def get_origin(repo, project):
     return None
 
 
-def show_status(srcdir, packages, projects, other_git, show_up_to_date=True, cache=None):
+def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=True, cache=None):
     def create_status(repo, master_branch, tracking_branch):
         status = []
         if repo.is_dirty(index=True, working_tree=True, untracked_files=True):
@@ -73,6 +73,7 @@ def show_status(srcdir, packages, projects, other_git, show_up_to_date=True, cac
 
     table = TableView("Package", "Path", "Status")
 
+    found_packages = set()
     for project in projects:
         repo = Repo(os.path.join(srcdir, project.workspace_path))
         tracking_branch = repo.head.reference.tracking_branch()
@@ -84,6 +85,7 @@ def show_status(srcdir, packages, projects, other_git, show_up_to_date=True, cac
             for name, pkg_list in iteritems(ws_packages):
                 if name not in packages:
                     continue
+                found_packages.add(name)
                 path_list = []
                 for pkg in pkg_list:
                     head, tail = os.path.split(pkg.workspace_path)
@@ -99,11 +101,20 @@ def show_status(srcdir, packages, projects, other_git, show_up_to_date=True, cac
             for name, pkg_list in iteritems(ws_packages):
                 if name not in packages:
                     continue
+                found_packages.add(name)
                 path_list = []
                 for pkg in pkg_list:
                     head, tail = os.path.split(pkg.workspace_path)
                     path_list.append(head + "/" if tail == name else pkg.workspace_path)
                 table.add_row(name, path_list, status)
+    missing = set(packages) - found_packages
+    for name in missing:
+        path_list = []
+        if name in ws_state.ws_packages:
+            for pkg in ws_state.ws_packages[name]:
+                head, tail = os.path.split(pkg.workspace_path)
+                path_list.append(escape(head + "/" if tail == name else pkg.workspace_path))
+        table.add_row(escape(name), path_list, "no git")
     table.sort(0)
     table.write(sys.stdout)
 
@@ -115,7 +126,7 @@ def has_package_path(obj, paths):
     return False
 
 
-def update_projects(srcdir, packages, projects, other_git, update_op, dry_run=False):
+def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, dry_run=False):
     for project in projects:
         repo = Repo(os.path.join(srcdir, project.workspace_path))
         master_remote = get_origin(repo, project)
@@ -151,10 +162,10 @@ def update_projects(srcdir, packages, projects, other_git, update_op, dry_run=Fa
                 update_op(repo, path, None, None, tracking_remote, tracking_branch)
             except Exception as e:
                 error("cannot update '%s': %s\n" % (escape(path), escape(str(e))))
-    show_status(srcdir, packages, projects, other_git)
+    show_status(srcdir, packages, projects, other_git, ws_state)
 
 
-def pull_projects(srcdir, packages, projects, other_git, dry_run=False):
+def pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
     def do_pull(repo, path, master_remote, master_branch, tracking_remote, tracking_branch):
         if need_pull(repo, tracking_branch):
             invoke = ["git", "-C", os.path.join(srcdir, path), "merge", "--ff-only", str(tracking_branch)]
@@ -162,10 +173,10 @@ def pull_projects(srcdir, packages, projects, other_git, dry_run=False):
                 msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
             else:
                 call_process(invoke)
-    update_projects(srcdir, packages, projects, other_git, do_pull, dry_run=dry_run)
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run)
 
 
-def push_projects(srcdir, packages, projects, other_git, dry_run=False):
+def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
     def do_push(repo, path, master_remote, master_branch, tracking_remote, tracking_branch):
         if need_push(repo, tracking_branch):
             invoke = ["git", "-C", os.path.join(srcdir, path), "push", str(tracking_remote), "%s:%s" % (str(repo.head.reference), str(tracking_branch.remote_head))]
@@ -174,7 +185,7 @@ def push_projects(srcdir, packages, projects, other_git, dry_run=False):
             else:
                 call_process(invoke)
 
-    update_projects(srcdir, packages, projects, other_git, do_push, dry_run=dry_run)
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run)
 
 
 def compute_git_subdir(srcdir, name):
@@ -227,6 +238,9 @@ def run(args):
         else:
             return call_process(invoke)
     if args.git_cmd == "clone":
+        for p in args.packages:
+            if p in ws_state.ws_packages:
+                fatal("package '%s' is already in workspace" % escape(p))
         depends, fallback, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
         show_fallback(fallback)
         if conflicts:
@@ -253,8 +267,8 @@ def run(args):
         projects = ws_state.ws_projects
         other_git = ws_state.other_git
     if args.git_cmd == "status":
-        show_status(srcdir, packages, projects, other_git, show_up_to_date=not args.modified, cache=cache)
+        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=not args.modified, cache=cache)
     if args.git_cmd == "pull":
-        pull_projects(srcdir, packages, projects, other_git, dry_run=args.dry_run)
+        pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
     if args.git_cmd == "push":
-        push_projects(srcdir, packages, projects, other_git, dry_run=args.dry_run)
+        push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
