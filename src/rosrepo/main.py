@@ -17,9 +17,8 @@ def add_common_options(parser):
 
 def prepare_arguments(parser):
     from . import __version__
-    from argparse import SUPPRESS
     parser.add_argument("--version", action="version", version="%s" % __version__)
-    cmds = parser.add_subparsers(metavar="ACTION", title="Actions", description="The following actions are available:")
+    cmds = parser.add_subparsers(metavar="ACTION", title="Actions", description="The following actions are available:", dest="command")
 
     # init
     p = cmds.add_parser("init", help="initialize workspace")
@@ -136,6 +135,33 @@ def prepare_arguments(parser):
     add_common_options(p)
     from .cmd_clean import run as clean_func
     p.set_defaults(func=clean_func)
+
+    # include
+    from .buildset import run as buildset_func
+    p = cmds.add_parser("include", help="add packages to default set or pinned set")
+    add_common_options(p)
+    p.add_argument("-l", "--list", action="store_true", help="list packages but do not change anything")
+    p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    p.add_argument("--replace", action="store_true", help="replace the whole set (instead of adding to it)")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("--pin", "--pinned", action="store_true", help="add packages to pinned set")
+    m.add_argument("--default", action="store_true", help="add packages to default set")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("-a", "--all", action="store_true", help="select all packages in the workspace")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
+    p.set_defaults(func=buildset_func)
+
+    # exclude
+    p = cmds.add_parser("exclude", help="remove packages from default set or pinned set")
+    add_common_options(p)
+    p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("--pin", "--pinned", action="store_true", help="add packages to pinned set")
+    m.add_argument("--default", action="store_true", help="add packages to default set")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("-a", "--all", action="store_true", help="select all packages")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
+    p.set_defaults(func=buildset_func)
 
     return parser
 
