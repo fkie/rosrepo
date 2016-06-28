@@ -2,7 +2,6 @@
 Copyright (c) 2016 Fraunhofer FKIE
 
 """
-import sys
 from .util import UserError
 from yaml import YAMLError
 from pickle import PickleError
@@ -13,10 +12,12 @@ def add_common_options(parser):
     g = parser.add_argument_group("common options")
     g.add_argument("-w", "--workspace", help="override workspace location (default: autodetect)")
     g.add_argument("--offline", "--offline-mode", action="store_true", help="assume no network connection; do not contact Gitlab servers")
+    g.add_argument("--dry-run", action="store_true", help="do nothing and just print what would be done")
 
 
 def prepare_arguments(parser):
     from . import __version__
+    from argparse import SUPPRESS
     parser.add_argument("--version", action="version", version="%s" % __version__)
     cmds = parser.add_subparsers(metavar="ACTION", title="Actions", description="The following actions are available:")
 
@@ -52,13 +53,14 @@ def prepare_arguments(parser):
     g.add_argument("-S", "--default-set-only", action="store_true", help="list only packages in the default set")
     g.add_argument("-P", "--pinned-set-only", action="store_true", help="list only packages in the pinned set")
     g.add_argument("-B", "--built-only", action="store_true", help="list only packages which have been built in this workspace")
+    g.add_argument("-C", "--conflicts-only", action="store_true", help="list only package which cannot be resolved as dependency")
     g.add_argument("-W", "--workspace-only", action="store_true", help="list only packages which are in the workspace")
     g.add_argument("-D", "--dependees", action="store_true", help="also list dependees for default and pinned set")
     from .cmd_list import run as list_func
     p.set_defaults(func=list_func)
 
     # bash
-    p = cmds.add_parser("bash", help="print environment variables")
+    p = cmds.add_parser("bash", help=SUPPRESS)
     add_common_options(p)
     p.add_argument("-t", "--terse", action="store_true", help="only print the value itself")
     p.add_argument("-e", "--export", action="store_true", help="prepend variable definition with export keyword")
@@ -66,10 +68,28 @@ def prepare_arguments(parser):
     from .cmd_bash import run as bash_func
     p.set_defaults(func=bash_func)
 
+    # build
+    p = cmds.add_parser("build", help="build packages in workspace")
+    add_common_options(p)
+    p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    g = p.add_mutually_exclusive_group(required=False)
+    g.add_argument("--set-default", action="store_true", help="use selected packages as new default build set")
+    g.add_argument("--set-pinned", action="store_true", help="use selected packages as new pinned build set, i.e. build them always")
+    g = p.add_mutually_exclusive_group(required=False)
+    g.add_argument("--no-rosclipse", action="store_true", help="do not run rosclipse to create Eclipse project files")
+    g.add_argument("--force-rosclipse", action="store_true", help="force rosclipse to update Eclipse project files")
+    p.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
+    from cmd_build import run as build_func
+    p.set_defaults(func=build_func)
+
     # git
     p = cmds.add_parser("git", help="manage Git repositories")
     add_common_options(p)
     git_cmds = p.add_subparsers(metavar="COMMAND", title="Git commands", dest="git_cmd")
+    # git clone
+    q = git_cmds.add_parser("clone", help="clone packages from Gitlab repository")
+    q.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL for remote access (default: ssh)")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clone")
     # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
     q.add_argument("-m", "--modified", action="store_true", help="only show packages which are not up-to-date")
@@ -97,7 +117,7 @@ def run_rosrepo(args):
         if hasattr(args, "func"):
             return args.func(args)
         else:
-            error("internal error: undefined command\n", fd=sys.stderr)
+            error("internal error: undefined command\n")
     except UserError as e:
         error("%s\n" % str(e))
     except YAMLError as e:

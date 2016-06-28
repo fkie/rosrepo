@@ -8,8 +8,8 @@ from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_F
 from .config import Config, ConfigError, Version
 from .cache import Cache
 from .gitlab import get_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects
-from .util import path_has_prefix, iteritems, NamedTuple, UserError
-from .ui import msg, warning
+from .util import path_has_prefix, iteritems, NamedTuple
+from .ui import msg, warning, fatal, escape
 
 
 WORKSPACE_PACKAGE_CACHE_VERSION = 1
@@ -17,6 +17,10 @@ WORKSPACE_PACKAGE_CACHE_VERSION = 1
 
 class Package(NamedTuple):
     __slots__ = ("manifest", "workspace_path", "project")
+
+
+class WorkspaceState(NamedTuple):
+    __slots__ = ("ws_packages", "gitlab_packages", "ws_projects", "gitlab_projects", "other_git")
 
 
 def is_ros_root(path):
@@ -167,27 +171,27 @@ def get_workspace_location(override):
         wstype, wsversion = detect_workspace_type(wsdir)
         if wstype == 3:
             return wsdir
-        msg("catkin workspace detected in @{cf}%s@|\n\n" % wsdir, fd=sys.stderr)
+        msg("catkin workspace detected in @{cf}%s@|\n\n" % escape(wsdir), fd=sys.stderr)
         if wstype == -1:
             msg(
                 "I found a catkin workspace, but it seems to be broken.\n\n"
                 "You can delete any corrupted settings and reinitialize the "
                 "workspace for rosrepo with the command\n\n"
                 "    @!rosrepo init --reset %(path)s@|\n\n"
-                % {"path": wsdir}, fd=sys.stderr
+                % {"path": escape(wsdir)}, fd=sys.stderr
             )
         if wstype == 0:
             msg(
                 "I found a catkin workspace, but it is not configured with rosrepo.\n\n"
                 "If you wish to use rosrepo with this workspace, run the command\n\n"
                 "    @!rosrepo init %(path)s@|\n\n"
-                % {"path": wsdir}, fd=sys.stderr
+                % {"path": escape(wsdir)}, fd=sys.stderr
             )
         if wstype == 4:
             msg(
                 "This catkin workspace has been configured by a newer version of rosrepo.\n\n"
                 "Please upgrade rosrepo to at least version @{cf}%(new_version)s@|\n\n"
-                % {"new_version": wsversion}, fd=sys.stderr
+                % {"new_version": escape(wsversion)}, fd=sys.stderr
             )
         if wstype == 1 or wstype == 2:
             from . import __version__
@@ -197,7 +201,7 @@ def get_workspace_location(override):
                 "If you wish to use the new version of rosrepo, you need to reinitialize the "
                 "workspace with the command\n\n"
                 "    @!rosrepo init %(path)s@|\n\n"
-                % {"old_version": wsversion, "new_version": __version__, "path": wsdir}, fd=sys.stderr
+                % {"old_version": escape(wsversion), "new_version": __version__, "path": escape(wsdir)}, fd=sys.stderr
             )
         if override is None:
             msg(
@@ -210,11 +214,11 @@ def get_workspace_location(override):
             msg(
                 "There is no catkin workspace in %(path)s\n\n"
                 "You can create a new workspace there by running\n\n"
-                "    rosrepo init %(path)s\n\n"
+                "    @!rosrepo init %(path)s@|\n\n"
                 "If you are really sure that there is a workspace there already, "
                 "it is possible that the marker file has been deleted by accident. "
                 "In that case, the above command will restore your workspace.\n\n"
-                % {"path": override}, fd=sys.stderr
+                % {"path": escape(override)}, fd=sys.stderr
             )
         else:
             msg(
@@ -224,9 +228,9 @@ def get_workspace_location(override):
                 "automatic detection. If you have never created a workspace yet, "
                 "you can initialize one in your home directory with\n\n"
                 "    @!rosrepo init %s/ros@|\n\n"
-                % os.path.expanduser("~"), fd=sys.stderr
+                % escape(os.path.expanduser("~")), fd=sys.stderr
             )
-    raise UserError("valid workspace location required")
+    fatal("valid workspace location required")
 
 
 def migrate_workspace(wsdir):
@@ -244,7 +248,7 @@ def migrate_workspace(wsdir):
             shutil.rmtree(develdir)
         if os.path.isdir(installdir):
             shutil.rmtree(installdir)
-        msg("Migrating workspace format @{cf}%s@|...\n" % wsversion)
+        msg("Migrating workspace format @{cf}%s@|...\n" % escape(wsversion))
     if wstype == 1:
         repodir = os.path.normpath(os.path.join(wsdir, "repos"))
         metainfo = os.path.join(repodir, ".metainfo")
@@ -261,7 +265,7 @@ def migrate_workspace(wsdir):
                 with open(metainfo, "r") as f:
                     old_meta = yaml.safe_load(f)
             except Exception as e:
-                warning("cannot migrate metadata: %s\n" % str(e))
+                warning("cannot migrate metadata: %s\n" % escape(str(e)))
         cfg = Config(wsdir)
         cfg["pinned_build"] = []
         cfg["default_build"] = []
@@ -287,8 +291,7 @@ def migrate_workspace(wsdir):
                 shutil.move(path, srcdir)
             os.rmdir(repodir)
         except shutil.Error as e:
-            sys.stderr.write("Error: %s" % str(e))
-            sys.exit(1)
+            fatal(escape(str(e)))
         cfg.write()
     if wstype == 2:
         cfg = Config(wsdir)
@@ -303,7 +306,7 @@ def migrate_workspace(wsdir):
                     packages = pickle.load(f)
                 os.unlink(infofile)
             except Exception as e:
-                warning("cannot migrate metadata: %s\n" % str(e))
+                warning("cannot migrate metadata: %s\n" % escape(str(e)))
         for name, info in iteritems(packages):
             if info.pinned:
                 cfg["pinned_build"].append(name)
@@ -318,20 +321,49 @@ def migrate_workspace(wsdir):
         shutil.rmtree(os.path.join(wsdir, ".catkin_tools", "profiles", "rosrepo"), ignore_errors=True)
 
 
-def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, gitlab_projects=None, cloned_projects=None, verbose=True):
+WSFL_WS_PACKAGES = 1
+WSFL_GITLAB_PACKAGES = 2
+WSFL_WS_PROJECTS = 4
+WSFL_GITLAB_PROJECTS = 8
+WSFL_ALL = 15
+
+
+def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verbose=True, ws_state=None, flags=WSFL_ALL):
+    if ws_state is None:
+        ws_state = WorkspaceState()
     if config is None:
         config = Config(wsdir)
     if cache is None:
         cache = Cache(wsdir)
-    ws_avail = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
-    if gitlab_projects is None:
-        gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
-    if cloned_projects is None:
-        cloned_projects, _ = find_cloned_gitlab_projects(gitlab_projects, os.path.join(wsdir, "src"))
-    gitlab_avail = find_catkin_packages_from_gitlab_projects(gitlab_projects)
-    for _, pkg_list in iteritems(ws_avail):
-        for pkg in pkg_list:
-            for prj in cloned_projects:
-                if path_has_prefix(pkg.workspace_path, prj.workspace_path):
-                    pkg.project = prj
-    return ws_avail, gitlab_avail
+    link_projects = False
+    if flags & WSFL_WS_PACKAGES and ws_state.ws_packages is None:
+        link_projects = True
+        ws_state.ws_packages = find_catkin_packages(os.path.join(wsdir, "src"), cache=cache)
+        for name, pkg_list in iteritems(ws_state.ws_packages):
+            if len(pkg_list) > 1:
+                msg("You have multiple versions of the package @{cf}%s@| in your workspace:\n\n" % escape(name))
+                for pkg in pkg_list:
+                    msg("     - @{cf}%s@|\n" % escape(os.path.join(wsdir, "src", pkg.workspace_path)))
+                msg(
+                    "\n"
+                    "Please remove one of the versions or place a @{cf}CATKIN_IGNORE@| file "
+                    "in its path to disable it.\n\n"
+                )
+                fatal("workspace has conflicting packages")
+    if flags & WSFL_GITLAB_PROJECTS and ws_state.gitlab_projects is None:
+        ws_state.gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
+    if flags & WSFL_WS_PROJECTS and ws_state.ws_projects is None or ws_state.other_git is None:
+        if ws_state.gitlab_projects is None and ws_state.other_git is None:
+            _, ws_state.other_git = find_cloned_gitlab_projects({}, os.path.join(wsdir, "src"))
+        if ws_state.gitlab_projects is not None and ws_state.ws_projects is None:
+            link_projects = True
+            ws_state.ws_projects, ws_state.other_git = find_cloned_gitlab_projects(ws_state.gitlab_projects, os.path.join(wsdir, "src"))
+    if flags & WSFL_GITLAB_PACKAGES and ws_state.gitlab_packages is None and ws_state.gitlab_projects is not None:
+        ws_state.gitlab_packages = find_catkin_packages_from_gitlab_projects(ws_state.gitlab_projects)
+    if link_projects and ws_state.ws_packages is not None and ws_state.ws_projects is not None:
+        for _, pkg_list in iteritems(ws_state.ws_packages):
+            for pkg in pkg_list:
+                for prj in ws_state.ws_projects:
+                    if path_has_prefix(pkg.workspace_path, prj.workspace_path):
+                        pkg.project = prj
+    return ws_state

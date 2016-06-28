@@ -26,7 +26,8 @@ GITLAB_PACKAGE_CACHE_VERSION = 1
 class GitlabProject(NamedTuple):
     __slots__ = (
         "server", "name", "id", "website", "url", "packages",
-        "last_modified", "workspace_path", "master_branch"
+        "last_modified", "workspace_path", "master_branch",
+        "server_path"
     )
 
     def __cmp__(self, other):
@@ -125,14 +126,15 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                         master_branch=yaml_p["default_branch"],
                         packages=None,
                         last_modified=date_parse(yaml_p["last_activity_at"]),
-                        workspace_path=None
+                        workspace_path=None,
+                        server_path=yaml_p["path_with_namespace"]
                     )
                     if cached_p is not None and cached_p.last_modified == p.last_modified:
                         p.packages = cached_p.packages
                     else:
                         cache_update = True
                         if verbose:
-                            sys.stdout.write("Fetching: %s\n" % p.website)
+                            msg("@{cf}Fetching: %s@|\n" % p.website)
                         manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
                         p.packages = []
                         for path, blob in manifests:
@@ -190,6 +192,8 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
                 if repo_has_project_url(repo, project):
                     assert project.workspace_path is None or project.workspace_path == path
                     project.workspace_path = path
+                    for p in project.packages:
+                        p.project = project
                     result.append(project)
                     break
             else:

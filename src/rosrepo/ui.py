@@ -72,6 +72,7 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
     for chunk in chunks:
         count = indent_first
         line = []
+        empty_paragraph = True
         if indent_first > 0:
             line.append(" " * (indent_first - 1))
         for word in chunk.split(" "):
@@ -80,6 +81,7 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
                 continue
             if l != 0:
                 skip_blank = False
+                empty_paragraph = False
             if count + l < width:
                 line.append(word)
                 count += l + 1
@@ -94,7 +96,7 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
                 else:
                     line.append(word)
                     count += l + 1
-        result.append(" ".join(line))
+        result.append("" if skip_blank or empty_paragraph else " ".join(line))
     return "\n".join(result)
 
 
@@ -102,7 +104,7 @@ def escape(msg):
     return msg.replace("@", "@@")
 
 
-def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stdout, indent_first=0, indent_next=0):
+def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_first=0, indent_next=0):
     from .terminal_color import ansi
     ansi_text = color_fmt(text, use_color=isatty(fd) if use_color is None else use_color)
     if wrap:
@@ -126,17 +128,60 @@ def warning(text, use_color=None):
     msg("@!@{yf}%s: warning: %s" % (sys.argv[0], text), use_color=use_color, fd=sys.stderr, indent_next=len(sys.argv[0]) + 11)
 
 
+def readline(prompt, fd_in=sys.stdin, fd_out=sys.stderr):
+    fd_out.write(prompt)
+    fd_out.flush()
+    return fd_in.readline().rstrip("\r\n")
+
+
 def get_credentials(domain):
-    msg("@!Authentication required for @{cf}%s\n" % domain, fd=sys.stderr)
+    if not isatty(sys.stdin):
+        fatal("Need TTY to query credentials")
+    if isatty(sys.stderr):
+        fd = sys.stderr
+    elif isatty(sys.stdout):
+        fd = sys.stdout
+    else:
+        fatal("Need TTY to query credentials")
+    msg("\n@!Authentication required for @{cf}%s\n" % domain, fd=fd)
     while True:
-        login = raw_input("Username: ")
+        login = readline("Username: ", fd_out=fd)
         if login == "":
             continue
         passwd = getpass("Password: ")
         if passwd == "":
-            msg("Starting over\n\n")
+            msg("Starting over\n\n", fd=fd)
             continue
         return login, passwd
+
+
+def pick_dependency_resolution(package_name, pkg_list):
+    if not isatty(sys.stdin):
+        return None
+    if isatty(sys.stderr):
+        fd = sys.stderr
+    elif isatty(sys.stdout):
+        fd = sys.stdout
+    else:
+        return None
+    result = None
+    while result is None:
+        msg("\n@!Dependency resolution for @{cf}%s@|\n" % package_name, fd=fd)
+        msg(
+            "The package is not in your workspace and can be cloned from "
+            "multiple Git repositories. Please pick the one you want:\n\n", fd=fd
+        )
+        for i in range(len(pkg_list)):
+            msg("%3d. %s\n" % (i + 1, pkg_list[i].project.website), fd=fd)
+        msg("%3d. %s\n\n" % (0, "Choose automatically"), fd=fd)
+        try:
+            s = int(readline("--> ", fd_out=fd))
+            if s == 0:
+                return None
+            result = pkg_list[s - 1]
+        except (ValueError, IndexError):
+            msg("@!@{rf}Invalid choice@|\n\n", fd=fd)
+    return result
 
 
 class TableView(object):
