@@ -203,14 +203,14 @@ def compute_git_subdir(srcdir, name):
     return result
 
 
-def clone_packages(srcdir, packages, ws_state, protocol="ssh", dry_run=False, list_only=False):
+def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=False, dry_run=False):
     need_cloning = [(n, p) for n, p in iteritems(packages) if n not in ws_state.ws_packages and p.project not in ws_state.ws_projects]
     if not need_cloning:
         return
     msg("@{cf}The following packages have to be cloned from Gitlab@|:\n")
-    msg(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n", indent_first=4, indent_next=4)
-    if list_only:
-        return
+    msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent_first=4, indent_next=4)
+    if offline_mode:
+        fatal("cannot clone projects in offline mode")
     projects = list(set(p.project for _, p in need_cloning))
     for project in projects:
         git_subdir = compute_git_subdir(srcdir, project.server_path)
@@ -226,6 +226,7 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", dry_run=False, li
                 fatal("failed to clone repository")
         else:
             msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
+        msg("\n")
 
 
 def run(args):
@@ -252,7 +253,7 @@ def run(args):
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies")
-        return clone_packages(depends, ws_state, protocol=args.protocol, dry_run=args.dry_run)
+        return clone_packages(depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
     if args.packages:
         for p in args.packages:
             if p not in ws_state.ws_packages:
