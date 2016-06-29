@@ -15,7 +15,7 @@ from .workspace import get_workspace_location, get_workspace_state, find_catkin_
 from .config import Config
 from .cache import Cache
 from .resolver import find_dependees, show_fallback, show_conflicts
-from .ui import TableView, msg, error, fatal, escape
+from .ui import TableView, msg, warning, error, fatal, escape
 from .util import iteritems, path_has_prefix, makedirs
 from git import Repo, GitCommandError
 from rosrepo.util import call_process
@@ -206,7 +206,7 @@ def compute_git_subdir(srcdir, name):
 def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=False, dry_run=False):
     need_cloning = [(n, p) for n, p in iteritems(packages) if n not in ws_state.ws_packages and p.project not in ws_state.ws_projects]
     if not need_cloning:
-        return
+        return False
     msg("@{cf}The following packages have to be cloned from Gitlab@|:\n")
     msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent_first=4, indent_next=4)
     if offline_mode:
@@ -227,6 +227,7 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=Fals
         else:
             msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
         msg("\n")
+    return True
 
 
 def run(args):
@@ -245,15 +246,15 @@ def run(args):
         else:
             return call_process(invoke)
     if args.git_cmd == "clone":
-        for p in args.packages:
-            if p in ws_state.ws_packages:
-                fatal("package '%s' is already in workspace" % escape(p))
         depends, fallback, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
         show_fallback(fallback)
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies")
-        return clone_packages(depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
+        if not clone_packages(srcdir, depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run):
+            warning("already in workspace\n")
+        return 0
+
     if args.packages:
         for p in args.packages:
             if p not in ws_state.ws_packages:
