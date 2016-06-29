@@ -1,8 +1,13 @@
-# encoding=utf8
-"""
-Copyright (c) 2016 Fraunhofer FKIE
-
-"""
+# coding=utf-8
+#
+# ROSREPO
+# Manage ROS workspaces with multiple Gitlab repositories
+#
+# Author: Timo Röhling
+#
+# Copyright (c) 2016 Fraunhofer FKIE
+#
+#
 import os
 import sys
 from .config import Config

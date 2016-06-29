@@ -1,7 +1,13 @@
-"""
-Copyright (c) 2016 Fraunhofer FKIE
-
-"""
+# coding=utf-8
+#
+# ROSREPO
+# Manage ROS workspaces with multiple Gitlab repositories
+#
+# Author: Timo Röhling
+#
+# Copyright (c) 2016 Fraunhofer FKIE
+#
+#
 import os
 from .workspace import find_ros_root, get_workspace_location, get_workspace_state, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages

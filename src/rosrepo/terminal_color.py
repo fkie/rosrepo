@@ -1,3 +1,20 @@
+# coding=utf-8
+#
+# ROSREPO
+# Manage ROS workspaces with multiple Gitlab repositories
+#
+# Author: Timo Röhling
+#
+# Copyright (c) 2016 Fraunhofer FKIE
+#
+#
+
+##############################################################################
+# This file is originally from catkin tools, and has been modified for
+# ROSREPO. It is reused under the following license:
+##############################################################################
+
+#
 # Copyright 2014 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

@@ -1,7 +1,13 @@
-"""
-Copyright (c) 2016 Fraunhofer FKIE
-
-"""
+# coding=utf-8
+#
+# ROSREPO
+# Manage ROS workspaces with multiple Gitlab repositories
+#
+# Author: Timo Röhling
+#
+# Copyright (c) 2016 Fraunhofer FKIE
+#
+#
 import os
 import sys
 from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_FILENAME

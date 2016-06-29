@@ -1,3 +1,12 @@
+#
+# ROSREPO
+# Manage ROS workspaces with multiple Gitlab repositories
+#
+# Author: Timo Röhling
+#
+# Copyright (c) 2016 Fraunhofer FKIE
+#
+#
 import unittest
 
 import sys
