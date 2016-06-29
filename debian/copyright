@@ -1,0 +1,8 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: rosrepo
+Source: https://github.com/fkie/rosrepo
+
+Files: *
+Copyright: 2016 Fraunhofer FKIE
+License: none
+

@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+package_version:=$(shell dpkg-parsechangelog | grep "^Version:" | cut  -d" " -f2 | cut -d- -f1 | cut -d+ -f1)
+actual_version:=$(shell $(CURDIR)/rosrepo.py --version 2>&1)
+debianized_version:=$(subst a,~a,$(subst b,~b,$(actual_version)))
+
+ifneq ($(package_version),$(debianized_version))
+$(error Package version $(package_version) does not match actual version $(debianized_version))
+endif
+
+%:
+	dh $@ --with python2 --buildsystem=python_distutils
+
+make-orig-tar:
+	git archive --prefix=rosrepo-$(debianized_version)/ -o ../rosrepo_$(debianized_version).orig.tar.xz $(shell git merge-base debian master )
+
