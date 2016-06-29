@@ -23,7 +23,7 @@ def run(args):
     cache = Cache(wsdir)
     config.set_default("default_build", [])
     config.set_default("pinned_build", [])
-    set_name = "pinned_build" if args.pin else "default_build"
+    set_name = "pinned_build" if args.pinned else "default_build"
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
     if args.all:
         args.packages = ws_state.ws_packages.keys()

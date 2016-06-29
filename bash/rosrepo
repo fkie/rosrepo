@@ -114,7 +114,7 @@ _rosrepo_complete()
     ####
     if [ "$cmd" = "list" ]
     then
-        COMPREPLY=($(compgen -W "$common_opts -a --all --available -v --invert -n --package-names -S --default-set-only -P --pinned-set-only -B --built-only -W --workspace-only -D --dependees" -- "$arg"))
+        COMPREPLY=($(compgen -W "$common_opts -a --all --available -v --invert -n --package-names -S --default-only -P --pinned-only -B --built-only -W --workspace-only -D --dependees" -- "$arg"))
         return 0
     fi
     ####
@@ -140,14 +140,13 @@ _rosrepo_complete()
     if [ "$cmd" = "include" -o "$cmd" = "exclude" ]
     then
             buildset="-S"
-            [ "${has_opt["--pin"]}" = 1 ] && buildset="-P"
             [ "${has_opt["--pinned"]}" = 1 ] && buildset="-P"
             rosrepo_cmd[1]="list"
             [ "${has_opt["--replace"]}" = 1 ] || rosrepo_cmd+=("$buildset")
             [ "$cmd" = "include" ] && rosrepo_cmd+=("-v")
             if [ "${arg:0:1}" = "-" ]
             then
-                COMPREPLY=($(compgen -W "-p --protocol --pin --pinned --default -a --all -l --list" -- "$arg"))
+                COMPREPLY=($(compgen -W "-p --protocol -P --pinned -S --default -a --all" -- "$arg"))
             else
                 [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
             fi
