@@ -90,7 +90,7 @@ def run(args):
             call_process(invoke)
 
     catkin_lint = find_program("catkin_lint")
-    if catkin_lint and (args.catkin_lint or config.get("use_catkin_lint", False)) and not args.no_catkin_lint:
+    if catkin_lint and (args.catkin_lint or config.get("use_catkin_lint", True)) and not args.no_catkin_lint:
         catkin_lint = [catkin_lint, "--package-path", srcdir]
         if args.offline:
             catkin_lint += ["--offline"]
