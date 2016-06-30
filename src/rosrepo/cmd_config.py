@@ -142,7 +142,7 @@ def run(args):
         cxx = get_cxx_compiler(args.set_compiler)
         if cc and cxx:
             need_clean = need_clean or args.set_compiler != config.get("compiler", None)
-            config["compiler"] = args.compiler
+            config["compiler"] = args.set_compiler
         else:
             fatal("unknown compiler")
     if args.unset_compiler and "compiler" in config:
@@ -164,8 +164,8 @@ def run(args):
     catkin_config += ["--cmake-args"] + DEFAULT_CMAKE_ARGS
     compiler = config.get("compiler", None)
     if compiler:
-        cc = get_c_compiler(args.compiler)
-        cxx = get_cxx_compiler(args.compiler)
+        cc = get_c_compiler(compiler)
+        cxx = get_cxx_compiler(compiler)
         if cc and cxx:
             catkin_config += ["-DCMAKE_C_COMPILER=%s" % cc, "-DCMAKE_CXX_COMPILER=%s" % cxx]
     return call_process(catkin_config)
