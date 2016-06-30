@@ -24,6 +24,38 @@ except ImportError:
     from urllib.parse import urlsplit, urlunsplit
 
 
+def show_config(config):
+    table = TableView(expand=True)
+    srv_list = []
+    for srv in config.get("gitlab_servers", []):
+        label = srv.get("label", None)
+        url = srv.get("url", None)
+        if label and url:
+            srv_list.append("@{yf}%s: %s" % (escape(label), escape(url)))
+        elif label:
+            srv_list.append("@{yf}%s" % escape(label))
+        elif url:
+            srv_list.append("@{yf}%s" % escape(url))
+    table.add_row("@{cf}Gitlab Servers:", srv_list)
+    if "store_credentials" in config:
+        table.add_row("@{cf}Store Credentials:", "@{yf}" + ("Yes" if config["store_credentials"] else "No"))
+    table.add_separator()
+    if "ros_root" in config:
+        table.add_row("@{cf}Override ROS Path:", "@{yf}" + escape(config["ros_root"]))
+    if "compiler" in config:
+        table.add_row("@{cf}Compiler:", "@{yf}" + escape(config["compiler"]))
+    jobs = config.get("job_limit", None)
+    table.add_row("@{cf}Parallel Build Jobs:", "@{yf}" + ("%d" % jobs if jobs is not None else "Unlimited"))
+    if "install" in config:
+        table.add_row("@{cf}Install:", "@{yf}" + ("Yes" if config["install"] else "No"))
+    table.add_row("@{cf}Run catkin_lint Before Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
+    table.add_row("@{cf}Run rosclipse After Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
+    table.add_separator()
+    table.add_row("@{cf}Pinned Packages:", ["@{yf}" + escape(s) for s in config.get("pinned_build", [])])
+    table.add_row("@{cf}Default Build:", ["@{yf}" + escape(s) for s in config.get("default_build", [])])
+    table.write()
+
+
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
@@ -186,4 +218,6 @@ def run(args):
         cxx = get_cxx_compiler(compiler)
         if cc and cxx:
             catkin_config += ["-DCMAKE_C_COMPILER=%s" % cc, "-DCMAKE_CXX_COMPILER=%s" % cxx]
-    return call_process(catkin_config)
+    ret = call_process(catkin_config)
+    show_config(config)
+    return ret

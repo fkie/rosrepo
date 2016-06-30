@@ -51,14 +51,13 @@ def printed_len(text):
 
 def slice_ansi_text(text, chunk_size, fill=" ", pad=True):
     ll = printed_len(text)
-    if ll:
-        ll[0] = 0  # Do not skip initial ANSI for this
+    initial_ansi = text[:ll[0]] if ll else ""
     excess = len(ll) % chunk_size
     if pad and excess > 0:
         padded_text = text + fill[0] * (chunk_size - excess)
     else:
         padded_text = text
-    return list(padded_text[ll[i]:ll[chunk_size + i] if chunk_size + i < len(ll) else len(padded_text)] for i in range(0, len(ll), chunk_size))
+    return list(initial_ansi + padded_text[ll[i]:ll[chunk_size + i] if chunk_size + i < len(ll) else len(padded_text)] for i in range(0, len(ll), chunk_size))
 
 
 def pad_ansi_text(text, width, truncate=True, fill=" "):
@@ -108,6 +107,16 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
 
 def escape(msg):
     return msg.replace("@", "@@")
+
+
+def separator(fd=sys.stderr, width=None, use_color=None):
+    if width is None:
+        try:
+            if width is None:
+                width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
+        except OSError:
+            width = 80
+    fd.write(color_fmt("@{pf}" + ("-" * width) + "@|\n", use_color=isatty(fd) if use_color is None else use_color))
 
 
 def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_first=0, indent_next=0):
@@ -191,15 +200,23 @@ def pick_dependency_resolution(package_name, pkg_list):
 
 
 class TableView(object):
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.columns = args
-        self.width = [max(1, len(remove_ansi(color_fmt(c)))) for c in self.columns]
+        self.expand = kwargs.get("expand", False)
+        if not self.columns:
+            self.width = [0, 0]
+        else:
+            self.width = [max(1, len(remove_ansi(color_fmt(c)))) for c in self.columns]
         self.rows = []
 
     def add_row(self, *args):
         row = [r if isinstance(r, list) or isinstance(r, tuple) else (r,) for r in args]
+        assert len(row) == len(self.width)
         self.rows.append(row)
         self.width = [max(w, *(len(remove_ansi(color_fmt(r))) for r in rs)) for w, rs in zip(self.width, row)]
+
+    def add_separator(self):
+        self.rows.append(None)
 
     def empty(self):
         return len(self.rows) == 0
@@ -207,29 +224,40 @@ class TableView(object):
     def sort(self, column_index):
         self.rows.sort(key=lambda x: x[column_index])
 
-    def write(self, fd=sys.stdout):
+    def write(self, fd=sys.stdout, use_color=None):
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
+        if use_color is None:
+            use_color = isatty(fd)
         if isatty(fd):
-            use_color = True
             try:
-                total_width = terminal_width.get(fd.fileno(), get_terminal_size(fd))[0] - 1
+                total_width = terminal_width.get(fd.fileno(), get_terminal_size(fd))[0]
             except OSError:
-                total_width = 79
+                total_width = 80
         else:
             use_color = False
             total_width = None
         if total_width is not None:
+            if self.expand and actual_width < total_width:
+                width[-1] += total_width - actual_width
+                actual_width = total_width
             while actual_width > total_width:
                 max_width = max(width)
                 width = [min(max_width - 1, w) for w in width]
-                actual_width = sum(width) + 3 * len(width) + 1
-        fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
-        sep = color_fmt("@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n", use_color=use_color)
-        fd.write(sep)
-        fd.write(fmt % tuple(pad_ansi_text(color_fmt("@!%s" % c, use_color=use_color), w) for c, w in zip(self.columns, width)))
+                actual_width = sum(width) + 3 * len(width) - 1
+        if self.columns:
+            fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
+            sep = color_fmt("@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n", use_color=use_color)
+            fd.write(sep)
+            fd.write(fmt % tuple(pad_ansi_text(color_fmt("@!%s" % c, use_color=use_color), w) for c, w in zip(self.columns, width)))
+        else:
+            fmt = " %s   %s\n"
+            sep = color_fmt("@{pf}" + ("-" * actual_width) + "@|\n", use_color=use_color)
         fd.write(sep)
         for row in self.rows:
+            if row is None:
+                fd.write(sep)
+                continue
             for line in map(None, *row):
                 chunks = (slice_ansi_text(color_fmt(r, use_color=use_color) if r is not None else "", w) for r, w in zip(line, width))
                 for chunk in map(None, *chunks):
