@@ -130,8 +130,8 @@ def run(args):
                     pkgdir = os.path.join(wsdir, "src", pkg.workspace_path)
                     p_time = max(getmtime(os.path.join(pkgdir, "CMakeLists.txt")), getmtime(os.path.join(pkgdir, "package.xml")))
                     e_time = min(getmtime(os.path.join(pkgdir, ".project")), getmtime(os.path.join(pkgdir, ".cproject")), getmtime(os.path.join(pkgdir, ".settings", "language.settings.xml")))
-                    if e_time < p_time or args.force_rosclipse:
-                        msg("@{cf}Updating project files for '%s'@|\n" % name)
+                    if e_time < p_time or args.rosclipse:
+                        msg("@{cf}Updating rosclipse project files@|: %s\n" % name)
                         if not args.dry_run:
                             call_process([rosclipse, name])
     return ret
