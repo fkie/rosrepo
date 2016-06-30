@@ -24,6 +24,38 @@ except ImportError:
     from urllib.parse import urlsplit, urlunsplit
 
 
+def show_config(config):
+    table = TableView(expand=True)
+    srv_list = []
+    for srv in config.get("gitlab_servers", []):
+        label = srv.get("label", None)
+        url = srv.get("url", None)
+        if label and url:
+            srv_list.append("@{yf}%s: %s" % (escape(label), escape(url)))
+        elif label:
+            srv_list.append("@{yf}%s" % escape(label))
+        elif url:
+            srv_list.append("@{yf}%s" % escape(url))
+    table.add_row("@{cf}Gitlab Servers:", srv_list)
+    if "store_credentials" in config:
+        table.add_row("@{cf}Store Credentials:", "@{yf}" + ("Yes" if config["store_credentials"] else "No"))
+    table.add_separator()
+    if "ros_root" in config:
+        table.add_row("@{cf}Override ROS Path:", "@{yf}" + escape(config["ros_root"]))
+    if "compiler" in config:
+        table.add_row("@{cf}Compiler:", "@{yf}" + escape(config["compiler"]))
+    jobs = config.get("job_limit", None)
+    table.add_row("@{cf}Parallel Build Jobs:", "@{yf}" + ("%d" % jobs if jobs is not None else "Unlimited"))
+    if "install" in config:
+        table.add_row("@{cf}Install:", "@{yf}" + ("Yes" if config["install"] else "No"))
+    table.add_row("@{cf}Run catkin_lint Before Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
+    table.add_row("@{cf}Run rosclipse After Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
+    table.add_separator()
+    table.add_row("@{cf}Pinned Packages:", ["@{yf}" + escape(s) for s in config.get("pinned_build", [])])
+    table.add_row("@{cf}Default Build:", ["@{yf}" + escape(s) for s in config.get("default_build", [])])
+    table.write()
+
+
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
@@ -47,12 +79,21 @@ def run(args):
     need_clean = False
 
     if args.set_ros_root:
-        need_clean = True
-        if args.set_ros_root.lower() == "auto":
-            if "ros_root" in config:
-                del config["ros_root"]
-        else:
-            config["ros_root"] = args.set_ros_root
+        old_ros_root = find_ros_root(config.get("ros_root", None))
+        new_ros_root = find_ros_root(args.set_ros_root)
+        need_clean = old_ros_root != new_ros_root
+        config["ros_root"] = args.set_ros_root
+    if args.unset_ros_root:
+        old_ros_root = find_ros_root(config.get("ros_root", None))
+        new_ros_root = find_ros_root(None)
+        need_clean = old_ros_root != new_ros_root
+        del config["ros_root"]
+
+    config.set_default("store_credentials", True)
+    if args.store_credentials:
+        config["store_credentials"] = True
+    if args.no_store_credentials:
+        config["store_credentials"] = False
 
     if args.gitlab_logout:
         config.set_default("gitlab_servers", [])
@@ -64,6 +105,12 @@ def run(args):
                 break
         else:
             fatal("no such Gitlab server")
+    if args.remove_credentials:
+        config.set_default("gitlab_servers", [])
+        for srv in config["gitlab_servers"]:
+            if "private_token" in srv:
+                del srv["private_token"]
+        msg("All Gitlab private tokens removed")
     if args.gitlab_login:
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
@@ -88,7 +135,7 @@ def run(args):
         label, url = args.set_gitlab_url[0], urlunsplit(urlsplit(args.set_gitlab_url[1]))
         if args.private_token:
             private_token = args.private_token
-        elif args.no_private_token:
+        elif args.no_private_token or not config["store_credentials"]:
             private_token = None
         else:
             if args.offline:
@@ -116,14 +163,15 @@ def run(args):
             config["job_limit"] = args.job_limit
         else:
             del config["job_limit"]
-    if args.no_job_limit and "job_limit" in config:
+    if args.no_job_limit:
         del config["job_limit"]
 
+    config.set_default("install", False)
     if args.install:
-        need_clean = need_clean or not config.get("install", False)
+        need_clean = need_clean or not config["install"]
         config["install"] = True
     if args.no_install:
-        need_clean = need_clean or config.get("install", False)
+        need_clean = need_clean or config["install"]
         config["install"] = False
 
     if args.set_compiler:
@@ -131,12 +179,25 @@ def run(args):
         cxx = get_cxx_compiler(args.set_compiler)
         if cc and cxx:
             need_clean = need_clean or args.set_compiler != config.get("compiler", None)
-            config["compiler"] = args.compiler
+            config["compiler"] = args.set_compiler
         else:
             fatal("unknown compiler")
     if args.unset_compiler and "compiler" in config:
         need_clean = True
         del config["compiler"]
+
+    config.set_default("use_rosclipse", True)
+    if args.rosclipse:
+        config["use_rosclipse"] = True
+    if args.no_rosclipse:
+        config["use_rosclipse"] = False
+
+    config.set_default("use_catkin_lint", True)
+    if args.catkin_lint:
+        config["use_catkin_lint"] = True
+    if args.no_catkin_lint:
+        config["use_catkin_lint"] = False
+
     config.write()
 
     ros_rootdir = find_ros_root(config.get("ros_root", None))
@@ -153,8 +214,10 @@ def run(args):
     catkin_config += ["--cmake-args"] + DEFAULT_CMAKE_ARGS
     compiler = config.get("compiler", None)
     if compiler:
-        cc = get_c_compiler(args.compiler)
-        cxx = get_cxx_compiler(args.compiler)
+        cc = get_c_compiler(compiler)
+        cxx = get_cxx_compiler(compiler)
         if cc and cxx:
             catkin_config += ["-DCMAKE_C_COMPILER=%s" % cc, "-DCMAKE_CXX_COMPILER=%s" % cxx]
-    return call_process(catkin_config)
+    ret = call_process(catkin_config)
+    show_config(config)
+    return ret
