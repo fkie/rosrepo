@@ -49,8 +49,7 @@ def run(args):
     if args.set_ros_root:
         need_clean = True
         if args.set_ros_root.lower() == "auto":
-            if "ros_root" in config:
-                del config["ros_root"]
+            del config["ros_root"]
         else:
             config["ros_root"] = args.set_ros_root
 
@@ -127,7 +126,7 @@ def run(args):
             config["job_limit"] = args.job_limit
         else:
             del config["job_limit"]
-    if args.no_job_limit and "job_limit" in config:
+    if args.no_job_limit:
         del config["job_limit"]
 
     if args.install:

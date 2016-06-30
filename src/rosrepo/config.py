@@ -66,6 +66,12 @@ class Config(object):
             raise ValueError("Cannot change read-only configuration")
         self._data[key] = value
 
+    def __delitem__(self, key):
+        if self.read_only:
+            raise ValueError("Cannot change read-only configuration")
+        if key in self._data:
+            del self._data[key]
+
     def __iter__(self):
         return self._data.__iter__()
 
