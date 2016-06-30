@@ -9,7 +9,7 @@
 #
 #
 import os
-from .workspace import get_workspace_location, get_workspace_state, WSFL_WS_PACKAGES
+from .workspace import find_ros_root, get_workspace_location, get_workspace_state, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages
 from .resolver import find_dependees, show_fallback, show_conflicts
 from .config import Config
@@ -22,6 +22,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    ros_rootdir = find_ros_root(config.get("ros_root", None))
+    if ros_rootdir is None:
+        fatal("cannot detect ROS distribution. Have your sourced your setup.bash?\n")
+
     config.set_default("default_build", [])
     config.set_default("pinned_build", [])
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
