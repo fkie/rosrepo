@@ -65,7 +65,5 @@ def run(args):
         cfg.data["ros_root"] = ros_rootdir
     else:
         del cfg["ros_root"]
-    cfg.set_default("install", False)
-    cfg.set_default("rosclipse", True)
     cfg.write()
     return config_run(FakeArgs(workspace=wsdir))
