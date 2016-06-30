@@ -39,7 +39,9 @@ def prepare_arguments(parser):
     # config
     p = cmds.add_parser("config", help="configuration settings")
     add_common_options(p)
-    p.add_argument("--set-ros-root", metavar="PATH", help="override ROS installation path (default: autodetect)")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("--set-ros-root", metavar="PATH", help="override ROS installation path")
+    m.add_argument("--unset-ros-root", action="store_true", help="undo override for ROS installation path")
     g = p.add_argument_group("Gitlab options")
     g.add_argument("--set-gitlab-url", nargs=2, metavar=("LABEL", "URL"), help="add or change a Gitlab server named LABEL")
     g.add_argument("--get-gitlab-url", metavar="LABEL", help="show the Gitlab server named LABEL")
@@ -66,6 +68,9 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--rosclipse", action="store_true", help="use rosclipse to update Eclipse project files")
     m.add_argument("--no-rosclipse", action="store_true", help="do not run rosclipse to create Eclipse project files")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--catkin-lint", action="store_true", help="use catkin_lint to check packages before build")
+    m.add_argument("--no-catkin-lint", action="store_true", help="do not use catkin_lint to check packages before build")
     from .cmd_config import run as config_func
     p.set_defaults(func=config_func)
 

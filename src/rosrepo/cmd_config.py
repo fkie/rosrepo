@@ -47,17 +47,22 @@ def run(args):
     need_clean = False
 
     if args.set_ros_root:
-        need_clean = True
-        if args.set_ros_root.lower() == "auto":
-            del config["ros_root"]
-        else:
-            config["ros_root"] = args.set_ros_root
+        old_ros_root = find_ros_root(config.get("ros_root", None))
+        new_ros_root = find_ros_root(args.set_ros_root)
+        need_clean = old_ros_root != new_ros_root
+        config["ros_root"] = args.set_ros_root
+    if args.unset_ros_root:
+        old_ros_root = find_ros_root(config.get("ros_root", None))
+        new_ros_root = find_ros_root(None)
+        need_clean = old_ros_root != new_ros_root
+        del config["ros_root"]
 
     config.set_default("store_credentials", True)
     if args.store_credentials:
         config["store_credentials"] = True
     if args.no_store_credentials:
         config["store_credentials"] = False
+
     if args.gitlab_logout:
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
@@ -129,11 +134,12 @@ def run(args):
     if args.no_job_limit:
         del config["job_limit"]
 
+    config.set_default("install", False)
     if args.install:
-        need_clean = need_clean or not config.get("install", False)
+        need_clean = need_clean or not config["install"]
         config["install"] = True
     if args.no_install:
-        need_clean = need_clean or config.get("install", False)
+        need_clean = need_clean or config["install"]
         config["install"] = False
 
     if args.set_compiler:
@@ -147,6 +153,19 @@ def run(args):
     if args.unset_compiler and "compiler" in config:
         need_clean = True
         del config["compiler"]
+
+    config.set_default("use_rosclipse", True)
+    if args.rosclipse:
+        config["use_rosclipse"] = True
+    if args.no_rosclipse:
+        config["use_rosclipse"] = False
+
+    config.set_default("use_catkin_lint", True)
+    if args.catkin_lint:
+        config["use_catkin_lint"] = True
+    if args.no_catkin_lint:
+        config["use_catkin_lint"] = False
+
     config.write()
 
     ros_rootdir = find_ros_root(config.get("ros_root", None))
