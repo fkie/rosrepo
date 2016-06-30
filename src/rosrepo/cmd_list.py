@@ -51,9 +51,9 @@ def run(args):
             show = False
         if args.built_only and not has_been_built:
             show = False
-        if args.default_set_only and not in_default_set and not (args.dependees and name in default_depends):
+        if args.default_only and not in_default_set and not (args.dependees and name in default_depends):
             show = False
-        if args.pinned_set_only and not in_pinned_set and not (args.dependees and name in pinned_depends):
+        if args.pinned_only and not in_pinned_set and not (args.dependees and name in pinned_depends):
             show = False
         if args.conflicts_only and not in_conflict_set:
             show = False

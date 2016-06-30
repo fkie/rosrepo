@@ -32,43 +32,55 @@ def run(args):
             msg("@{cf}Replacing default build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
         else:
-            msg("@{cf}Clearing default build set@|\n\n")
+            fatal("No packages given for new default build")
         config["default_build"] = sorted(args.packages)
-        config.write()
     if args.set_pinned:
         if args.packages:
             msg("@{cf}Replacing pinned build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
         else:
-            msg("@{cf}Clearing pinned build set@|\n\n")
+            fatal("No packages given to be pinned")
         config["pinned_build"] = sorted(args.packages)
-        config.write()
     srcdir = os.path.join(wsdir, "src")
-    build_set = set(config["pinned_build"])
+    pinned_set = set(config["pinned_build"])
     if args.packages:
-        build_set |= set(args.packages)
+        build_set = set(args.packages)
+        if build_set:
+            msg("@{cf}You selected the following packages to be built@|:\n")
+            msg(", ".join(sorted(list(build_set))) + "\n\n", indent_first=4, indent_next=4)
     else:
-        build_set |= set(config["default_build"])
+        build_set = set(config["default_build"])
+        if build_set:
+            msg("@{cf}The following packages are included in the default build@|:\n")
+            msg(", ".join(sorted(list(build_set))) + "\n\n", indent_first=4, indent_next=4)
+    if pinned_set - build_set:
+        if build_set:
+            msg("@{cf}The following pinned packages will also be built@|:\n")
+        else:
+            msg("@{cf}The following pinned packages will be built@|:\n")
+        msg(", ".join(sorted(list(pinned_set - build_set))) + "\n\n", indent_first=4, indent_next=4)
+    build_set |= pinned_set
     if not build_set:
-        fatal("no package to build")
-    msg("@{cf}The following packages will be built@|:\n")
-    msg(", ".join(sorted(list(build_set))) + "\n\n", indent_first=4, indent_next=4)
+        fatal("no packages to build")
     build_packages, fallback, conflicts = find_dependees(build_set, ws_state)
     show_fallback(fallback)
     show_conflicts(conflicts)
     if conflicts:
         fatal("cannot resolve dependencies")
+
+    if not args.dry_run:
+        config.write()
+
     depend_set = set(build_packages.keys()) - build_set
     if depend_set:
         msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
         msg(", ".join(sorted(depend_set)) + "\n\n", indent_first=4, indent_next=4)
-    clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol, dry_run=args.dry_run)
+    clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
     build_packages, fallback, conflicts = find_dependees(build_set, ws_state)
     show_fallback(fallback)
     show_conflicts(conflicts)
-    if conflicts:
-        fatal("workspace is broken")
+    assert not conflicts
 
     if args.clean:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
