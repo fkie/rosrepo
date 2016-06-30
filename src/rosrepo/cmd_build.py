@@ -89,6 +89,16 @@ def run(args):
         else:
             call_process(invoke)
 
+    catkin_lint = find_program("catkin_lint")
+    if catkin_lint and (args.catkin_lint or config.get("use_catkin_lint", False)) and not args.no_catkin_lint:
+        catkin_lint = [catkin_lint, "--package-path", srcdir]
+        if args.offline:
+            catkin_lint += ["--offline"]
+        catkin_lint += reduce(lambda x, y: x + y, (["--pkg", pkg] for pkg in build_packages.keys()))
+        ret = call_process(catkin_lint)
+        if ret != 0 and not args.dry_run:
+            fatal("catkin_lint reported errors")
+
     catkin_build = ["catkin", "build", "--workspace", wsdir]
     if args.dry_run:
         catkin_build += ["--dry-run"]
@@ -112,7 +122,7 @@ def run(args):
     ret = call_process(catkin_build)
 
     rosclipse = find_program("rosclipse")
-    if rosclipse is not None and (args.force_rosclipse or config.get("use_rosclipse", True)) and not args.no_rosclipse:
+    if rosclipse is not None and (args.rosclipse or config.get("use_rosclipse", True)) and not args.no_rosclipse:
         eclipse_ok, _, _ = call_process([rosclipse, "-d"], stdout=PIPE, stderr=PIPE)
         if eclipse_ok == 0:
             for name, pkg in iteritems(build_packages):
