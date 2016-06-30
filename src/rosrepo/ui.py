@@ -246,8 +246,12 @@ class TableView(object):
                 actual_width = total_width
             while actual_width > total_width:
                 max_width = max(width)
-                width = [min(max_width - 1, w) for w in width]
-                actual_width = sum(width) + 3 * len(width) - 1
+                for i in range(len(width)):
+                    if width[i] == max_width:
+                        width[i] -= 1
+                        actual_width -= 1
+                    if actual_width <= total_width:
+                        break
         if self.columns:
             fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
             sep = color_fmt("@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n", use_color=use_color)

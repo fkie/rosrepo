@@ -65,17 +65,17 @@ def run(args):
             return False
         for pkg in pkg_list:
             status.append(
-                ("W" if in_workspace else ".") +
-                ("B" if has_been_built else ".") +
-                ("S" if in_default_set else ".") +
-                ("P" if in_pinned_set else ".") +
-                ("D" if not in_default_set and not in_pinned_set and in_dependee_set else ".") +
-                ("C" if in_conflict_set else ".")
+                ("@!@{gf}W@|" if in_workspace else ".") +
+                ("@!@{gf}B@|" if has_been_built else ".") +
+                ("@!S@|" if in_default_set else ".") +
+                ("@!P@|" if in_pinned_set else ".") +
+                ("@!@{bf}D@|" if not in_default_set and not in_pinned_set and in_dependee_set else ".") +
+                ("@!@{rf}C@|" if in_conflict_set else ".")
             )
             if hasattr(pkg, "workspace_path"):
                 head, tail = os.path.split(pkg.workspace_path)
                 path = head + "/" if tail == name else pkg.workspace_path
-                location.append(escape(path))
+                location.append("@{yf}" + escape(path))
             else:
                 location.append(escape(pkg.project.website))
         return True
@@ -88,9 +88,9 @@ def run(args):
         if filter_table_entry(name, pkg_list, status, location):
             if name in ws_state.gitlab_packages:
                 for pkg in ws_state.gitlab_packages[name]:
-                    status.append("      U" if upstream == pkg.project else "")
-                    location.append(pkg.project.website)
-            table.add_row(name, status, location)
+                    status.append("      *" if upstream == pkg.project else "")
+                    location.append(escape(pkg.project.website))
+            table.add_row("@{yf}" + escape(name), status, location)
             names.add(name)
     for name, pkg_list in iteritems(ws_state.gitlab_packages):
         if name in ws_state.ws_packages:
@@ -98,7 +98,7 @@ def run(args):
         status = []
         location = []
         if filter_table_entry(name, pkg_list, status, location):
-            table.add_row(name, status, location)
+            table.add_row("@{yf}" + escape(name), status, location)
             names.add(name)
     if table.empty() and not args.autocomplete:
         warning("no packages matched your search filter\n")
@@ -109,13 +109,12 @@ def run(args):
         table.sort(0)
         table.write(sys.stdout)
         msg("\n"
-            "@!W@|=In Workspace   "
-            "@!B@|=Built   "
+            "@!@{gf}W@|=In Workspace   "
+            "@!@{gf}B@|=Built   "
             "@!S@|=Default Set   "
-            "@!D@|=Dependee   "
-            "@!C@|=Conflict   "
             "@!P@|=Pinned   "
-            "@!U@|=Upstream   "
+            "@!@{bf}D@|=Dependee   "
+            "@!@{rf}C@|=Conflict   "
             "\n", indent_first=2, indent_next=2, fd=sys.stdout
             )
         sys.stdout.write("\n")

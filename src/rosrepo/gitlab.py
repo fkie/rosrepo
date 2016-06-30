@@ -26,7 +26,11 @@ from .ui import get_credentials, msg, warning, error
 from .util import iteritems, NamedTuple
 
 
-GITLAB_PACKAGE_CACHE_VERSION = 1
+GITLAB_PACKAGE_CACHE_VERSION = 2
+
+
+class GitlabServer(NamedTuple):
+    __slots__ = ("etag", "projects")
 
 
 class GitlabProject(NamedTuple):
@@ -110,62 +114,79 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
     server_name = urlsplit(url)[1]
     cache_update = False
     if cache is not None:
-        cached_projects = cache.get_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, [])
+        server_cache = cache.get_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, GitlabServer())
     else:
-        cached_projects = []
+        server_cache = GitlabServer()
+    if server_cache.projects is None:
+        server_cache.projects = []
     if not cache_only and url is not None and private_token is not None and url not in _updated_urls:
         projects = []
         try:
             with requests.Session() as s:
                 s.headers.update({"PRIVATE-TOKEN": private_token})
-                r = s.get(urljoin(url, "api/v3/projects"), timeout=timeout)
+                etag = {}
+                if server_cache.etag is not None:
+                    etag.update({"If-None-Match": server_cache.etag})
+                r = s.get(urljoin(url, "api/v3/projects"), headers=etag, timeout=timeout)
                 r.raise_for_status()
-                project_list = r.json()
-                for yaml_p in project_list:
-                    cached_p = next((q for q in cached_projects if q.id == yaml_p["id"]), None)
-                    p = GitlabProject(
-                        server=server_name,
-                        name=yaml_p["name_with_namespace"],
-                        id=yaml_p["id"],
-                        website=yaml_p["web_url"],
-                        url={"ssh": yaml_p["ssh_url_to_repo"], "http": yaml_p["http_url_to_repo"]},
-                        master_branch=yaml_p["default_branch"],
-                        packages=None,
-                        last_modified=date_parse(yaml_p["last_activity_at"]),
-                        workspace_path=None,
-                        server_path=yaml_p["path_with_namespace"]
-                    )
-                    if cached_p is not None and cached_p.last_modified == p.last_modified:
-                        p.packages = cached_p.packages
-                    else:
-                        cache_update = True
-                        if verbose:
-                            msg("@{cf}Fetching@|: %s\n" % p.website)
-                        manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
-                        p.packages = []
-                        for path, blob in manifests:
-                            r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s" % (p.id, blob)), timeout=timeout)
-                            r.raise_for_status()
-                            filename = os.path.join(path, PACKAGE_MANIFEST_FILENAME)
-                            xml_data = r.content
-                            try:
-                                manifest = parse_package_string(xml_data, filename)
-                            except InvalidPackage as e:
-                                warning("'%s' hosts invalid package '%s': %s\n" % (p.website, filename, str(e)))
-                                manifest = None
-                            p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
-                    projects.append(p)
+                if r.status_code == 304:
+                    projects = server_cache.projects
+                else:
+                    server_cache.etag = r.headers.get("etag", None)
+                    project_list = r.json()
+                    for yaml_p in project_list:
+                        cached_p = next((q for q in server_cache.projects if q.id == yaml_p["id"]), None)
+                        p = GitlabProject(
+                            server=server_name,
+                            name=yaml_p["name_with_namespace"],
+                            id=yaml_p["id"],
+                            website=yaml_p["web_url"],
+                            url={"ssh": yaml_p["ssh_url_to_repo"], "http": yaml_p["http_url_to_repo"]},
+                            master_branch=yaml_p["default_branch"],
+                            packages=None,
+                            last_modified=date_parse(yaml_p["last_activity_at"]),
+                            workspace_path=None,
+                            server_path=yaml_p["path_with_namespace"]
+                        )
+                        if cached_p is not None and cached_p.last_modified == p.last_modified:
+                            p.packages = cached_p.packages
+                        else:
+                            cache_update = True
+                            if verbose:
+                                msg("@{cf}Fetching@|: %s\n" % p.website)
+                            manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
+                            old_manifests = {}
+                            if cached_p is not None:
+                                for old_p in cached_p.packages:
+                                    old_manifests[old_p.manifest_blob] = old_p.manifest_xml
+                            p.packages = []
+                            for path, blob in manifests:
+                                if blob not in old_manifests:
+                                    r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s" % (p.id, blob)), timeout=timeout)
+                                    r.raise_for_status()
+                                    xml_data = r.content
+                                else:
+                                    xml_data = old_manifests[blob]
+                                filename = os.path.join(path, PACKAGE_MANIFEST_FILENAME)
+                                try:
+                                    manifest = parse_package_string(xml_data, filename)
+                                except InvalidPackage as e:
+                                    warning("'%s' hosts invalid package '%s': %s\n" % (p.website, filename, str(e)))
+                                    manifest = None
+                                p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
+                        projects.append(p)
         except IOError as e:
             error("cannot update from %s: %s\n" % (url, e))
-            projects = cached_projects
+            projects = server_cache.projects
             cache_update = False
         if cache is not None:
             _updated_urls.add(url)
     else:
-        projects = cached_projects
+        projects = server_cache.projects
     if cache is not None:
-        if cache_update or len(projects) != len(cached_projects):
-            cache.set_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, projects)
+        if cache_update or len(projects) != len(server_cache.projects):
+            server_cache.projects = projects
+            cache.set_object(url_to_cache_name(label, url), GITLAB_PACKAGE_CACHE_VERSION, server_cache)
     return projects
 
 
