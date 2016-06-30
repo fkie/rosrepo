@@ -34,7 +34,7 @@ class Config(object):
             current = Version(__version__)
             stored = Version(self._data["version"])
             if stored < current and not read_only:
-                self.migrate(stored)
+                self._migrate(stored)
             if stored > current and not read_only:
                 raise ConfigError("Workspace was configured by newer version of rosrepo")
         else:
@@ -49,6 +49,7 @@ class Config(object):
 
     def _migrate(self, old_version):
         self._data["version"] = __version__
+        self.write()
 
     def set_default(self, key, value):
         if key not in self._data:
