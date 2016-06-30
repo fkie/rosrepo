@@ -8,6 +8,7 @@
 # Copyright (c) 2016 Fraunhofer FKIE
 #
 #
+import os
 import sys
 from getpass import getpass
 import re
@@ -136,11 +137,13 @@ def fatal(text):
 
 
 def error(text, use_color=None):
-    msg("@!@{rf}%s: error: %s" % (sys.argv[0], text), fd=sys.stderr, indent_next=len(sys.argv[0]) + 9)
+    prog = os.path.split(sys.argv[0])[1]
+    msg("@!@{rf}%s: error: %s" % (prog, text), fd=sys.stderr, indent_next=len(prog) + 9)
 
 
 def warning(text, use_color=None):
-    msg("@!@{yf}%s: warning: %s" % (sys.argv[0], text), use_color=use_color, fd=sys.stderr, indent_next=len(sys.argv[0]) + 11)
+    prog = os.path.split(sys.argv[0])[1]
+    msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, fd=sys.stderr, indent_next=len(prog) + 11)
 
 
 def readline(prompt, fd_in=sys.stdin, fd_out=sys.stderr):
