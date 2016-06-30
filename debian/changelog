@@ -1,3 +1,9 @@
+rosrepo (3.0.0~a4-1) unstable; urgency=medium
+
+  * New pre-release.
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 30 Jun 2016 14:14:49 +0200
+
 rosrepo (3.0.0~a3-1) unstable; urgency=medium
 
   * Hotfix.
