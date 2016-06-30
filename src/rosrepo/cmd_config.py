@@ -54,6 +54,11 @@ def run(args):
         else:
             config["ros_root"] = args.set_ros_root
 
+    config.set_default("store_credentials", True)
+    if args.store_credentials:
+        config["store_credentials"] = True
+    if args.no_store_credentials:
+        config["store_credentials"] = False
     if args.gitlab_logout:
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
@@ -64,6 +69,12 @@ def run(args):
                 break
         else:
             fatal("no such Gitlab server")
+    if args.remove_credentials:
+        config.set_default("gitlab_servers", [])
+        for srv in config["gitlab_servers"]:
+            if "private_token" in srv:
+                del srv["private_token"]
+        msg("All Gitlab private tokens removed")
     if args.gitlab_login:
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
@@ -88,7 +99,7 @@ def run(args):
         label, url = args.set_gitlab_url[0], urlunsplit(urlsplit(args.set_gitlab_url[1]))
         if args.private_token:
             private_token = args.private_token
-        elif args.no_private_token:
+        elif args.no_private_token or not config["store_credentials"]:
             private_token = None
         else:
             if args.offline:
