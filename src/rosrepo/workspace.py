@@ -26,7 +26,7 @@ class Package(NamedTuple):
 
 
 class WorkspaceState(NamedTuple):
-    __slots__ = ("ws_packages", "gitlab_packages", "ws_projects", "gitlab_projects", "other_git")
+    __slots__ = ("ws_packages", "remote_packages", "ws_projects", "remote_projects", "other_git")
 
 
 def is_ros_root(path):
@@ -332,9 +332,9 @@ def migrate_workspace(wsdir):
 
 
 WSFL_WS_PACKAGES = 1
-WSFL_GITLAB_PACKAGES = 2
+WSFL_REMOTE_PACKAGES = 2
 WSFL_WS_PROJECTS = 4
-WSFL_GITLAB_PROJECTS = 8
+WSFL_REMOTE_PROJECTS = 8
 WSFL_ALL = 15
 
 
@@ -360,13 +360,13 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                     "in its path to disable it.\n\n"
                 )
                 fatal("workspace has conflicting packages")
-    if flags & WSFL_GITLAB_PROJECTS:
-        ws_state.gitlab_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
-    if flags & WSFL_WS_PROJECTS and ws_state.gitlab_projects is not None:
+    if flags & WSFL_REMOTE_PROJECTS:
+        ws_state.remote_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
+    if flags & WSFL_WS_PROJECTS and ws_state.remote_projects is not None:
         link_projects = True
-        ws_state.ws_projects, ws_state.other_git = find_cloned_gitlab_projects(ws_state.gitlab_projects, os.path.join(wsdir, "src"))
-    if flags & WSFL_GITLAB_PACKAGES and ws_state.gitlab_projects is not None:
-        ws_state.gitlab_packages = find_catkin_packages_from_gitlab_projects(ws_state.gitlab_projects)
+        ws_state.ws_projects, ws_state.other_git = find_cloned_gitlab_projects(ws_state.remote_projects, os.path.join(wsdir, "src"))
+    if flags & WSFL_REMOTE_PACKAGES and ws_state.remote_projects is not None:
+        ws_state.remote_packages = find_catkin_packages_from_gitlab_projects(ws_state.remote_projects)
     if link_projects and ws_state.ws_packages is not None and ws_state.ws_projects is not None:
         for _, pkg_list in iteritems(ws_state.ws_packages):
             for pkg in pkg_list:
