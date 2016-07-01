@@ -79,12 +79,12 @@ def run(args):
     need_clean = False
 
     if args.set_ros_root:
-        old_ros_root = find_ros_root(config.get("ros_root", None))
+        old_ros_root = find_ros_root(config.get("ros_root"))
         new_ros_root = find_ros_root(args.set_ros_root)
         need_clean = old_ros_root != new_ros_root
         config["ros_root"] = args.set_ros_root
     if args.unset_ros_root:
-        old_ros_root = find_ros_root(config.get("ros_root", None))
+        old_ros_root = find_ros_root(config.get("ros_root"))
         new_ros_root = find_ros_root(None)
         need_clean = old_ros_root != new_ros_root
         del config["ros_root"]
@@ -121,13 +121,12 @@ def run(args):
                     fatal("cannot acquire token for Gitlab server without URL")
                 if args.private_token:
                     private_token = args.private_token
-                elif args.no_private_token:
-                    private_token = None
                 else:
                     if args.offline:
                         fatal("cannot acquire Gitlab private token in offline mode\n")
                     private_token = acquire_gitlab_private_token(label, url)
-                srv["private_token"] = private_token
+                if config["store_credentials"]:
+                    srv["private_token"] = private_token
                 break
         else:
             fatal("no such Gitlab server")
@@ -135,8 +134,6 @@ def run(args):
         label, url = args.set_gitlab_url[0], urlunsplit(urlsplit(args.set_gitlab_url[1]))
         if args.private_token:
             private_token = args.private_token
-        elif args.no_private_token or not config["store_credentials"]:
-            private_token = None
         else:
             if args.offline:
                 fatal("cannot acquire Gitlab private token in offline mode\n")
@@ -145,20 +142,19 @@ def run(args):
         for srv in config["gitlab_servers"]:
             if srv.get("label", None) == label:
                 srv["url"] = url
-                if private_token is not None:
+                if private_token is not None and config["store_credentials"]:
                     srv["private_token"] = private_token
                 break
         else:
             srv = {"label": label, "url": url}
-            if private_token is not None:
+            if private_token is not None and config["store_credentials"]:
                 srv["private_token"] = private_token
             config["gitlab_servers"].append(srv)
-        find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=args.offline, verbose=True)
     if args.unset_gitlab_url:
         config.set_default("gitlab_servers", [])
         config["gitlab_servers"] = [srv for srv in config["gitlab_servers"] if srv["label"] != args.unset_gitlab_url]
 
-    if args.job_limit:
+    if args.job_limit is not None:
         if args.job_limit > 0:
             config["job_limit"] = args.job_limit
         else:
@@ -200,7 +196,7 @@ def run(args):
 
     config.write()
 
-    ros_rootdir = find_ros_root(config.get("ros_root", None))
+    ros_rootdir = find_ros_root(config.get("ros_root"))
     if ros_rootdir is None:
         fatal("cannot detect ROS distribution. Please source setup.bash or use --ros-root option\n")
 

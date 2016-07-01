@@ -64,3 +64,4 @@ def run(args):
 
     if not args.dry_run:
         config.write()
+    return 0

@@ -35,7 +35,7 @@ def run(args):
                     if not has_srcdir:
                         has_srcdir = True
                         new_path.append(srcdir)
-                else:
+                elif path:
                     new_path.append(path)
             if not has_srcdir:
                 new_path.insert(0, srcdir)
@@ -46,3 +46,4 @@ def run(args):
             else:
                 if not args.terse:
                     sys.stdout.write("# variable %s is not set\n" % key)
+    return 0

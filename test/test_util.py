@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # ROSREPO
 # Manage ROS workspaces with multiple Gitlab repositories
