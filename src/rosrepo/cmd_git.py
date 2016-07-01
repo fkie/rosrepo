@@ -280,3 +280,4 @@ def run(args):
         pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
     if args.git_cmd == "push":
         push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+    return 0

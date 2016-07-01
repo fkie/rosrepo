@@ -46,3 +46,4 @@ def run(args):
             else:
                 if not args.terse:
                     sys.stdout.write("# variable %s is not set\n" % key)
+    return 0
