@@ -86,13 +86,13 @@ def run(args):
         location = []
         upstream = next((pkg.project for pkg in pkg_list if pkg.project is not None), None)
         if filter_table_entry(name, pkg_list, status, location):
-            if name in ws_state.gitlab_packages:
-                for pkg in ws_state.gitlab_packages[name]:
+            if name in ws_state.remote_packages:
+                for pkg in ws_state.remote_packages[name]:
                     status.append("      *" if upstream == pkg.project else "")
                     location.append(escape(pkg.project.website))
             table.add_row("@{yf}" + escape(name), status, location)
             names.add(name)
-    for name, pkg_list in iteritems(ws_state.gitlab_packages):
+    for name, pkg_list in iteritems(ws_state.remote_packages):
         if name in ws_state.ws_packages:
             continue
         status = []

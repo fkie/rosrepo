@@ -87,7 +87,7 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     depends[name] = ws_state.ws_packages[name][0]
                     manifest = ws_state.ws_packages[name][0].manifest
                     queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
-                elif name in ws_state.gitlab_packages:
+                elif name in ws_state.remote_packages:
                     # Package is not in workspace, so we may have multiple sources
                     # to download it from. However, since each Gitlab project
                     # may contain multiple packages, we must verify that no other
@@ -97,7 +97,7 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     best_fallback = fallback
                     candidates = []
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                    for pkg in ws_state.gitlab_packages[name]:
+                    for pkg in ws_state.remote_packages[name]:
                         # Is the package project in the workspace already?
                         if pkg.project in ws_state.ws_projects:
                             resolver_msgs.append("cannot be cloned from @{cf}%s@| because that repository is cloned in @{cf}%s/@| already" % (escape(pkg.project.name), escape(pkg.project.workspace_path)))

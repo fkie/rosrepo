@@ -85,13 +85,13 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         tracking_branch = repo.head.reference.tracking_branch()
         origin = get_origin(repo, project)
         master_branch = origin.refs[project.master_branch] if origin is not None else None
+        ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
+        found_packages |= set(ws_packages.keys())
         status = create_status(repo, master_branch, tracking_branch)
         if status is not None:
-            ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
             for name, pkg_list in iteritems(ws_packages):
                 if name not in packages:
                     continue
-                found_packages.add(name)
                 path_list = []
                 for pkg in pkg_list:
                     head, tail = os.path.split(pkg.workspace_path)
@@ -101,13 +101,13 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
     for path in other_git:
         repo = Repo(os.path.join(srcdir, path))
         tracking_branch = repo.head.reference.tracking_branch()
+        ws_packages = find_catkin_packages(srcdir, path, cache=cache)
+        found_packages |= set(ws_packages.keys())
         status = create_status(repo, None, tracking_branch)
         if status is not None:
-            ws_packages = find_catkin_packages(srcdir, path, cache=cache)
             for name, pkg_list in iteritems(ws_packages):
                 if name not in packages:
                     continue
-                found_packages.add(name)
                 path_list = []
                 for pkg in pkg_list:
                     head, tail = os.path.split(pkg.workspace_path)
