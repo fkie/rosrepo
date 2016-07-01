@@ -18,12 +18,12 @@ from .terminal_color import fmt as color_fmt
 terminal_width = {}
 try:
     terminal_width[sys.stdout.fileno()] = get_terminal_size(sys.stdout)
-except OSError:
-    terminal_width[sys.stdout.fileno()] = None
+except:
+    pass
 try:
     terminal_width[sys.stderr.fileno()] = get_terminal_size(sys.stderr)
-except OSError:
-    terminal_width[sys.stderr.fileno()] = None
+except:
+    pass
 
 
 def isatty(fd):
@@ -127,7 +127,7 @@ def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_f
         try:
             if max_width is None:
                 max_width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
-        except OSError:
+        except:
             pass
     fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if (isatty(fd) if use_color is None else use_color) else ""))
 
@@ -214,6 +214,7 @@ class TableView(object):
 
     def add_row(self, *args):
         row = [r if isinstance(r, list) or isinstance(r, tuple) else (r,) for r in args]
+        row = [r if isinstance(r, tuple) or len(r) > 0 else [""] for r in row]  # Handle special case with empty lists
         assert len(row) == len(self.width)
         self.rows.append(row)
         self.width = [max(w, *(len(remove_ansi(color_fmt(r))) for r in rs)) for w, rs in zip(self.width, row)]

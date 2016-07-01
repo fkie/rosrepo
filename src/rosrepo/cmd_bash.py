@@ -35,7 +35,7 @@ def run(args):
                     if not has_srcdir:
                         has_srcdir = True
                         new_path.append(srcdir)
-                else:
+                elif path:
                     new_path.append(path)
             if not has_srcdir:
                 new_path.insert(0, srcdir)

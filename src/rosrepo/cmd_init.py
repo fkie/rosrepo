@@ -62,7 +62,7 @@ def run(args):
     makedirs(os.path.join(wsdir, "src"))
     cfg = Config(wsdir)
     if args.ros_root:
-        cfg.data["ros_root"] = ros_rootdir
+        cfg["ros_root"] = ros_rootdir
     else:
         del cfg["ros_root"]
     cfg.write()

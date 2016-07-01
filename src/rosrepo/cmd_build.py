@@ -114,9 +114,9 @@ def run(args):
         catkin_build += ["--continue-on-failure"]
 
     if args.jobs:
-        catkin_build += ["--jobs", args.jobs]
+        catkin_build += ["-j", str(args.jobs), "-p", str(args.jobs)]
     elif "job_limit" in config:
-        catkin_build += ["--jobs", config["job_limit"]]
+        catkin_build += ["-j", str(config["job_limit"]), "-p", str(config["job_limit"])]
 
     catkin_build += build_packages.keys()
 

@@ -40,7 +40,9 @@ def is_ros_root(path):
         return False
     if not os.path.isdir(os.path.join(path, "share")):
         return False
-    if not os.path.isfile(os.path.join(path, "setup.sh")):
+    if not os.path.isfile(os.path.join(path, "env.sh")):
+        return False
+    if not os.path.isfile(os.path.join(path, ".catkin")):
         return False
     return True
 
