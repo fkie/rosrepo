@@ -189,7 +189,7 @@ class TableView(object):
         self.columns = args
         self.expand = kwargs.get("expand", False)
         if not self.columns:
-            self.width = [0, 0]
+            self.width = [1, 1]
         else:
             self.width = [max(1, len(remove_ansi(color_fmt(c)))) for c in self.columns]
         self.rows = []
