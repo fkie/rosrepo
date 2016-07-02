@@ -61,9 +61,5 @@ def run(args):
         f.write("# This file currently only serves to mark the location of a catkin workspace for tool integration\n")
     makedirs(os.path.join(wsdir, "src"))
     cfg = Config(wsdir)
-    if args.ros_root:
-        cfg["ros_root"] = ros_rootdir
-    else:
-        del cfg["ros_root"]
     cfg.write()
-    return config_run(FakeArgs(workspace=wsdir))
+    return config_run(FakeArgs(workspace=wsdir, set_ros_root=args.ros_root))

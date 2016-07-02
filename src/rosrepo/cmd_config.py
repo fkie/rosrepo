@@ -28,14 +28,9 @@ def show_config(config):
     table = TableView(expand=True)
     srv_list = []
     for srv in config.get("gitlab_servers", []):
-        label = srv.get("label", None)
-        url = srv.get("url", None)
-        if label and url:
-            srv_list.append("@{yf}%s: %s" % (escape(label), escape(url)))
-        elif label:
-            srv_list.append("@{yf}%s" % escape(label))
-        elif url:
-            srv_list.append("@{yf}%s" % escape(url))
+        label = srv.get("label", "")
+        url = srv.get("url", "")
+        srv_list.append("@{yf}%s%s" % (escape(label) + ": " if label else "", escape(url)))
     table.add_row("@{cf}Gitlab Servers:", srv_list)
     if "store_credentials" in config:
         table.add_row("@{cf}Store Credentials:", "@{yf}" + ("Yes" if config["store_credentials"] else "No"))
@@ -59,7 +54,6 @@ def show_config(config):
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
-    cache = Cache(wsdir)
 
     if args.get_gitlab_url:
         servers = config.get("gitlab_servers", [])

@@ -68,8 +68,13 @@ def call_process(*args, **kwargs):
             kwargs["stderr"] = devnull
         return real_call_process(*args, **kwargs)
 
+def fake_acquire_user_token(label, url):
+    return "usertoken"
 
+@mock.patch("rosrepo.cmd_build.call_process", call_process)
+@mock.patch("rosrepo.cmd_config.acquire_gitlab_private_token", fake_acquire_user_token)
 @mock.patch("rosrepo.cmd_config.call_process", call_process)
+@mock.patch("rosrepo.cmd_clean.call_process", call_process)
 def run_rosrepo(*argv):
     parser = prepare_arguments(argparse.ArgumentParser())
     args = parser.parse_args(argv)
