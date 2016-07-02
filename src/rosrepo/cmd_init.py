@@ -9,6 +9,7 @@
 #
 #
 import os
+import re
 from shutil import rmtree
 from .workspace import find_ros_root, is_workspace, migrate_workspace
 from .util import makedirs, path_has_prefix
@@ -40,12 +41,9 @@ def run(args):
             msg("Resetting workspace\n")
             rmtree(os.path.join(wsdir, ".rosrepo"), ignore_errors=True)
             rmtree(os.path.join(wsdir, ".catkin_tools"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "build"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "build_isolated"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "devel"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "devel_isolated"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "install"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "logs"), ignore_errors=True)
+            for fn in os.listdir(wsdir):
+                if re.match(r"(build|devel|install|logs)($|_)", fn, re.IGNORECASE):
+                    rmtree(os.path.join(wsdir, fn), ignore_errors=True)
             try:
                 os.unlink(os.path.join(wsdir, "src", "CMakeLists.txt"))
             except OSError:
