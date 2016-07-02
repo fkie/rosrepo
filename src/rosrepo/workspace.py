@@ -310,7 +310,7 @@ def migrate_workspace(wsdir):
         packages = {}
         if os.path.isfile(infofile):
             try:
-                with open(infofile, "r") as f:
+                with open(infofile, "rb") as f:
                     packages = pickle.load(f)
                 os.unlink(infofile)
             except Exception as e:

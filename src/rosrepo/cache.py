@@ -31,7 +31,7 @@ class Cache(object):
         if name in self.preloaded:
             return self.preloaded[name]
         try:
-            with open(os.path.join(self.cache_dir, name), "r") as f:
+            with open(os.path.join(self.cache_dir, name), "rb") as f:
                 cache_file = pickle.loads(zlib.decompress(f.read()))
         except Exception:
             return default

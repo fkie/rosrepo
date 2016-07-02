@@ -14,7 +14,10 @@ import os
 import yaml
 from dateutil.parser import parse as date_parse
 from git import Repo
-from urllib import quote as urlquote
+try:
+    from urllib import quote as urlquote
+except ImportError:
+    from urllib.parse import quote as urlquote
 from catkin_pkg.package import parse_package_string, InvalidPackage, PACKAGE_MANIFEST_FILENAME
 
 try:

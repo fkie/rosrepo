@@ -121,7 +121,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="build all packages in the workspace")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
-    from cmd_build import run as build_func
+    from .cmd_build import run as build_func
     p.set_defaults(func=build_func)
 
     # git
@@ -193,7 +193,7 @@ def run_rosrepo(args):
         if hasattr(args, "func"):
             return args.func(args)
         else:
-            error("internal error: undefined command\n")
+            error("no command\n")
     except UserError as e:
         error("%s\n" % str(e))
     except YAMLError as e:

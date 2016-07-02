@@ -10,12 +10,17 @@
 #
 import os
 import argparse
-import mock
+try:
+    import mock
+except ImportError:
+    import unittest.mock as mock
 import sys
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 from rosrepo.main import prepare_arguments, run_rosrepo as run_rosrepo_impl
 from rosrepo.util import call_process as real_call_process
-from mock import patch
 
 
 def create_fake_ros_root(rosdir):
@@ -37,7 +42,7 @@ def create_fake_ros_root(rosdir):
             'exec "$@"\n'
             % {"dir": rosdir}
         )
-    os.chmod(os.path.join(rosdir, "env.sh"), 0755)
+    os.chmod(os.path.join(rosdir, "env.sh"), 0o755)
 
 
 def create_package(wsdir, name, depends):
@@ -64,7 +69,7 @@ def call_process(*args, **kwargs):
         return real_call_process(*args, **kwargs)
 
 
-@patch("rosrepo.cmd_config.call_process", call_process)
+@mock.patch("rosrepo.cmd_config.call_process", call_process)
 def run_rosrepo(*argv):
     parser = prepare_arguments(argparse.ArgumentParser())
     args = parser.parse_args(argv)

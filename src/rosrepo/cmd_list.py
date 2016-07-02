@@ -33,7 +33,7 @@ def run(args):
     z = default_conflicts.copy()
     z.update(pinned_conflicts)
     show_conflicts(z)
-    conflicts = set(default_conflicts.keys() + pinned_conflicts.keys() + default_fallback.keys() + pinned_fallback.keys())
+    conflicts = set(default_conflicts.keys()) | set(pinned_conflicts.keys()) | set(default_fallback.keys()) | set(pinned_fallback.keys())
     names = set()
     table = TableView("Package", "Status", "Location")
 

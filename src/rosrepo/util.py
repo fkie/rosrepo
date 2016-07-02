@@ -71,7 +71,7 @@ def makedirs(path):
         os.makedirs(path)
 
 
-def write_atomic(filepath, data, mode=0644, ignore_fail=False):
+def write_atomic(filepath, data, mode=0o644, ignore_fail=False):
     try:
         fd, filepath_tmp = mkstemp(prefix=os.path.basename(filepath) + ".tmp.", dir=os.path.dirname(filepath))
         os.fchmod(fd, mode)

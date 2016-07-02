@@ -25,8 +25,8 @@ class Config(object):
         self.config_file = os.path.join(self.config_dir, "config")
         self.read_only = read_only
         if os.path.isfile(self.config_file):
-            with open(self.config_file, "r") as f:
-                self._data = yaml.safe_load(f.read())
+            with open(self.config_file, "rb") as f:
+                self._data = yaml.safe_load(f)
             if not isinstance(self._data, dict):
                 raise ConfigError("Corrupted rosrepo configuration file")
             if "version" not in self._data:
@@ -45,7 +45,7 @@ class Config(object):
             raise RuntimeError("Cannot write config file marked as read only")
         if not os.path.isdir(self.config_dir):
             os.makedirs(self.config_dir)
-        write_atomic(self.config_file, yaml.safe_dump(self._data, default_flow_style=False))
+        write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
 
     def _migrate(self, old_version):
         self._data["version"] = __version__

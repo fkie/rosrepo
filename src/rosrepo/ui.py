@@ -13,6 +13,10 @@ import sys
 from getpass import getpass
 import re
 from .util import get_terminal_size, UserError
+try:
+    from itertools import izip_longest as zip_longest
+except ImportError:
+    from itertools import zip_longest
 from .terminal_color import fmt as color_fmt
 
 terminal_width = {}
@@ -266,8 +270,8 @@ class TableView(object):
             if row is None:
                 fd.write(sep)
                 continue
-            for line in map(None, *row):
-                chunks = (slice_ansi_text(color_fmt(r, use_color=use_color) if r is not None else "", w) for r, w in zip(line, width))
-                for chunk in map(None, *chunks):
+            for line in zip_longest(*row, fillvalue=""):
+                chunks = (slice_ansi_text(color_fmt(r, use_color=use_color), w) for r, w in zip(line, width))
+                for chunk in zip_longest(*chunks):
                     fd.write(fmt % tuple(r if r is not None else " " * w for r, w in zip(chunk, width)))
         fd.write(sep)
