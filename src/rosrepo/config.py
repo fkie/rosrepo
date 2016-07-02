@@ -11,7 +11,7 @@
 import os
 import yaml
 from distutils.version import StrictVersion as Version
-from .util import write_atomic, UserError
+from .util import write_atomic, UserError, makedirs
 from . import __version__
 
 
@@ -42,9 +42,8 @@ class Config(object):
 
     def write(self):
         if self.read_only:
-            raise RuntimeError("Cannot write config file marked as read only")
-        if not os.path.isdir(self.config_dir):
-            os.makedirs(self.config_dir)
+            raise ConfigError("Cannot write config file marked as read only")
+        makedirs(self.config_dir)
         write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
 
     def _migrate(self, old_version):
@@ -52,6 +51,8 @@ class Config(object):
         self.write()
 
     def set_default(self, key, value):
+        if self.read_only:
+            raise ConfigError("Cannot change read-only configuration")
         if key not in self._data:
             self._data[key] = value
 
@@ -63,12 +64,12 @@ class Config(object):
 
     def __setitem__(self, key, value):
         if self.read_only:
-            raise ValueError("Cannot change read-only configuration")
+            raise ConfigError("Cannot change read-only configuration")
         self._data[key] = value
 
     def __delitem__(self, key):
         if self.read_only:
-            raise ValueError("Cannot change read-only configuration")
+            raise ConfigError("Cannot change read-only configuration")
         if key in self._data:
             del self._data[key]
 
