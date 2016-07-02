@@ -95,12 +95,29 @@ def write_atomic(filepath, data, mode=0o644, ignore_fail=False):
             raise
 
 
-def get_terminal_size(fd):
+def isatty(fd):
+    return hasattr(fd, "isatty") and fd.isatty()
+
+
+_cached_terminal_size = None
+
+
+def get_terminal_size():
+    global _cached_terminal_size
+    if _cached_terminal_size is not None:
+        return _cached_terminal_size
     try:
-        cr = struct.unpack('hh', fcntl.ioctl(fd.fileno(), termios.TIOCGWINSZ, '1234'))
+        fd = os.open(os.ctermid(), os.O_RDONLY)
+        cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+        os.close(fd)
     except (IOError, struct.error):
+        try:
+            os.close(fd)
+        except:
+            pass
         raise OSError("Cannot determine terminal size")
-    return int(cr[1]), int(cr[0])
+    _cached_terminal_size = int(cr[1]), int(cr[0])
+    return _cached_terminal_size
 
 
 def find_program(program):

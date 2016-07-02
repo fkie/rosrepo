@@ -12,26 +12,12 @@ import os
 import sys
 from getpass import getpass
 import re
-from .util import get_terminal_size, UserError
 try:
     from itertools import izip_longest as zip_longest
 except ImportError:
     from itertools import zip_longest
+from .util import isatty, get_terminal_size, UserError
 from .terminal_color import fmt as color_fmt
-
-terminal_width = {}
-try:
-    terminal_width[sys.stdout.fileno()] = get_terminal_size(sys.stdout)
-except:
-    pass
-try:
-    terminal_width[sys.stderr.fileno()] = get_terminal_size(sys.stderr)
-except:
-    pass
-
-
-def isatty(fd):
-    return hasattr(fd, "isatty") and fd.isatty()
 
 
 _ansi_escape = re.compile(r"\x1b[^m]*m")
@@ -114,26 +100,18 @@ def escape(msg):
     return msg.replace("@", "@@")
 
 
-def separator(fd=sys.stderr, width=None, use_color=None):
-    if width is None:
-        try:
-            if width is None:
-                width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
-        except OSError:
-            width = 80
-    fd.write(color_fmt("@{pf}" + ("-" * width) + "@|\n", use_color=isatty(fd) if use_color is None else use_color))
-
-
 def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_first=0, indent_next=0):
     from .terminal_color import ansi
-    ansi_text = color_fmt(text, use_color=isatty(fd) if use_color is None else use_color)
+    if use_color is None:
+        use_color = isatty(fd)
+    ansi_text = color_fmt(text, use_color=use_color)
     if wrap:
         try:
             if max_width is None:
-                max_width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
-        except:
+                max_width, _ = get_terminal_size()
+        except OSError:
             pass
-    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if (isatty(fd) if use_color is None else use_color) else ""))
+    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if use_color else ""))
 
 
 def fatal(text):
@@ -235,16 +213,12 @@ class TableView(object):
     def write(self, fd=sys.stdout, use_color=None):
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
+        try:
+            total_width = get_terminal_size()[0]
+        except OSError:
+            total_width = None
         if use_color is None:
             use_color = isatty(fd)
-        if isatty(fd):
-            try:
-                total_width = terminal_width.get(fd.fileno(), get_terminal_size(fd))[0]
-            except OSError:
-                total_width = 80
-        else:
-            use_color = False
-            total_width = None
         if total_width is not None:
             if self.expand and actual_width < total_width:
                 width[-1] += total_width - actual_width
