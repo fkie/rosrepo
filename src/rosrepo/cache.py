@@ -29,17 +29,19 @@ class Cache(object):
 
     def get_object(self, name, version, default=None):
         if name in self.preloaded:
-            return self.preloaded[name]
+            if self.preloaded[name].version == version:
+                return self.preloaded[name].obj
+            return default
         try:
             with open(os.path.join(self.cache_dir, name), "rb") as f:
                 cache_file = pickle.loads(zlib.decompress(f.read()))
-        except Exception:
+        except:
             return default
         if not isinstance(cache_file, CacheFile):
             return default
+        self.preloaded[name] = cache_file
         if cache_file.version != version:
             return default
-        self.preloaded[name] = cache_file.obj
         return cache_file.obj
 
     def set_object(self, name, version, obj):
@@ -47,12 +49,12 @@ class Cache(object):
         makedirs(self.cache_dir)
         filepath = os.path.join(self.cache_dir, name)
         write_atomic(filepath, zlib.compress(pickle.dumps(cache_file, -1)), ignore_fail=True)
-        self.preloaded[name] = obj
+        self.preloaded[name] = cache_file
 
     def reset_object(self, name):
+        if name in self.preloaded:
+            del self.preloaded[name]
         try:
             os.unlink(os.path.join(self.cache_dir, name))
-            if name in self.preloaded:
-                del self.preloaded[name]
         except OSError:
             pass
