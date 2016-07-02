@@ -83,7 +83,7 @@ def detect_workspace_type(path):
     isfile = os.path.isfile
     join = os.path.join
     if not isdir(join(path, "src")):
-        return -1, None
+        return -1, "there is no @{cf}src@| folder"
     if isfile(join(path, ".rosrepo", "config")):
         try:
             from . import __version__
@@ -93,17 +93,17 @@ def detect_workspace_type(path):
             if this_version < ws_version:
                 return 4, cfg["version"]
             return 3, cfg["version"]
-        except ConfigError:
-            return -1, None
+        except ConfigError as e:
+            return -1, "the configuration is broken (%s)" % escape(str(e))
     if isdir(join(path, ".catkin_tools", "rosrepo")):
         return 2, "2.x"
     if isdir(join(path, ".catkin_tools", "profiles", "rosrepo")):
         return 2, "2.1.5+"
     if isdir(join(path, "repos")):
         if not isfile(join(path, "src", "CMakeLists.txt")):
-            return -1, None
+            return -1, "it looks like a rosrepo 1.x workspace without @{cf}src/CMakeLists.txt@|"
         if not isfile(join(path, "src", "toplevel.cmake")):
-            return -1, None
+            return -1, "it looks like a rosrepo 1.x workspace without @{cf}src/toplevel.cmake@|"
         return 1, "1.x"
     return 0, None
 
@@ -182,11 +182,11 @@ def get_workspace_location(override):
         msg("catkin workspace detected in @{cf}%s@|\n\n" % escape(wsdir), fd=sys.stderr)
         if wstype == -1:
             msg(
-                "I found a catkin workspace, but it seems to be broken.\n\n"
+                "I found a catkin workspace, but %s(error_msg)\n\n"
                 "You can delete any corrupted settings and reinitialize the "
                 "workspace for rosrepo with the command\n\n"
                 "    @!rosrepo init --reset %(path)s@|\n\n"
-                % {"path": escape(wsdir)}, fd=sys.stderr
+                % {"path": escape(wsdir), "error_msg": wsversion}, fd=sys.stderr
             )
         if wstype == 0:
             msg(
@@ -196,10 +196,15 @@ def get_workspace_location(override):
                 % {"path": escape(wsdir)}, fd=sys.stderr
             )
         if wstype == 4:
+            from . import __version__
             msg(
-                "This catkin workspace has been configured by a newer version of rosrepo.\n\n"
-                "Please upgrade rosrepo to at least version @{cf}%(new_version)s@|\n\n"
-                % {"new_version": escape(wsversion)}, fd=sys.stderr
+                "This catkin workspace has been configured by a newer version of rosrepo, "
+                "please upgrade to version @{cf}%(new_version)s@| or newer.\n\n"
+                "If you want to revert the workspace back to this version (@{cf}%(old_version)s@|), "
+                "you can reset all settings with\n\n"
+                "    @!rosrepo init --reset %(path)s@|\n\n"
+                "@!@{yf}WARNING@|: Please make a backup before doing this!\n\n"
+                % {"path": escape(wsdir), "new_version": escape(wsversion), "old_version": __version__}, fd=sys.stderr
             )
         if wstype == 1 or wstype == 2:
             from . import __version__

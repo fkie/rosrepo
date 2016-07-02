@@ -161,25 +161,6 @@ class WorkspaceTest(unittest.TestCase):
             1
         )
 
-    def test_corrupted_config(self):
-        self.assertEqual(
-            helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir),
-            (0, "")
-        )
-        cfg = Config(self.wsdir)
-        del cfg["version"]
-        cfg.write()
-        self.assertEqual(
-            helper.run_rosrepo("list", "-w", self.wsdir, "-n")[0],
-            1
-        )
-        with open(os.path.join(self.wsdir, ".rosrepo", "config"), "w") as f:
-            f.write("#+?($!'$")
-        self.assertEqual(
-            helper.run_rosrepo("list", "-w", self.wsdir, "-n")[0],
-            1
-        )
-
     def test_buildset(self):
         self.assertEqual(
             helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir),
@@ -468,16 +449,13 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(self.get_config_value("use_rosclipse"), False)
 
     def test_init_failures(self):
-        self.assertEqual(
-            helper.run_rosrepo("init", self.wsdir)[0],
-            1
-        )
+        exitcode, stdout = helper.run_rosrepo("init", self.wsdir)
+        self.assertEqual(exitcode, 1)
+        self.assertIn("cannot detect ROS distribution", stdout)
         os.environ["HOME"] = self.wsdir
-        self.assertEqual(
-            helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)[0],
-            1
-        )
-        self.assertEqual(
-            helper.run_rosrepo("init", "-r", self.ros_root_dir, os.path.normpath(os.path.join(os.path.dirname(__file__), "..")))[0],
-            1
-        )
+        exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
+        self.assertEqual(exitcode, 1)
+        self.assertIn("$HOME", stdout)
+        exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir)))
+        self.assertEqual(exitcode, 1)
+        self.assertIn("rosrepo source folder", stdout)

@@ -25,24 +25,30 @@ class Config(object):
         self.config_file = os.path.join(self.config_dir, "config")
         self.read_only = read_only
         if os.path.isfile(self.config_file):
-            with open(self.config_file, "rb") as f:
-                self._data = yaml.safe_load(f)
+            try:
+                with open(self.config_file, "rb") as f:
+                    self._data = yaml.safe_load(f)
+            except (OSError, IOError, yaml.YAMLError):
+                raise ConfigError("unreadable configuration file")
             if not isinstance(self._data, dict):
-                raise ConfigError("Corrupted rosrepo configuration file")
+                raise ConfigError("invalid configuration file")
             if "version" not in self._data:
-                raise ConfigError("Corrupted rosrepo configuration file")
+                raise ConfigError("missing configuration version number")
             current = Version(__version__)
-            stored = Version(self._data["version"])
+            try:
+                stored = Version(self._data["version"])
+            except (TypeError, ValueError):
+                raise ConfigError("invalid configuration version number")
             if stored < current and not read_only:
                 self._migrate(stored)
             if stored > current and not read_only:
-                raise ConfigError("Workspace was configured by newer version of rosrepo")
+                raise ConfigError("workspace was configured by newer version of rosrepo")
         else:
             self._data = {"version": __version__}
 
     def write(self):
         if self.read_only:
-            raise ConfigError("Cannot write config file marked as read only")
+            raise ConfigError("cannot write config file marked as read only")
         makedirs(self.config_dir)
         write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
 
@@ -52,7 +58,7 @@ class Config(object):
 
     def set_default(self, key, value):
         if self.read_only:
-            raise ConfigError("Cannot change read-only configuration")
+            raise ConfigError("cannot change read-only configuration")
         if key not in self._data:
             self._data[key] = value
 
@@ -64,12 +70,12 @@ class Config(object):
 
     def __setitem__(self, key, value):
         if self.read_only:
-            raise ConfigError("Cannot change read-only configuration")
+            raise ConfigError("cannot change read-only configuration")
         self._data[key] = value
 
     def __delitem__(self, key):
         if self.read_only:
-            raise ConfigError("Cannot change read-only configuration")
+            raise ConfigError("cannot change read-only configuration")
         if key in self._data:
             del self._data[key]
 

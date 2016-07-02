@@ -52,6 +52,12 @@ class ConfigTest(unittest.TestCase):
         with open(cfg_file, "w") as f:
             f.write("no_version: yes")
         self.assertRaises(ConfigError, lambda: Config(self.wsdir))
+        with open(cfg_file, "w") as f:
+            f.write("version: invalid")
+        self.assertRaises(ConfigError, lambda: Config(self.wsdir))
+        with open(cfg_file, "w") as f:
+            f.write("version: 123")
+        self.assertRaises(ConfigError, lambda: Config(self.wsdir))
 
     def test_version_mismatch(self):
         os.makedirs(os.path.join(self.wsdir, ".rosrepo"))
@@ -65,7 +71,7 @@ class ConfigTest(unittest.TestCase):
         cfg = Config(self.wsdir)
         self.assertEqual(cfg.get("version"), rosrepo_version)
         with open(cfg_file, "w") as f:
-            f.write("version: 99.0.0")
+            f.write('version: "999.0"')
         self.assertRaises(ConfigError, lambda: Config(self.wsdir))
 
     def test_read_only(self):
