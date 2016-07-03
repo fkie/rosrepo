@@ -119,12 +119,12 @@ def fatal(text):
 
 
 def error(text, use_color=None):
-    prog = os.path.split(sys.argv[0])[1]
+    prog = "rosrepo"
     msg("@!@{rf}%s: error: %s" % (prog, text), fd=sys.stderr, indent_next=len(prog) + 9)
 
 
 def warning(text, use_color=None):
-    prog = os.path.split(sys.argv[0])[1]
+    prog = "rosrepo"
     msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, fd=sys.stderr, indent_next=len(prog) + 11)
 
 

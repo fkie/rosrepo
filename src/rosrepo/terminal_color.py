@@ -147,15 +147,15 @@ def fmt(msg, use_color=True, reset=True):
     return t.safe_substitute(_ansi if use_color else _no_ansi) + (ansi('reset') if reset and use_color else '')
 
 
-def test_colors():
-    def cprint(msg):
-        print(fmt(msg))
-
-    cprint("| @{kf}Black      @|| @!@{kf}Black Bold")
-    cprint("| @{rf}Red        @|| @!@{rf}Red Bold")
-    cprint("| @{gf}Green      @|| @!@{gf}Green Bold")
-    cprint("| @{yf}Yellow     @|| @!@{yf}Yellow Bold")
-    cprint("| @{bf}Blue       @|| @!@{bf}Blue Bold")
-    cprint("| @{pf}Purple     @|| @!@{pf}Purple Bold")
-    cprint("| @{cf}Cyan       @|| @!@{cf}Cyan Bold")
-    cprint("| White      | @!White Bold")
+# def test_colors():
+#     def cprint(msg):
+#         print(fmt(msg))
+#
+#     cprint("| @{kf}Black      @|| @!@{kf}Black Bold")
+#     cprint("| @{rf}Red        @|| @!@{rf}Red Bold")
+#     cprint("| @{gf}Green      @|| @!@{gf}Green Bold")
+#     cprint("| @{yf}Yellow     @|| @!@{yf}Yellow Bold")
+#     cprint("| @{bf}Blue       @|| @!@{bf}Blue Bold")
+#     cprint("| @{pf}Purple     @|| @!@{pf}Purple Bold")
+#     cprint("| @{cf}Cyan       @|| @!@{cf}Cyan Bold")
+#     cprint("| White      | @!White Bold")
