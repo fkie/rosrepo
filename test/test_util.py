@@ -39,7 +39,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(t.second, 2)
         self.assertEqual(t[1], 2)
         self.assertEqual(str(t), "TestTuple(first=1, second=2)")
-        self.assertEqual([d for d in t], [1, 2])        
+        self.assertEqual([d for d in t], [1, 2])
         t = TestTuple(first=3, second=4)
         self.assertEqual(t.first, 3)
         self.assertEqual(t.second, 4)

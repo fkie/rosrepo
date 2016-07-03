@@ -58,6 +58,10 @@ class ConfigTest(unittest.TestCase):
         with open(cfg_file, "w") as f:
             f.write("version: 123")
         self.assertRaises(ConfigError, lambda: Config(self.wsdir))
+        with open(cfg_file, "w") as f:
+            f.write("version: %s" % rosrepo_version)
+        os.chmod(cfg_file, 0)
+        self.assertRaises(ConfigError, lambda: Config(self.wsdir))
 
     def test_version_mismatch(self):
         os.makedirs(os.path.join(self.wsdir, ".rosrepo"))

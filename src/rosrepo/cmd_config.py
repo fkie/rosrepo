@@ -112,7 +112,7 @@ def run(args):
             if label == args.gitlab_login:
                 url = srv.get("url", None)
                 if url is None:
-                    fatal("cannot acquire token for Gitlab server without URL")
+                    fatal("cannot acquire token for Gitlab server without URL\n")
                 if args.private_token:
                     private_token = args.private_token
                 else:

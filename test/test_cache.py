@@ -71,7 +71,7 @@ class CacheTest(unittest.TestCase):
         os.chmod(os.path.join(self.wsdir, ".rosrepo", "cache"), 0o755)
         new_cache = Cache(self.wsdir)
         self.assertEqual(new_cache.get_object("test", 1), "data")
-        
+
     def test_corruption(self):
         os.makedirs(os.path.join(self.wsdir, ".rosrepo", "cache"))
         with open(os.path.join(self.wsdir, ".rosrepo", "cache", "broken1"), "w") as f:

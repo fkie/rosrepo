@@ -100,10 +100,10 @@ def escape(msg):
     return msg.replace("@", "@@")
 
 
-def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_first=0, indent_next=0):
+def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0):
     from .terminal_color import ansi
     if use_color is None:
-        use_color = isatty(fd)
+        use_color = isatty(sys.stderr)
     ansi_text = color_fmt(text, use_color=use_color)
     if wrap:
         try:
@@ -111,7 +111,7 @@ def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_f
                 max_width, _ = get_terminal_size()
         except OSError:
             pass
-    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if use_color else ""))
+    sys.stderr.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if use_color else ""))
 
 
 def fatal(text):
@@ -120,12 +120,12 @@ def fatal(text):
 
 def error(text, use_color=None):
     prog = "rosrepo"
-    msg("@!@{rf}%s: error: %s" % (prog, text), fd=sys.stderr, indent_next=len(prog) + 9)
+    msg("@!@{rf}%s: error: %s" % (prog, text), indent_next=len(prog) + 9)
 
 
 def warning(text, use_color=None):
     prog = "rosrepo"
-    msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, fd=sys.stderr, indent_next=len(prog) + 11)
+    msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, indent_next=len(prog) + 11)
 
 
 def readline(prompt, fd_in=sys.stdin, fd_out=sys.stderr):
@@ -210,13 +210,15 @@ class TableView(object):
     def sort(self, column_index):
         self.rows.sort(key=lambda x: x[column_index])
 
-    def write(self, fd=sys.stdout, use_color=None):
+    def write(self, fd=None, use_color=None):
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
         try:
             total_width = get_terminal_size()[0]
         except OSError:
             total_width = None
+        if fd is None:
+            fd = sys.stdout
         if use_color is None:
             use_color = isatty(fd)
         if total_width is not None:

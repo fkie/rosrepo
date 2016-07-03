@@ -21,6 +21,7 @@ except ImportError:
     from io import StringIO
 from rosrepo.main import prepare_arguments, run_rosrepo as run_rosrepo_impl
 from rosrepo.util import call_process as real_call_process
+from subprocess import PIPE
 
 
 def create_fake_ros_root(rosdir):
@@ -61,17 +62,32 @@ def create_package(wsdir, name, depends):
 
 
 def call_process(*args, **kwargs):
-    with open(os.devnull, "w") as devnull:
-        if "stdout" not in kwargs:
-            kwargs["stdout"] = devnull
-        if "stderr" not in kwargs:
-            kwargs["stderr"] = devnull
-        return real_call_process(*args, **kwargs)
+    redirected = False
+    if "stdout" not in kwargs and "stderr" not in kwargs:
+        kwargs["stdout"] = PIPE
+        kwargs["stderr"] = PIPE
+        redirected = True
+    exitcode, stdout, stderr = real_call_process(*args, **kwargs)
+    if redirected:
+        sys.stdout.write(stdout.decode("UTF-8"))
+        sys.stderr.write(stderr.decode("UTF-8"))
+        return exitcode
+    return exitcode, stdout, stderr
+
+
+def no_call_process(*args, **kwargs):
+    return (0, "", "") if kwargs.get("stdin") == PIPE or kwargs.get("stdout") == PIPE or kwargs.get("stderr") == PIPE else 0
+
+
+def find_program(arg):
+    return arg
+
 
 def fake_acquire_user_token(label, url):
     return "usertoken"
 
-@mock.patch("rosrepo.cmd_build.call_process", call_process)
+@mock.patch("rosrepo.cmd_build.call_process", no_call_process)
+@mock.patch("rosrepo.cmd_build.find_program", find_program)
 @mock.patch("rosrepo.cmd_config.acquire_gitlab_private_token", fake_acquire_user_token)
 @mock.patch("rosrepo.cmd_config.call_process", call_process)
 @mock.patch("rosrepo.cmd_clean.call_process", call_process)

@@ -16,6 +16,7 @@ from .config import Config
 from .cache import Cache
 from .ui import msg, fatal, escape
 from .util import call_process, find_program, iteritems, getmtime, PIPE
+from functools import reduce
 
 
 def run(args):
@@ -36,14 +37,14 @@ def run(args):
             msg("@{cf}Replacing default build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
         else:
-            fatal("No packages given for new default build")
+            fatal("no packages given for new default build\n")
         config["default_build"] = sorted(args.packages)
     if args.set_pinned:
         if args.packages:
             msg("@{cf}Replacing pinned build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
         else:
-            fatal("No packages given to be pinned")
+            fatal("no packages given to be pinned")
         config["pinned_build"] = sorted(args.packages)
     srcdir = os.path.join(wsdir, "src")
     pinned_set = set(config["pinned_build"])
@@ -89,9 +90,8 @@ def run(args):
     if args.clean:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
         if args.dry_run:
-            msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
-        else:
-            call_process(invoke)
+            invoke += ["--dry-run"]
+        call_process(invoke)
 
     catkin_lint = find_program("catkin_lint")
     if catkin_lint and (args.catkin_lint or config.get("use_catkin_lint", True)) and not args.no_catkin_lint:
