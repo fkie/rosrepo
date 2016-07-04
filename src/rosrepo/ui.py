@@ -74,25 +74,24 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0, suffix=""):
             line.append(" " * (indent_first - 1))
         for word in chunk.split(" "):
             l = len(remove_ansi(word))
-            if l == 0 and skip_blank:
-                continue
-            if l != 0:
-                skip_blank = False
-                empty_paragraph = False
-            if count + l < width - sl:
-                line.append(word)
-                count += l + 1
-            else:
-                result.append(" ".join(line))
-                line = []
-                count = indent_next
-                if indent_next > 0:
-                    line.append(" " * (indent_next - 1))
-                if l == 0:
-                    skip_blank = True
-                else:
+            if l != 0 or not skip_blank:
+                if l != 0:
+                    skip_blank = False
+                    empty_paragraph = False
+                if count + l <= width - sl:
                     line.append(word)
                     count += l + 1
+                else:
+                    result.append(" ".join(line))
+                    line = []
+                    count = indent_next
+                    if indent_next > 0:
+                        line.append(" " * (indent_next - 1))
+                    if l == 0:
+                        skip_blank = True
+                    else:
+                        line.append(word)
+                        count += l + 1
         result.append("" if skip_blank or empty_paragraph else " ".join(line))
     return (suffix + "\n").join(result)
 
@@ -101,10 +100,12 @@ def escape(msg):
     return msg.replace("@", "@@")
 
 
-def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0, suffix=""):
+def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0, suffix="", fd=None):
     from .terminal_color import ansi
+    if fd is None:
+        fd = sys.stderr
     if use_color is None:
-        use_color = isatty(sys.stderr)
+        use_color = isatty(fd)
     ansi_text = color_fmt(text, use_color=use_color)
     if wrap:
         try:
@@ -112,7 +113,7 @@ def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_
                 max_width, _ = get_terminal_size()
         except OSError:
             pass
-    sys.stderr.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next, suffix) + (ansi('reset') if use_color else ""))
+    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next, suffix) + (ansi('reset') if use_color else ""))
 
 
 def fatal(text):
@@ -129,10 +130,10 @@ def warning(text, use_color=None):
     msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, indent_next=len(prog) + 11)
 
 
-def readline(prompt, fd_in=sys.stdin, fd_out=sys.stderr):
-    fd_out.write(prompt)
-    fd_out.flush()
-    return fd_in.readline().rstrip("\r\n")
+def readline(prompt):
+    sys.stderr.write(prompt)
+    sys.stderr.flush()
+    return sys.stdin.readline().rstrip("\r\n")
 
 
 def get_credentials(domain):
@@ -245,11 +246,12 @@ class TableView(object):
                 actual_width = total_width
             while actual_width > total_width:
                 max_width = max(width)
+                if max_width == 1:
+                    break
                 for i in range(len(width)):
                     if width[i] == max_width:
                         width[i] -= 1
                         actual_width -= 1
-                    if actual_width <= total_width:
                         break
         if self.columns:
             fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)

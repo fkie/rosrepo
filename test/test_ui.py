@@ -11,14 +11,21 @@
 import unittest
 
 import sys
+import os
 sys.stderr = sys.stdout
+
+import helper
+try:
+    from mock import patch
+except ImportError:
+    from unittest.mock import patch
 
 import rosrepo.terminal_color as tc
 import rosrepo.ui as ui
 
 class TerminalColorTest(unittest.TestCase):
 
-    def test_enable_disable(self):
+    def test_color_enable(self):
         tc.set_color(False)
         self.assertEqual(tc.fmt("@!Bold@|"), "Bold")
         tc.set_color(True)
@@ -58,4 +65,37 @@ class TerminalColorTest(unittest.TestCase):
         for t in wrapped_text:
             self.assertEqual(t[:4], "    ")
             self.assertNotEqual(t[4], " ")
+        ansi_paragraph = tc.fmt(paragraph)
+        ansi_words = ansi_paragraph.split()
+        for width in range(len(paragraph)):
+            self.assertEqual(
+                ui.wrap_ansi_text(ansi_paragraph, width).split(),
+                ansi_words
+            )
+        paragraph = "This    is Sparta"
+        self.assertEqual(
+            ui.wrap_ansi_text(paragraph, 4),
+            "This\nis\nSparta"
+        )
 
+    def test_msg_without_terminal(self):
+        with patch("os.ctermid", lambda: os.devnull):
+            stdin = helper.StringIO("Timo\n")
+            stderr = helper.StringIO()
+            with patch("sys.stdin", stdin):
+                with patch("sys.stderr", stderr):
+                    name = ui.readline("What is your name: ")
+                    ui.warning("Hello there!")
+                    ui.msg("Hi %s!" % name)
+                    table = ui.TableView()
+                    table.add_row("One", "1")
+                    table.add_row("More Data here", "Yay")
+                    table.sort(0)
+                    table.write(fd=stderr)
+                    with patch("rosrepo.ui.get_terminal_size", lambda: (5, 5)):
+                        table.write(fd=stderr)
+                    with patch("rosrepo.ui.get_terminal_size", lambda: (15, 5)):
+                        table.write(fd=stderr)
+            stderr = stderr.getvalue()
+            self.assertIn("Hello there!", stderr)
+            self.assertIn("Hi Timo!", stderr)
