@@ -29,21 +29,13 @@ class WorkspaceState(NamedTuple):
 
 
 def is_ros_root(path):
-    if not os.path.isdir(os.path.join(path, "bin")):
-        return False
-    if not os.path.isdir(os.path.join(path, "etc")):
-        return False
-    if not os.path.isdir(os.path.join(path, "include")):
-        return False
-    if not os.path.isdir(os.path.join(path, "lib")):
-        return False
-    if not os.path.isdir(os.path.join(path, "share")):
-        return False
-    if not os.path.isfile(os.path.join(path, "env.sh")):
-        return False
-    if not os.path.isfile(os.path.join(path, ".catkin")):
-        return False
-    return True
+    return os.path.isdir(os.path.join(path, "bin")) \
+        and os.path.isdir(os.path.join(path, "etc")) \
+        and os.path.isdir(os.path.join(path, "include")) \
+        and os.path.isdir(os.path.join(path, "lib")) \
+        and os.path.isdir(os.path.join(path, "share")) \
+        and os.path.isfile(os.path.join(path, "env.sh")) \
+        and os.path.isfile(os.path.join(path, ".catkin"))
 
 
 def find_ros_root(override=None):
