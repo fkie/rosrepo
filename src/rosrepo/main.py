@@ -188,7 +188,7 @@ def prepare_arguments(parser):
     return parser
 
 
-def run_rosrepo(args):
+def run_rosrepo(args):  # pragma: no cover
     try:
         if hasattr(args, "func"):
             return args.func(args)
@@ -209,7 +209,7 @@ def run_rosrepo(args):
     return 1
 
 
-def main():
+def main():  # pragma: no cover
     import argparse
     parser = prepare_arguments(argparse.ArgumentParser())
     args = parser.parse_args()

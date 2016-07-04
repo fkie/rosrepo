@@ -108,7 +108,7 @@ def disable_ANSI_colors():
 
 # Default to ansi colors on
 enable_ANSI_colors()
-if os.name in ['nt']:
+if os.name in ['nt']:  # pragma: no cover
     disable_ANSI_colors()
 
 _color_on = True

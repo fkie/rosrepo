@@ -75,8 +75,13 @@ def call_process(*args, **kwargs):
     return exitcode, stdout, stderr
 
 
-def no_call_process(*args, **kwargs):
-    return (0, "", "") if kwargs.get("stdin") == PIPE or kwargs.get("stdout") == PIPE or kwargs.get("stderr") == PIPE else 0
+failing_programs = []
+
+
+def no_call_process(args, **kwargs):
+    global failing_programs
+    exitcode = 1 if args[0] in failing_programs else 0
+    return (exitcode, "", "") if kwargs.get("stdin") == PIPE or kwargs.get("stdout") == PIPE or kwargs.get("stderr") == PIPE else exitcode
 
 
 def find_program(arg):
@@ -86,6 +91,28 @@ def find_program(arg):
 def fake_acquire_user_token(label, url):
     return "usertoken"
 
+
+class FakeRosdep(object):
+    
+    def __contains__(self, key):
+        return "system" in key
+
+    def resolve(self, key):
+        if "system" in key:
+            return "apt", [key]
+        else:
+            raise KeyError()
+
+    def ok(self):
+        return True
+
+
+def fake_apt_installed(package):
+    return "installed" in package
+
+
+@mock.patch("rosrepo.resolver._rosdep_instance", FakeRosdep())
+@mock.patch("rosrepo.resolver.apt_installed", fake_apt_installed)
 @mock.patch("rosrepo.cmd_build.call_process", no_call_process)
 @mock.patch("rosrepo.cmd_build.find_program", find_program)
 @mock.patch("rosrepo.cmd_config.acquire_gitlab_private_token", fake_acquire_user_token)

@@ -29,14 +29,6 @@ class Rosdep(object):
         except ImportError:
             self.view = None
 
-    def is_ros(self, name):
-        if self.view is None:
-            return False
-        try:
-            return self.view.lookup(name).data["_is_ros"]
-        except KeyError:
-            return False
-
     def __contains__(self, name):
         if self.view is None:
             return False
@@ -168,6 +160,11 @@ def find_dependees(packages, ws_state, auto_resolve=False):
     return depends, system_depends, conflicts
 
 
+def apt_installed(package):
+    exitcode, stdout, _ = call_process(["dpkg-query", "-f", "${Status}", "-W", package], stdout=PIPE, stderr=PIPE)
+    return exitcode == 0 and "ok installed" in stdout
+
+
 def resolve_system_depends(system_depends, missing_only=False):
     resolved = set()
     rosdep = get_rosdep()
@@ -179,10 +176,5 @@ def resolve_system_depends(system_depends, missing_only=False):
             else:
                 warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
     if missing_only:
-        missing = set()
-        for dep in resolved:
-            exitcode, stdout, _ = call_process(["dpkg-query", "-f", "${Status}", "-W", dep], stdout=PIPE, stderr=PIPE)
-            if exitcode != 0 or "ok installed" not in stdout:
-                missing.add(dep)
-        return missing
+        return set(r for r in resolved if not apt_installed(r))
     return resolved
