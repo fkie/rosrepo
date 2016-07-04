@@ -9,7 +9,6 @@
 #
 #
 import os
-import sys
 from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_FILENAME
 from .config import Config, ConfigError, Version
 from .cache import Cache

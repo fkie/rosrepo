@@ -10,9 +10,8 @@
 #
 import sys
 from .workspace import find_ros_root, get_workspace_location
-from .gitlab import find_available_gitlab_projects, acquire_gitlab_private_token
+from .gitlab import acquire_gitlab_private_token
 from .config import Config
-from .cache import Cache
 from .ui import TableView, msg, fatal, escape
 from .common import DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
 from .util import call_process
