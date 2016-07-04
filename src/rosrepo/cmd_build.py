@@ -79,6 +79,9 @@ def run(args):
         msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
         msg(", ".join(sorted(depend_set)) + "\n\n", indent_first=4, indent_next=4)
 
+    if system_depends:
+        msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
+        msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
     missing = resolve_system_depends(system_depends, missing_only=True)
     show_missing_system_depends(missing)
     if missing:
