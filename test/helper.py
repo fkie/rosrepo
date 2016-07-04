@@ -69,8 +69,8 @@ def call_process(*args, **kwargs):
         redirected = True
     exitcode, stdout, stderr = real_call_process(*args, **kwargs)
     if redirected:
-        sys.stdout.write(stdout.decode("UTF-8"))
-        sys.stderr.write(stderr.decode("UTF-8"))
+        sys.stdout.write(stdout)
+        sys.stderr.write(stderr)
         return exitcode
     return exitcode, stdout, stderr
 

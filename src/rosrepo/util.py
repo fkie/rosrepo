@@ -77,19 +77,7 @@ def write_atomic(filepath, data, mode=0o644, ignore_fail=False):
         os.fchmod(fd, mode)
         with os.fdopen(fd, "wb") as f:
             f.write(data)
-        try:
-            os.rename(filepath_tmp, filepath)
-        except OSError:
-            try:
-                os.unlink(filepath)
-            except OSError:
-                pass
-            try:
-                os.rename(filepath_tmp, filepath)
-            except OSError:
-                os.unlink(filepath_tmp)
-                if not ignore_fail:
-                    raise
+        os.rename(filepath_tmp, filepath)
     except (IOError, OSError):
         if not ignore_fail:
             raise
@@ -107,14 +95,9 @@ def get_terminal_size():
     if _cached_terminal_size is not None:
         return _cached_terminal_size
     try:
-        fd = os.open(os.ctermid(), os.O_RDONLY)
-        cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-        os.close(fd)
+        with open(os.ctermid(), "rb") as f:
+            cr = struct.unpack('hh', fcntl.ioctl(f.fileno(), termios.TIOCGWINSZ, '1234'))
     except (IOError, struct.error):
-        try:
-            os.close(fd)
-        except:
-            pass
         raise OSError("Cannot determine terminal size")
     _cached_terminal_size = int(cr[1]), int(cr[0])
     return _cached_terminal_size
@@ -143,8 +126,8 @@ def getmtime(path):
 def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None, env=None, input_data=None):
     p = Popen(args, bufsize=bufsize, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, env=env)
     if stdin == PIPE or stdout == PIPE or stderr == PIPE:
-        stdoutdata, stderrdata = p.communicate(input_data)
-        return p.returncode, stdoutdata, stderrdata
+        stdoutdata, stderrdata = p.communicate(input_data.encode("UTF-8") if input_data else None)
+        return p.returncode, stdoutdata.decode("UTF-8"), stderrdata.decode("UTF-8")
     else:
         p.wait()
     return p.returncode

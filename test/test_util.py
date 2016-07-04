@@ -10,8 +10,14 @@
 #
 import unittest
 
+import os
 import sys
 sys.stderr = sys.stdout
+
+try:
+    from mock import patch
+except ImportError:
+    from unittest.mock import patch
 
 import rosrepo.util as util
 
@@ -47,3 +53,42 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(t.first, 5)
         t[1] = 6
         self.assertEqual(t.second, 6)
+
+    def test_find_program(self):
+        with patch("os.path.isfile", lambda x : "exist" in x):
+            with patch("os.access", lambda x, y: "bin" in x):
+                with patch("os.environ", {"PATH": os.pathsep.join(["/missing", "/existing/stuff", "/existing/bin"])}):
+                    self.assertEqual(
+                        util.find_program("/exists-but-not-in-path/binary"),
+                        "/exists-but-not-in-path/binary"
+                    )
+                    self.assertEqual(
+                        util.find_program("/missing-path/binary"),
+                        None
+                    )
+                    self.assertEqual(
+                        util.find_program("/existing/not-executable"),
+                        None
+                    )
+                    self.assertEqual(
+                        util.find_program("stuff"),
+                        "/existing/bin/stuff"
+                    )
+                with patch("os.environ", {"PATH": "/existing/stuff"}):
+                    self.assertEqual(
+                        util.find_program("stuff"),
+                        None
+                    )
+    
+    def test_call_process(self):
+        exitcode = util.call_process(["/bin/true"])
+        self.assertEqual(exitcode, 0)
+        exitcode = util.call_process(["/bin/false"])
+        self.assertEqual(exitcode, 1)
+        exitcode, stdout, stderr = util.call_process(["/bin/sh", "-c", "read var; echo $var; echo>&2 stderr"], stdin=util.PIPE, stdout=util.PIPE, stderr=util.PIPE, input_data="stdout\n")
+        self.assertIn("stdout", stdout)
+        self.assertIn("stderr", stderr)
+
+    def test_terminal_size(self):
+        with patch("os.ctermid", lambda: os.devnull):
+            self.assertRaises(OSError, util.get_terminal_size)
