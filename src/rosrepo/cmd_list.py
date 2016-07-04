@@ -12,9 +12,9 @@ import os
 import sys
 from .config import Config
 from .cache import Cache
-from .resolver import find_dependees, show_conflicts, show_fallback
+from .resolver import find_dependees
 from .workspace import get_workspace_location, get_workspace_state
-from .ui import msg, warning, error, escape, TableView
+from .ui import msg, warning, error, escape, TableView, show_conflicts
 from .util import iteritems
 
 
@@ -25,15 +25,12 @@ def run(args):
     config.set_default("default_build", [])
     config.set_default("pinned_build", [])
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
-    default_depends, default_fallback, default_conflicts = find_dependees(config["default_build"], ws_state)
-    pinned_depends, pinned_fallback, pinned_conflicts = find_dependees(config["pinned_build"], ws_state)
-    z = default_fallback.copy()
-    z.update(pinned_fallback)
-    show_fallback(z)
+    default_depends, _, default_conflicts = find_dependees(config["default_build"], ws_state)
+    pinned_depends, _, pinned_conflicts = find_dependees(config["pinned_build"], ws_state)
     z = default_conflicts.copy()
     z.update(pinned_conflicts)
     show_conflicts(z)
-    conflicts = set(default_conflicts.keys()) | set(pinned_conflicts.keys()) | set(default_fallback.keys()) | set(pinned_fallback.keys())
+    conflicts = set(default_conflicts.keys()) | set(pinned_conflicts.keys())
     names = set()
     table = TableView("Package", "Status", "Location")
 

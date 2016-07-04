@@ -11,10 +11,10 @@
 import os
 from .workspace import find_ros_root, get_workspace_location, get_workspace_state, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages
-from .resolver import find_dependees, show_fallback, show_conflicts
+from .resolver import find_dependees, resolve_system_depends
 from .config import Config
 from .cache import Cache
-from .ui import msg, fatal, escape
+from .ui import msg, fatal, show_conflicts, show_missing_system_depends
 from .util import call_process, find_program, iteritems, getmtime, PIPE
 from functools import reduce
 
@@ -67,12 +67,10 @@ def run(args):
     build_set |= pinned_set
     if not build_set:
         fatal("no packages to build")
-    build_packages, fallback, conflicts = find_dependees(build_set, ws_state)
-    show_fallback(fallback)
+    build_packages, system_depends, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
     if conflicts:
         fatal("cannot resolve dependencies")
-
     if not args.dry_run:
         config.write()
 
@@ -80,10 +78,15 @@ def run(args):
     if depend_set:
         msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
         msg(", ".join(sorted(depend_set)) + "\n\n", indent_first=4, indent_next=4)
+
+    missing = resolve_system_depends(system_depends, missing_only=True)
+    show_missing_system_depends(missing)
+    if missing:
+        fatal("missing system packages")
+
     clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
-    build_packages, fallback, conflicts = find_dependees(build_set, ws_state)
-    show_fallback(fallback)
+    build_packages, _, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
     assert not conflicts
 

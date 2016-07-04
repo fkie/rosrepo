@@ -59,11 +59,12 @@ def pad_ansi_text(text, width, truncate=True, fill=" "):
     return text + fill[0] * (width - length)
 
 
-def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
+def wrap_ansi_text(text, width, indent_first=0, indent_next=0, suffix=""):
     if width is None:
         return text
     result = []
     chunks = text.split("\n")
+    sl = len(suffix)
     skip_blank = False
     for chunk in chunks:
         count = indent_first
@@ -78,7 +79,7 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
             if l != 0:
                 skip_blank = False
                 empty_paragraph = False
-            if count + l < width:
+            if count + l < width - sl:
                 line.append(word)
                 count += l + 1
             else:
@@ -93,14 +94,14 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
                     line.append(word)
                     count += l + 1
         result.append("" if skip_blank or empty_paragraph else " ".join(line))
-    return "\n".join(result)
+    return (suffix + "\n").join(result)
 
 
 def escape(msg):
     return msg.replace("@", "@@")
 
 
-def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0):
+def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0, suffix=""):
     from .terminal_color import ansi
     if use_color is None:
         use_color = isatty(sys.stderr)
@@ -111,7 +112,7 @@ def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_
                 max_width, _ = get_terminal_size()
         except OSError:
             pass
-    sys.stderr.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if use_color else ""))
+    sys.stderr.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next, suffix) + (ansi('reset') if use_color else ""))
 
 
 def fatal(text):
@@ -182,6 +183,23 @@ def pick_dependency_resolution(package_name, pkg_list):
         except (ValueError, IndexError):
             msg("@!@{rf}Invalid choice@|\n\n", fd=fd)
     return result
+
+
+def show_conflicts(conflicts):
+    for name in sorted(conflicts.keys()):
+        error("cannot use package '%s'\n" % escape(name))
+        for reason in conflicts[name]:
+            msg("   - %s\n" % reason, indent_next=5)
+
+
+def show_missing_system_depends(missing):
+    if missing:
+        msg(
+            "You need to install additional resources on this computer to satisfy all dependencies. "
+            "Please run the following command:\n\n"
+        )
+        msg("@!sudo apt-get install " + " ".join(sorted(list(missing))), indent_first=4, indent_next=25, suffix=" \\")
+        msg("\n\n")
 
 
 class TableView(object):

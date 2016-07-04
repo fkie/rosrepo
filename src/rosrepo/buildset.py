@@ -12,8 +12,8 @@ import os
 from .workspace import get_workspace_location, get_workspace_state
 from .cache import Cache
 from .config import Config
-from .ui import msg, fatal, escape
-from .resolver import find_dependees, show_conflicts, show_fallback
+from .ui import msg, fatal, escape, show_conflicts, show_missing_system_depends
+from .resolver import find_dependees, resolve_system_depends
 from .cmd_git import clone_packages
 
 
@@ -49,8 +49,7 @@ def run(args):
         msg("@{cf}No packages selected for the default build@|\n\n")
 
     if args.command == "include":
-        depends, fallback, conflicts = find_dependees(config["pinned_build"] + config["default_build"], ws_state)
-        show_fallback(fallback)
+        depends, system_depends, conflicts = find_dependees(config["pinned_build"] + config["default_build"], ws_state)
         show_conflicts(conflicts)
         if conflicts:
             fatal("cannot resolve dependencies")
@@ -62,6 +61,11 @@ def run(args):
 
         clone_packages(os.path.join(wsdir, "src"), depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
 
+        if system_depends:
+            msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
+            msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
+        missing = resolve_system_depends(system_depends, missing_only=True)
+        show_missing_system_depends(missing)
     if not args.dry_run:
         config.write()
     return 0
