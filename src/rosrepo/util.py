@@ -65,6 +65,16 @@ class UserError(RuntimeError):
     pass
 
 
+def is_deprecated_package(manifest):
+    deprecated = next((e for e in manifest.exports if e.tagname == "deprecated"), None)
+    return deprecated is not None
+
+
+def deprecated_package_info(manifest):
+    deprecated = next((e for e in manifest.exports if e.tagname == "deprecated"), None)
+    return deprecated.content if deprecated is not None else None
+
+
 def path_has_prefix(path, prefix):
     p = os.path.normpath(path)
     q = os.path.normpath(prefix)

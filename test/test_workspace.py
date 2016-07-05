@@ -50,6 +50,8 @@ class WorkspaceTest(unittest.TestCase):
         helper.create_package(self.wsdir, "epsilon", ["broken"])
         helper.create_package(self.wsdir, "broken", ["missing"])
         helper.create_package(self.wsdir, "incomplete", ["missing-system"])
+        helper.create_package(self.wsdir, "ancient", [], deprecated=True)
+        helper.create_package(self.wsdir, "ancient2", [], deprecated="Walking Dead")
         os.environ = {"PATH": "/usr/bin:/bin"}  # rosdep2 dies without PATH variable
 
     def tearDown(self):
@@ -210,6 +212,10 @@ class WorkspaceTest(unittest.TestCase):
         exitcode, stdout = helper.run_rosrepo("include", "-w", self.wsdir, "--default", "incomplete")
         self.assertEqual(exitcode, 0)
         self.assertIn("apt-get install", stdout)
+        exitcode, stdout = helper.run_rosrepo("include", "-w", self.wsdir, "--default", "ancient", "ancient2")
+        self.assertEqual(exitcode, 0)
+        self.assertIn("is deprecated", stdout)
+        self.assertIn("Walking Dead", stdout)
         os.makedirs(os.path.join(self.wsdir, "build"))
         exitcode, stdout = helper.run_rosrepo("init", "--reset", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)

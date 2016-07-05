@@ -58,7 +58,7 @@ def create_fake_ros_root(rosdir):
     os.chmod(os.path.join(rosdir, "env.sh"), 0o755)
 
 
-def create_package(wsdir, name, depends):
+def create_package(wsdir, name, depends, deprecated=False):
     pkgdir = os.path.join(wsdir, "src", name)
     if not os.path.isdir(pkgdir):
         os.makedirs(pkgdir)
@@ -70,6 +70,13 @@ def create_package(wsdir, name, depends):
             '<license>none</license>' % name
         )
         f.write(''.join(['<depend>%s</depend>' % dep for dep in depends]))
+        f.write('<export>')
+        if deprecated:
+            if isinstance(deprecated, str):
+                f.write('<deprecated>%s</deprecated>' % deprecated)
+            else:
+                f.write('<deprecated/>')
+        f.write('</export>')
         f.write('</package>\n')
 
 

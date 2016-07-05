@@ -21,7 +21,7 @@
 #
 #
 from .ui import pick_dependency_resolution, warning, escape
-from .util import call_process, PIPE
+from .util import is_deprecated_package, call_process, PIPE
 
 
 class Rosdep(object):
@@ -95,6 +95,8 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     # If the package is in the workspace, we assume it's unique and take the first in the list
                     depends[name] = ws_state.ws_packages[name][0]
                     manifest = ws_state.ws_packages[name][0].manifest
+                    if is_deprecated_package(manifest):
+                        score -= 5  # Penalty for being deprecated
                     queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
                 elif name in ws_state.remote_packages:
                     # Package is not in workspace, so we may have multiple sources
@@ -143,6 +145,8 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                             # We can build a consistent workspace with that
                             # If we have multiple choices, we pick the one with
                             # the smallest number of soft-conflicts
+                            if is_deprecated_package(manifest):
+                                new_score -= 250  # Huge penalty for being deprecated
                             if best_score is None or new_score > best_score:
                                 best_score = new_score
                                 best_depends = new_depends
