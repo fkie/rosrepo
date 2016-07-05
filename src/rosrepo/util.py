@@ -5,7 +5,19 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import os
@@ -71,36 +83,36 @@ def makedirs(path):
         os.makedirs(path)
 
 
-def write_atomic(filepath, data, mode=0644, ignore_fail=False):
+def write_atomic(filepath, data, mode=0o644, ignore_fail=False):
     try:
         fd, filepath_tmp = mkstemp(prefix=os.path.basename(filepath) + ".tmp.", dir=os.path.dirname(filepath))
         os.fchmod(fd, mode)
         with os.fdopen(fd, "wb") as f:
             f.write(data)
-        try:
-            os.rename(filepath_tmp, filepath)
-        except OSError:
-            try:
-                os.unlink(filepath)
-            except OSError:
-                pass
-            try:
-                os.rename(filepath_tmp, filepath)
-            except OSError:
-                os.unlink(filepath_tmp)
-                if not ignore_fail:
-                    raise
+        os.rename(filepath_tmp, filepath)
     except (IOError, OSError):
         if not ignore_fail:
             raise
 
 
-def get_terminal_size(fd):
+def isatty(fd):
+    return hasattr(fd, "isatty") and fd.isatty()
+
+
+_cached_terminal_size = None
+
+
+def get_terminal_size():
+    global _cached_terminal_size
+    if _cached_terminal_size is not None:
+        return _cached_terminal_size
     try:
-        cr = struct.unpack('hh', fcntl.ioctl(fd.fileno(), termios.TIOCGWINSZ, '1234'))
+        with open(os.ctermid(), "rb") as f:
+            cr = struct.unpack('hh', fcntl.ioctl(f.fileno(), termios.TIOCGWINSZ, '1234'))
     except (IOError, struct.error):
         raise OSError("Cannot determine terminal size")
-    return int(cr[1]), int(cr[0])
+    _cached_terminal_size = int(cr[1]), int(cr[0])
+    return _cached_terminal_size
 
 
 def find_program(program):
@@ -126,8 +138,8 @@ def getmtime(path):
 def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None, env=None, input_data=None):
     p = Popen(args, bufsize=bufsize, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, env=env)
     if stdin == PIPE or stdout == PIPE or stderr == PIPE:
-        stdoutdata, stderrdata = p.communicate(input_data)
-        return p.returncode, stdoutdata, stderrdata
+        stdoutdata, stderrdata = p.communicate(input_data.encode("UTF-8") if input_data else None)
+        return p.returncode, stdoutdata.decode("UTF-8"), stderrdata.decode("UTF-8")
     else:
         p.wait()
     return p.returncode

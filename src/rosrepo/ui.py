@@ -5,29 +5,30 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
-import os
 import sys
 from getpass import getpass
 import re
-from .util import get_terminal_size, UserError
+try:
+    from itertools import izip_longest as zip_longest
+except ImportError:
+    from itertools import zip_longest
+from .util import isatty, get_terminal_size, UserError
 from .terminal_color import fmt as color_fmt
-
-terminal_width = {}
-try:
-    terminal_width[sys.stdout.fileno()] = get_terminal_size(sys.stdout)
-except:
-    pass
-try:
-    terminal_width[sys.stderr.fileno()] = get_terminal_size(sys.stderr)
-except:
-    pass
-
-
-def isatty(fd):
-    return hasattr(fd, "isatty") and fd.isatty()
 
 
 _ansi_escape = re.compile(r"\x1b[^m]*m")
@@ -69,11 +70,12 @@ def pad_ansi_text(text, width, truncate=True, fill=" "):
     return text + fill[0] * (width - length)
 
 
-def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
+def wrap_ansi_text(text, width, indent_first=0, indent_next=0, suffix=""):
     if width is None:
         return text
     result = []
     chunks = text.split("\n")
+    sl = len(suffix)
     skip_blank = False
     for chunk in chunks:
         count = indent_first
@@ -83,53 +85,46 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0):
             line.append(" " * (indent_first - 1))
         for word in chunk.split(" "):
             l = len(remove_ansi(word))
-            if l == 0 and skip_blank:
-                continue
-            if l != 0:
-                skip_blank = False
-                empty_paragraph = False
-            if count + l < width:
-                line.append(word)
-                count += l + 1
-            else:
-                result.append(" ".join(line))
-                line = []
-                count = indent_next
-                if indent_next > 0:
-                    line.append(" " * (indent_next - 1))
-                if l == 0:
-                    skip_blank = True
-                else:
+            if l != 0 or not skip_blank:
+                if l != 0:
+                    skip_blank = False
+                    empty_paragraph = False
+                if count + l <= width - sl:
                     line.append(word)
                     count += l + 1
+                else:
+                    result.append(" ".join(line))
+                    line = []
+                    count = indent_next
+                    if indent_next > 0:
+                        line.append(" " * (indent_next - 1))
+                    if l == 0:
+                        skip_blank = True
+                    else:
+                        line.append(word)
+                        count += l + 1
         result.append("" if skip_blank or empty_paragraph else " ".join(line))
-    return "\n".join(result)
+    return (suffix + "\n").join(result)
 
 
 def escape(msg):
     return msg.replace("@", "@@")
 
 
-def separator(fd=sys.stderr, width=None, use_color=None):
-    if width is None:
-        try:
-            if width is None:
-                width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
-        except OSError:
-            width = 80
-    fd.write(color_fmt("@{pf}" + ("-" * width) + "@|\n", use_color=isatty(fd) if use_color is None else use_color))
-
-
-def msg(text, max_width=None, use_color=None, wrap=True, fd=sys.stderr, indent_first=0, indent_next=0):
+def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0, suffix="", fd=None):
     from .terminal_color import ansi
-    ansi_text = color_fmt(text, use_color=isatty(fd) if use_color is None else use_color)
+    if fd is None:
+        fd = sys.stderr
+    if use_color is None:
+        use_color = isatty(fd)
+    ansi_text = color_fmt(text, use_color=use_color)
     if wrap:
         try:
             if max_width is None:
-                max_width, _ = terminal_width.get(fd.fileno(), get_terminal_size(fd))
-        except:
+                max_width, _ = get_terminal_size()
+        except OSError:
             pass
-    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next) + (ansi('reset') if (isatty(fd) if use_color is None else use_color) else ""))
+    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next, suffix) + (ansi('reset') if use_color else ""))
 
 
 def fatal(text):
@@ -137,19 +132,19 @@ def fatal(text):
 
 
 def error(text, use_color=None):
-    prog = os.path.split(sys.argv[0])[1]
-    msg("@!@{rf}%s: error: %s" % (prog, text), fd=sys.stderr, indent_next=len(prog) + 9)
+    prog = "rosrepo"
+    msg("@!@{rf}%s: error: %s" % (prog, text), indent_next=len(prog) + 9)
 
 
 def warning(text, use_color=None):
-    prog = os.path.split(sys.argv[0])[1]
-    msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, fd=sys.stderr, indent_next=len(prog) + 11)
+    prog = "rosrepo"
+    msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, indent_next=len(prog) + 11)
 
 
-def readline(prompt, fd_in=sys.stdin, fd_out=sys.stderr):
-    fd_out.write(prompt)
-    fd_out.flush()
-    return fd_in.readline().rstrip("\r\n")
+def readline(prompt):
+    sys.stderr.write(prompt)
+    sys.stderr.flush()
+    return sys.stdin.readline().rstrip("\r\n")
 
 
 def get_credentials(domain):
@@ -202,12 +197,29 @@ def pick_dependency_resolution(package_name, pkg_list):
     return result
 
 
+def show_conflicts(conflicts):
+    for name in sorted(conflicts.keys()):
+        error("cannot use package '%s'\n" % escape(name))
+        for reason in conflicts[name]:
+            msg("   - %s\n" % reason, indent_next=5)
+
+
+def show_missing_system_depends(missing):
+    if missing:
+        msg(
+            "You need to install additional resources on this computer to satisfy all dependencies. "
+            "Please run the following command:\n\n"
+        )
+        msg("@!sudo apt-get install " + " ".join(sorted(list(missing))), indent_first=4, indent_next=25, suffix=" \\")
+        msg("\n\n")
+
+
 class TableView(object):
     def __init__(self, *args, **kwargs):
         self.columns = args
         self.expand = kwargs.get("expand", False)
         if not self.columns:
-            self.width = [0, 0]
+            self.width = [1, 1]
         else:
             self.width = [max(1, len(remove_ansi(color_fmt(c)))) for c in self.columns]
         self.rows = []
@@ -228,30 +240,29 @@ class TableView(object):
     def sort(self, column_index):
         self.rows.sort(key=lambda x: x[column_index])
 
-    def write(self, fd=sys.stdout, use_color=None):
+    def write(self, fd=None, use_color=None):
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
+        try:
+            total_width = get_terminal_size()[0]
+        except OSError:
+            total_width = None
+        if fd is None:
+            fd = sys.stdout
         if use_color is None:
             use_color = isatty(fd)
-        if isatty(fd):
-            try:
-                total_width = terminal_width.get(fd.fileno(), get_terminal_size(fd))[0]
-            except OSError:
-                total_width = 80
-        else:
-            use_color = False
-            total_width = None
         if total_width is not None:
             if self.expand and actual_width < total_width:
                 width[-1] += total_width - actual_width
                 actual_width = total_width
             while actual_width > total_width:
                 max_width = max(width)
+                if max_width == 1:
+                    break
                 for i in range(len(width)):
                     if width[i] == max_width:
                         width[i] -= 1
                         actual_width -= 1
-                    if actual_width <= total_width:
                         break
         if self.columns:
             fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
@@ -266,8 +277,8 @@ class TableView(object):
             if row is None:
                 fd.write(sep)
                 continue
-            for line in map(None, *row):
-                chunks = (slice_ansi_text(color_fmt(r, use_color=use_color) if r is not None else "", w) for r, w in zip(line, width))
-                for chunk in map(None, *chunks):
+            for line in zip_longest(*row, fillvalue=""):
+                chunks = (slice_ansi_text(color_fmt(r, use_color=use_color), w) for r, w in zip(line, width))
+                for chunk in zip_longest(*chunks):
                     fd.write(fmt % tuple(r if r is not None else " " * w for r, w in zip(chunk, width)))
         fd.write(sep)

@@ -5,7 +5,19 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 from .util import UserError
@@ -109,6 +121,7 @@ def prepare_arguments(parser):
     g.add_argument("-k", "--keep-going", action="store_true", help="continue as much as possible after errors")
     g.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
     g.add_argument("--no-status", action="store_true", help="suppress status line")
+    g.add_argument("-m", "--ignore-missing-depends", action="store_true", help="do not abort the build if system dependencies are missing")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--rosclipse", action="store_true", help="force rosclipse to update Eclipse project files")
     m.add_argument("--no-rosclipse", action="store_true", help="do not run rosclipse to create Eclipse project files")
@@ -121,7 +134,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="build all packages in the workspace")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
-    from cmd_build import run as build_func
+    from .cmd_build import run as build_func
     p.set_defaults(func=build_func)
 
     # git
@@ -188,12 +201,12 @@ def prepare_arguments(parser):
     return parser
 
 
-def run_rosrepo(args):
+def run_rosrepo(args):  # pragma: no cover
     try:
         if hasattr(args, "func"):
             return args.func(args)
         else:
-            error("internal error: undefined command\n")
+            error("no command\n")
     except UserError as e:
         error("%s\n" % str(e))
     except YAMLError as e:
@@ -209,7 +222,7 @@ def run_rosrepo(args):
     return 1
 
 
-def main():
+def main():  # pragma: no cover
     import argparse
     parser = prepare_arguments(argparse.ArgumentParser())
     args = parser.parse_args()

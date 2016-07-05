@@ -5,17 +5,35 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import os
 import argparse
-import mock
+try:
+    import mock
+except ImportError:
+    import unittest.mock as mock
 import sys
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 from rosrepo.main import prepare_arguments, run_rosrepo as run_rosrepo_impl
 from rosrepo.util import call_process as real_call_process
-from mock import patch
+from subprocess import PIPE
 
 
 def create_fake_ros_root(rosdir):
@@ -37,7 +55,7 @@ def create_fake_ros_root(rosdir):
             'exec "$@"\n'
             % {"dir": rosdir}
         )
-    os.chmod(os.path.join(rosdir, "env.sh"), 0755)
+    os.chmod(os.path.join(rosdir, "env.sh"), 0o755)
 
 
 def create_package(wsdir, name, depends):
@@ -56,15 +74,62 @@ def create_package(wsdir, name, depends):
 
 
 def call_process(*args, **kwargs):
-    with open(os.devnull, "w") as devnull:
-        if "stdout" not in kwargs:
-            kwargs["stdout"] = devnull
-        if "stderr" not in kwargs:
-            kwargs["stderr"] = devnull
-        return real_call_process(*args, **kwargs)
+    redirected = False
+    if "stdout" not in kwargs and "stderr" not in kwargs:
+        kwargs["stdout"] = PIPE
+        kwargs["stderr"] = PIPE
+        redirected = True
+    exitcode, stdout, stderr = real_call_process(*args, **kwargs)
+    if redirected:
+        sys.stdout.write(stdout)
+        sys.stderr.write(stderr)
+        return exitcode
+    return exitcode, stdout, stderr
 
 
-@patch("rosrepo.cmd_config.call_process", call_process)
+failing_programs = []
+
+
+def no_call_process(args, **kwargs):
+    global failing_programs
+    exitcode = 1 if args[0] in failing_programs else 0
+    return (exitcode, "", "") if kwargs.get("stdin") == PIPE or kwargs.get("stdout") == PIPE or kwargs.get("stderr") == PIPE else exitcode
+
+
+def find_program(arg):
+    return arg
+
+
+def fake_acquire_user_token(label, url):
+    return "usertoken"
+
+
+class FakeRosdep(object):
+    
+    def __contains__(self, key):
+        return "system" in key
+
+    def resolve(self, key):
+        if "system" in key:
+            return "apt", [key]
+        else:
+            raise KeyError()
+
+    def ok(self):
+        return True
+
+
+def fake_apt_installed(packages):
+    return set([p for p in packages if "installed" in p])
+
+
+@mock.patch("rosrepo.resolver._rosdep_instance", FakeRosdep())
+@mock.patch("rosrepo.resolver.apt_installed", fake_apt_installed)
+@mock.patch("rosrepo.cmd_build.call_process", no_call_process)
+@mock.patch("rosrepo.cmd_build.find_program", find_program)
+@mock.patch("rosrepo.cmd_config.acquire_gitlab_private_token", fake_acquire_user_token)
+@mock.patch("rosrepo.cmd_config.call_process", call_process)
+@mock.patch("rosrepo.cmd_clean.call_process", call_process)
 def run_rosrepo(*argv):
     parser = prepare_arguments(argparse.ArgumentParser())
     args = parser.parse_args(argv)

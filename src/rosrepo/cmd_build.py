@@ -5,17 +5,30 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import os
 from .workspace import find_ros_root, get_workspace_location, get_workspace_state, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages
-from .resolver import find_dependees, show_fallback, show_conflicts
+from .resolver import find_dependees, resolve_system_depends
 from .config import Config
 from .cache import Cache
-from .ui import msg, fatal, escape
+from .ui import msg, fatal, show_conflicts, show_missing_system_depends
 from .util import call_process, find_program, iteritems, getmtime, PIPE
+from functools import reduce
 
 
 def run(args):
@@ -36,14 +49,14 @@ def run(args):
             msg("@{cf}Replacing default build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
         else:
-            fatal("No packages given for new default build")
+            fatal("no packages given for new default build\n")
         config["default_build"] = sorted(args.packages)
     if args.set_pinned:
         if args.packages:
             msg("@{cf}Replacing pinned build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
         else:
-            fatal("No packages given to be pinned")
+            fatal("no packages given to be pinned")
         config["pinned_build"] = sorted(args.packages)
     srcdir = os.path.join(wsdir, "src")
     pinned_set = set(config["pinned_build"])
@@ -66,12 +79,10 @@ def run(args):
     build_set |= pinned_set
     if not build_set:
         fatal("no packages to build")
-    build_packages, fallback, conflicts = find_dependees(build_set, ws_state)
-    show_fallback(fallback)
+    build_packages, system_depends, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
     if conflicts:
         fatal("cannot resolve dependencies")
-
     if not args.dry_run:
         config.write()
 
@@ -79,19 +90,26 @@ def run(args):
     if depend_set:
         msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
         msg(", ".join(sorted(depend_set)) + "\n\n", indent_first=4, indent_next=4)
+
+    if system_depends:
+        msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
+        msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
+    missing = resolve_system_depends(system_depends, missing_only=True)
+    show_missing_system_depends(missing)
+    if missing and not args.ignore_missing_depends:
+        fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)")
+
     clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
-    build_packages, fallback, conflicts = find_dependees(build_set, ws_state)
-    show_fallback(fallback)
+    build_packages, _, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
     assert not conflicts
 
     if args.clean:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
         if args.dry_run:
-            msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
-        else:
-            call_process(invoke)
+            invoke += ["--dry-run"]
+        call_process(invoke)
 
     catkin_lint = find_program("catkin_lint")
     if catkin_lint and (args.catkin_lint or config.get("use_catkin_lint", True)) and not args.no_catkin_lint:

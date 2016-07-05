@@ -5,14 +5,25 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import sys
 from .workspace import find_ros_root, get_workspace_location
-from .gitlab import find_available_gitlab_projects, acquire_gitlab_private_token
+from .gitlab import acquire_gitlab_private_token
 from .config import Config
-from .cache import Cache
 from .ui import TableView, msg, fatal, escape
 from .common import DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
 from .util import call_process
@@ -28,14 +39,9 @@ def show_config(config):
     table = TableView(expand=True)
     srv_list = []
     for srv in config.get("gitlab_servers", []):
-        label = srv.get("label", None)
-        url = srv.get("url", None)
-        if label and url:
-            srv_list.append("@{yf}%s: %s" % (escape(label), escape(url)))
-        elif label:
-            srv_list.append("@{yf}%s" % escape(label))
-        elif url:
-            srv_list.append("@{yf}%s" % escape(url))
+        label = srv.get("label", "")
+        url = srv.get("url", "")
+        srv_list.append("@{yf}%s%s" % (escape(label) + ": " if label else "", escape(url)))
     table.add_row("@{cf}Gitlab Servers:", srv_list)
     if "store_credentials" in config:
         table.add_row("@{cf}Store Credentials:", "@{yf}" + ("Yes" if config["store_credentials"] else "No"))
@@ -59,7 +65,6 @@ def show_config(config):
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
-    cache = Cache(wsdir)
 
     if args.get_gitlab_url:
         servers = config.get("gitlab_servers", [])
@@ -118,7 +123,7 @@ def run(args):
             if label == args.gitlab_login:
                 url = srv.get("url", None)
                 if url is None:
-                    fatal("cannot acquire token for Gitlab server without URL")
+                    fatal("cannot acquire token for Gitlab server without URL\n")
                 if args.private_token:
                     private_token = args.private_token
                 else:

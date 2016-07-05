@@ -5,17 +5,13 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
-#
-#
-
 ##############################################################################
 # This file is originally from catkin tools, and has been modified for
-# ROSREPO. It is reused under the following license:
+# ROSREPO.
 ##############################################################################
-
 #
 # Copyright 2014 Open Source Robotics Foundation, Inc.
+# Copyright 2016 Fraunhofer FKIE
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +24,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+#
+#
 """
 Module to enable color terminal output
 """
@@ -108,7 +105,7 @@ def disable_ANSI_colors():
 
 # Default to ansi colors on
 enable_ANSI_colors()
-if os.name in ['nt']:
+if os.name in ['nt']:  # pragma: no cover
     disable_ANSI_colors()
 
 _color_on = True
@@ -147,15 +144,15 @@ def fmt(msg, use_color=True, reset=True):
     return t.safe_substitute(_ansi if use_color else _no_ansi) + (ansi('reset') if reset and use_color else '')
 
 
-def test_colors():
-    def cprint(msg):
-        print(fmt(msg))
-
-    cprint("| @{kf}Black      @|| @!@{kf}Black Bold")
-    cprint("| @{rf}Red        @|| @!@{rf}Red Bold")
-    cprint("| @{gf}Green      @|| @!@{gf}Green Bold")
-    cprint("| @{yf}Yellow     @|| @!@{yf}Yellow Bold")
-    cprint("| @{bf}Blue       @|| @!@{bf}Blue Bold")
-    cprint("| @{pf}Purple     @|| @!@{pf}Purple Bold")
-    cprint("| @{cf}Cyan       @|| @!@{cf}Cyan Bold")
-    cprint("| White      | @!White Bold")
+# def test_colors():
+#     def cprint(msg):
+#         print(fmt(msg))
+#
+#     cprint("| @{kf}Black      @|| @!@{kf}Black Bold")
+#     cprint("| @{rf}Red        @|| @!@{rf}Red Bold")
+#     cprint("| @{gf}Green      @|| @!@{gf}Green Bold")
+#     cprint("| @{yf}Yellow     @|| @!@{yf}Yellow Bold")
+#     cprint("| @{bf}Blue       @|| @!@{bf}Blue Bold")
+#     cprint("| @{pf}Purple     @|| @!@{pf}Purple Bold")
+#     cprint("| @{cf}Cyan       @|| @!@{cf}Cyan Bold")
+#     cprint("| White      | @!White Bold")

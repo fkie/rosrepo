@@ -5,76 +5,83 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
-from .ui import pick_dependency_resolution, msg, warning, error, escape
+from .ui import pick_dependency_resolution, warning, escape
+from .util import call_process, PIPE
 
 
 class Rosdep(object):
 
-    def __init__(self, view=None):
-        self.view = view
-
-    def is_ros(self, name):
-        if self.view is None:
-            return False
+    def __init__(self):
+        self.cached_installers = {}
         try:
-            return self.view.lookup(name).data["_is_ros"]
-        except KeyError:
-            return False
+            from rosdep2.lookup import RosdepLookup
+            from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
+            from rosdep2.sources_list import SourcesListLoader
+            from rosdep2 import get_default_installer, create_default_installer_context
+            sources_loader = SourcesListLoader.create_default()
+            lookup = RosdepLookup.create_from_rospkg(sources_loader=sources_loader)
+            self.view = lookup.get_rosdep_view(DEFAULT_VIEW_KEY)
+            self.installer_ctx = create_default_installer_context()
+            _, self.installer_keys, self.default_key, \
+                self.os_name, self.os_version = get_default_installer(self.installer_ctx)
+        except ImportError:
+            self.view = None
 
     def __contains__(self, name):
-        if self.view is None:
-            return False
-        return name in self.view.keys()
-
-    def __getitem__(self, name):
-        if self.view is None:
-            raise KeyError("No such package")
-        return self.view.lookup(name)
+        return self.view is not None and name in self.view.keys()
 
     def ok(self):
         return self.view is not None
 
+    def resolve(self, dep):
+        d = self.view.lookup(dep)
+        rule_installer, rule = \
+            d.get_rule_for_platform(self.os_name, self.os_version, self.installer_keys, self.default_key)
+        if rule_installer in self.cached_installers:
+            installer = self.cached_installers[rule_installer]
+        else:
+            installer = self.installer_ctx.get_installer(rule_installer)
+            self.cached_installers[rule_installer] = installer
+        resolved = installer.resolve(rule)
+        return rule_installer, resolved
+
+
+_rosdep_instance = None
+
 
 def get_rosdep():
-    try:
-        from rosdep2.lookup import RosdepLookup
-        from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
-        from rosdep2.sources_list import SourcesListLoader
-        sources_loader = SourcesListLoader.create_default()
-        lookup = RosdepLookup.create_from_rospkg(sources_loader=sources_loader)
-        return Rosdep(view=lookup.get_rosdep_view(DEFAULT_VIEW_KEY))
-    except ImportError:
-        return Rosdep(view=None)
-
-
-def show_fallback(fallback):
-    for name in sorted(fallback.keys()):
-        warning("using system package '%s'\n" % escape(name))
-        for reason in fallback[name]:
-            msg("   - %s\n" % reason, indent_next=5)
-
-
-def show_conflicts(conflicts):
-    for name in sorted(conflicts.keys()):
-        error("cannot use package '%s'\n" % escape(name))
-        for reason in conflicts[name]:
-            msg("   - %s\n" % reason, indent_next=5)
+    global _rosdep_instance
+    if _rosdep_instance is None:
+        _rosdep_instance = Rosdep()
+    return _rosdep_instance
 
 
 def find_dependees(packages, ws_state, auto_resolve=False):
-    def try_resolve(queue, depends, fallback, conflicts):
+    def try_resolve(queue, depends, system_depends, conflicts):
         if depends is None:
             depends = {}
-        if fallback is None:
-            fallback = {}
+        if system_depends is None:
+            system_depends = set()
         if conflicts is None:
             conflicts = {}
         while len(queue) > 0:
             root_depender, depender, name = queue.pop()
-            if name not in depends and name not in conflicts and name not in fallback:
+            if name not in depends and name not in conflicts and name not in system_depends:
                 resolver_msgs = []
                 if root_depender is not None and root_depender != depender:
                     resolver_msgs.append("is needed to resolve dependencies of package @{cf}%s@|" % escape(root_depender))
@@ -94,7 +101,7 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     # package conflicts with one that's already in the workspace
                     can_resolve = False
                     best_depends = depends
-                    best_fallback = fallback
+                    best_sysdep = system_depends
                     candidates = []
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     for pkg in ws_state.remote_packages[name]:
@@ -128,39 +135,65 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                         depends[name] = pkg
                         manifest = pkg.manifest
                         queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
-                        new_depends, new_fallback, new_conflicts = try_resolve(queue, depends.copy(), fallback.copy(), None)
+                        new_depends, new_sysdep, new_conflicts = try_resolve(queue, depends.copy(), system_depends.copy(), None)
                         conflicts.update(new_conflicts)
                         if not new_conflicts:
                             # We can build a consistent workspace with that
                             # If we have multiple choices, we pick the one with
                             # the smallest number of soft-conflicts
-                            if not can_resolve or len(new_fallback) < len(best_fallback):
+                            if not can_resolve or len(new_sysdep) < len(best_sysdep):
                                 can_resolve = True
                                 best_depends = new_depends
-                                best_fallback = new_fallback
+                                best_sysdep = new_sysdep
                         # Try next available package
                         queue = old_queue
                         del depends[name]
                     if can_resolve:
                         depends = best_depends
-                        fallback = best_fallback
+                        system_depends = best_sysdep
                     elif name in rosdep:
-                        fallback[name] = resolver_msgs
+                        system_depends.add(name)
                     else:
                         resolver_msgs.append("is not installable as system package")
                         conflicts[name] = resolver_msgs
-                    return depends, fallback, conflicts
+                    return depends, system_depends, conflicts
                 elif name in rosdep and depender is None:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     resolver_msgs.append("is not available from a configured Gitlab server")
                     conflicts[name] = resolver_msgs
-                elif name not in rosdep:
+                elif name in rosdep:
+                    system_depends.add(name)
+                else:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     resolver_msgs.append("is not available from a configured Gitlab server")
                     resolver_msgs.append("is not installable as system package")
                     conflicts[name] = resolver_msgs
-        return depends, fallback, conflicts
+        return depends, system_depends, conflicts
     rosdep = get_rosdep()
     queue = [(None, None, name) for name in packages]
-    depends, fallback, conflicts = try_resolve(queue, None, None, None)
-    return depends, fallback, conflicts
+    depends, system_depends, conflicts = try_resolve(queue, None, None, None)
+    return depends, system_depends, conflicts
+
+
+def apt_installed(packages):
+    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + list(packages), stdout=PIPE, stderr=PIPE)
+    result = set()
+    for line in stdout.split("\n"):
+        if "ok installed" in line:
+            result.add(line.split("|", 1)[0])
+    return result
+
+
+def resolve_system_depends(system_depends, missing_only=False):
+    resolved = set()
+    rosdep = get_rosdep()
+    for dep in system_depends:
+        installer, resolved_deps = rosdep.resolve(dep)
+        for d in resolved_deps:
+            if installer == "apt":
+                resolved.add(d)
+            else:
+                warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+    if missing_only:
+        resolved -= apt_installed(resolved)
+    return resolved

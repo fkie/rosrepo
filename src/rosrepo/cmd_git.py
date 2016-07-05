@@ -5,7 +5,19 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import os
@@ -14,11 +26,10 @@ import shutil
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages
 from .config import Config
 from .cache import Cache
-from .resolver import find_dependees, show_fallback, show_conflicts
-from .ui import TableView, msg, warning, error, fatal, escape
-from .util import iteritems, path_has_prefix, makedirs
+from .resolver import find_dependees, resolve_system_depends
+from .ui import TableView, msg, warning, error, fatal, escape, show_conflicts, show_missing_system_depends
+from .util import iteritems, path_has_prefix, makedirs, call_process
 from git import Repo, GitCommandError
-from rosrepo.util import call_process
 
 
 def is_ancestor(repo, ancestor_rev, rev):
@@ -246,13 +257,14 @@ def run(args):
         else:
             return call_process(invoke)
     if args.git_cmd == "clone":
-        depends, fallback, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
-        show_fallback(fallback)
+        depends, system_depends, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies")
         if not clone_packages(srcdir, depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
+        missing = resolve_system_depends(system_depends, missing_only=True)
+        show_missing_system_depends(missing)
         return 0
 
     if args.packages:
@@ -262,8 +274,7 @@ def run(args):
         if args.no_depends:
             packages = set(args.packages)
         else:
-            packages, fallback, conflicts = find_dependees(args.packages, ws_state)
-            show_fallback(fallback)
+            packages, _, conflicts = find_dependees(args.packages, ws_state)
             show_conflicts(conflicts)
         paths = []
         for name in packages:

@@ -5,11 +5,22 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import os
-import sys
 from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_FILENAME
 from .config import Config, ConfigError, Version
 from .cache import Cache
@@ -30,21 +41,13 @@ class WorkspaceState(NamedTuple):
 
 
 def is_ros_root(path):
-    if not os.path.isdir(os.path.join(path, "bin")):
-        return False
-    if not os.path.isdir(os.path.join(path, "etc")):
-        return False
-    if not os.path.isdir(os.path.join(path, "include")):
-        return False
-    if not os.path.isdir(os.path.join(path, "lib")):
-        return False
-    if not os.path.isdir(os.path.join(path, "share")):
-        return False
-    if not os.path.isfile(os.path.join(path, "env.sh")):
-        return False
-    if not os.path.isfile(os.path.join(path, ".catkin")):
-        return False
-    return True
+    return os.path.isdir(os.path.join(path, "bin")) \
+        and os.path.isdir(os.path.join(path, "etc")) \
+        and os.path.isdir(os.path.join(path, "include")) \
+        and os.path.isdir(os.path.join(path, "lib")) \
+        and os.path.isdir(os.path.join(path, "share")) \
+        and os.path.isfile(os.path.join(path, "env.sh")) \
+        and os.path.isfile(os.path.join(path, ".catkin"))
 
 
 def find_ros_root(override=None):
@@ -83,7 +86,7 @@ def detect_workspace_type(path):
     isfile = os.path.isfile
     join = os.path.join
     if not isdir(join(path, "src")):
-        return -1, None
+        return -1, "there is no @{cf}src@| folder"
     if isfile(join(path, ".rosrepo", "config")):
         try:
             from . import __version__
@@ -93,17 +96,17 @@ def detect_workspace_type(path):
             if this_version < ws_version:
                 return 4, cfg["version"]
             return 3, cfg["version"]
-        except ConfigError:
-            return -1, None
+        except ConfigError as e:
+            return -1, "the configuration is broken (%s)" % escape(str(e))
     if isdir(join(path, ".catkin_tools", "rosrepo")):
         return 2, "2.x"
     if isdir(join(path, ".catkin_tools", "profiles", "rosrepo")):
         return 2, "2.1.5+"
     if isdir(join(path, "repos")):
         if not isfile(join(path, "src", "CMakeLists.txt")):
-            return -1, None
+            return -1, "it looks like a rosrepo 1.x workspace without @{cf}src/CMakeLists.txt@|"
         if not isfile(join(path, "src", "toplevel.cmake")):
-            return -1, None
+            return -1, "it looks like a rosrepo 1.x workspace without @{cf}src/toplevel.cmake@|"
         return 1, "1.x"
     return 0, None
 
@@ -179,27 +182,32 @@ def get_workspace_location(override):
         wstype, wsversion = detect_workspace_type(wsdir)
         if wstype == 3:
             return wsdir
-        msg("catkin workspace detected in @{cf}%s@|\n\n" % escape(wsdir), fd=sys.stderr)
+        msg("catkin workspace detected in @{cf}%s@|\n\n" % escape(wsdir))
         if wstype == -1:
             msg(
-                "I found a catkin workspace, but it seems to be broken.\n\n"
+                "I found a catkin workspace, but %s(error_msg)\n\n"
                 "You can delete any corrupted settings and reinitialize the "
                 "workspace for rosrepo with the command\n\n"
                 "    @!rosrepo init --reset %(path)s@|\n\n"
-                % {"path": escape(wsdir)}, fd=sys.stderr
+                % {"path": escape(wsdir), "error_msg": wsversion}
             )
         if wstype == 0:
             msg(
                 "I found a catkin workspace, but it is not configured with rosrepo.\n\n"
                 "If you wish to use rosrepo with this workspace, run the command\n\n"
                 "    @!rosrepo init %(path)s@|\n\n"
-                % {"path": escape(wsdir)}, fd=sys.stderr
+                % {"path": escape(wsdir)}
             )
         if wstype == 4:
+            from . import __version__
             msg(
-                "This catkin workspace has been configured by a newer version of rosrepo.\n\n"
-                "Please upgrade rosrepo to at least version @{cf}%(new_version)s@|\n\n"
-                % {"new_version": escape(wsversion)}, fd=sys.stderr
+                "This catkin workspace has been configured by a newer version of rosrepo, "
+                "please upgrade to version @{cf}%(new_version)s@| or newer.\n\n"
+                "If you want to revert the workspace back to this version (@{cf}%(old_version)s@|), "
+                "you can reset all settings with\n\n"
+                "    @!rosrepo init --reset %(path)s@|\n\n"
+                "@!@{yf}WARNING@|: Please make a backup before doing this!\n\n"
+                % {"path": escape(wsdir), "new_version": escape(wsversion), "old_version": __version__}
             )
         if wstype == 1 or wstype == 2:
             from . import __version__
@@ -209,13 +217,12 @@ def get_workspace_location(override):
                 "If you wish to use the new version of rosrepo, you need to reinitialize the "
                 "workspace with the command\n\n"
                 "    @!rosrepo init %(path)s@|\n\n"
-                % {"old_version": escape(wsversion), "new_version": __version__, "path": escape(wsdir)}, fd=sys.stderr
+                % {"old_version": escape(wsversion), "new_version": __version__, "path": escape(wsdir)}
             )
         if override is None:
             msg(
                 "If this is not the workspace location you were looking for, try "
-                "the @{cf}--workspace@| option to override the automatic detection.\n\n",
-                fd=sys.stderr
+                "the @{cf}--workspace@| option to override the automatic detection.\n\n"
             )
     else:
         if override is not None:
@@ -226,7 +233,7 @@ def get_workspace_location(override):
                 "If you are really sure that there is a workspace there already, "
                 "it is possible that the marker file has been deleted by accident. "
                 "In that case, the above command will restore your workspace.\n\n"
-                % {"path": escape(override)}, fd=sys.stderr
+                % {"path": escape(override)}
             )
         else:
             msg(
@@ -236,7 +243,7 @@ def get_workspace_location(override):
                 "automatic detection. If you have never created a workspace yet, "
                 "you can initialize one in your home directory with\n\n"
                 "    @!rosrepo init %s/ros@|\n\n"
-                % escape(os.path.expanduser("~")), fd=sys.stderr
+                % escape(os.path.expanduser("~"))
             )
     fatal("valid workspace location required")
 
@@ -310,7 +317,7 @@ def migrate_workspace(wsdir):
         packages = {}
         if os.path.isfile(infofile):
             try:
-                with open(infofile, "r") as f:
+                with open(infofile, "rb") as f:
                     packages = pickle.load(f)
                 os.unlink(infofile)
             except Exception as e:

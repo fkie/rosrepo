@@ -5,10 +5,23 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 import os
+import re
 from shutil import rmtree
 from .workspace import find_ros_root, is_workspace, migrate_workspace
 from .util import makedirs, path_has_prefix
@@ -40,12 +53,9 @@ def run(args):
             msg("Resetting workspace\n")
             rmtree(os.path.join(wsdir, ".rosrepo"), ignore_errors=True)
             rmtree(os.path.join(wsdir, ".catkin_tools"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "build"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "build_isolated"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "devel"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "devel_isolated"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "install"), ignore_errors=True)
-            rmtree(os.path.join(wsdir, "logs"), ignore_errors=True)
+            for fn in os.listdir(wsdir):
+                if re.match(r"(build|devel|install|logs)($|_)", fn, re.IGNORECASE):
+                    rmtree(os.path.join(wsdir, fn), ignore_errors=True)
             try:
                 os.unlink(os.path.join(wsdir, "src", "CMakeLists.txt"))
             except OSError:
@@ -61,9 +71,5 @@ def run(args):
         f.write("# This file currently only serves to mark the location of a catkin workspace for tool integration\n")
     makedirs(os.path.join(wsdir, "src"))
     cfg = Config(wsdir)
-    if args.ros_root:
-        cfg["ros_root"] = ros_rootdir
-    else:
-        del cfg["ros_root"]
     cfg.write()
-    return config_run(FakeArgs(workspace=wsdir))
+    return config_run(FakeArgs(workspace=wsdir, set_ros_root=args.ros_root))

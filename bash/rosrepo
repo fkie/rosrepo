@@ -6,7 +6,19 @@
 #
 # Author: Timo Röhling
 #
-# Copyright (c) 2016 Fraunhofer FKIE
+# Copyright 2016 Fraunhofer FKIE
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 
@@ -124,7 +136,7 @@ _rosrepo_complete()
         rosrepo_cmd+=("-a")
         if [ "${arg:0:1}" = "-" ]
         then
-            COMPREPLY=($(compgen -W "$common_opts --set-default --set-pinned -a --all -c --clean -v --verbose -k --keep-going -j --jobs --no-status --no-rosclipse --rosclipse --no-catkin-lint --catkin-lint" -- "$arg"))
+            COMPREPLY=($(compgen -W "$common_opts --set-default --set-pinned -a --all -c --clean -v --verbose -k --keep-going -j --jobs -m --ignore-missing-depends --no-status --no-rosclipse --rosclipse --no-catkin-lint --catkin-lint" -- "$arg"))
         else
             COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
         fi
