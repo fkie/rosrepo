@@ -2,14 +2,28 @@ Source: rosrepo
 Section: devel
 Priority: extra
 Maintainer: Timo Röhling <timo.roehling@fkie.fraunhofer.de>
-Build-Depends: debhelper (>= 8.0.0), python-all, python-setuptools
+Build-Depends: debhelper (>= 9), dh-python,
+        python-all, python-setuptools, python-nose,
+        python3-all, python3-setuptools, python3-nose
 Homepage: http://srv-gitlab.fkie.fraunhofer.de/timo.roehling/rosrepo
 X-Python-Version: >= 2.7
+X-Python3-Version: >= 3.2
 Standards-Version: 3.9.5
 
 Package: python-rosrepo
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, python-catkin-pkg, python-dateutil, python-git, python-requests, python-rosdep, python-setuptools, python-yaml
+Conflicts: python3-rosrepo
+Description: Manage ROS workspaces with multiple Gitlab repositories
+ - More comfortable management of package builds and dependencies
+ - Mark packages as pinned so they will always be built
+ - Clone, push, and pull from Gitlab repositories
+ - Automatically clone Gitlab projects to satisfy package dependencies
+
+Package: python3-rosrepo
+Architecture: all
+Conflicts: python-rosrepo
+Depends: ${python3:Depends}, ${misc:Depends}, python3-catkin-pkg, python3-dateutil, python3-git, python3-requests, python3-rosdep, python3-setuptools, python3-yaml
 Description: Manage ROS workspaces with multiple Gitlab repositories
  - More comfortable management of package builds and dependencies
  - Mark packages as pinned so they will always be built

@@ -4,5 +4,11 @@ Source: https://github.com/fkie/rosrepo
 
 Files: *
 Copyright: 2016 Fraunhofer FKIE
-License: none
+License: Apache-2.0
+
+
+Files: src/rosrepo/terminal_color.py
+Copyright: 2014 Open Source Robotics Foundation, Inc.
+Copyright: 2016 Fraunhofer FKIE
+License: Apache-2.0
 
