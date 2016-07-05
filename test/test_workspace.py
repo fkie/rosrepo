@@ -16,6 +16,11 @@ import yaml
 import pickle
 from tempfile import mkdtemp
 from rosrepo.config import Config
+try:
+    from mock import patch
+except ImportError:
+    from unittest.mock import patch
+
 import sys
 sys.stderr = sys.stdout
 
@@ -203,6 +208,8 @@ class WorkspaceTest(unittest.TestCase):
     def test_build(self):
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "1")
+        self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--dry-run")
         self.assertEqual(exitcode, 1)
         self.assertIn("no packages to build", stdout)
@@ -212,23 +219,27 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("alpha", stdout)
         self.assertIn("beta", stdout)
         self.assertIn("gamma", stdout)
-        self.assertIn("delta", stdout)        
+        self.assertIn("delta", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "alpha")
         self.assertEqual(exitcode, 1)
         self.assertIn("catkin_lint reported errors", stdout)
-        helper.failing_programs = []        
+        helper.failing_programs = []
+        with patch("rosrepo.cmd_build.find_ros_root", lambda x: None):
+            exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "alpha")
+            self.assertEqual(exitcode, 1)
+            self.assertIn("cannot detect ROS distribution", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--all")
         self.assertEqual(exitcode, 1)
         self.assertIn("cannot resolve dependencies", stdout)        
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--set-default")
         self.assertEqual(exitcode, 1)
-        self.assertIn("no packages given", stdout)        
+        self.assertIn("no packages given", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--set-default", "alpha")
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("default_build", []), ["alpha"])
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--set-pinned")
         self.assertEqual(exitcode, 1)
-        self.assertIn("no packages given", stdout)        
+        self.assertIn("no packages given", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--set-pinned", "beta")
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("pinned_build", []), ["beta"])
@@ -237,7 +248,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("alpha", stdout)
         self.assertIn("beta", stdout)
         self.assertIn("gamma", stdout)
-        self.assertIn("delta", stdout)        
+        self.assertIn("delta", stdout)
         exitcode, stdout = helper.run_rosrepo("exclude", "-w", self.wsdir, "--all")
         self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir)
@@ -298,6 +309,10 @@ class WorkspaceTest(unittest.TestCase):
     def test_config(self):
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
+        with patch("rosrepo.cmd_config.find_ros_root", lambda x: None):
+            exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir)
+            self.assertEqual(exitcode, 1)
+            self.assertIn("cannot detect ROS distribution", stdout)
         #######################
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "16")
         self.assertEqual(exitcode, 0)
@@ -444,6 +459,10 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(self.get_config_value("use_rosclipse"), False)
 
     def test_init_failures(self):
+        with patch("rosrepo.cmd_init.find_ros_root", lambda x: None):
+            exitcode, stdout = helper.run_rosrepo("init", self.wsdir)
+            self.assertEqual(exitcode, 1)
+            self.assertIn("cannot detect ROS distribution", stdout)
         os.environ["HOME"] = self.wsdir
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 1)

@@ -84,8 +84,8 @@ def run(args):
         msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
     missing = resolve_system_depends(system_depends, missing_only=True)
     show_missing_system_depends(missing)
-    if missing:
-        fatal("missing system packages")
+    if missing and not args.ignore_missing_depends:
+        fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)")
 
     clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)

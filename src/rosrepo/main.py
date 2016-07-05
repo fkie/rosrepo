@@ -109,6 +109,7 @@ def prepare_arguments(parser):
     g.add_argument("-k", "--keep-going", action="store_true", help="continue as much as possible after errors")
     g.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
     g.add_argument("--no-status", action="store_true", help="suppress status line")
+    g.add_argument("-m", "--ignore-missing-depends", action="store_true", help="do not abort the build if system dependencies are missing")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--rosclipse", action="store_true", help="force rosclipse to update Eclipse project files")
     m.add_argument("--no-rosclipse", action="store_true", help="do not run rosclipse to create Eclipse project files")
