@@ -72,13 +72,15 @@ def get_rosdep():
 
 
 def find_dependees(packages, ws_state, auto_resolve=False):
-    def try_resolve(queue, depends, system_depends, conflicts):
+    def try_resolve(queue, depends=None, system_depends=None, conflicts=None, score=None):
         if depends is None:
             depends = {}
         if system_depends is None:
             system_depends = set()
         if conflicts is None:
             conflicts = {}
+        if score is None:
+            score = 0
         while len(queue) > 0:
             root_depender, depender, name = queue.pop()
             if name not in depends and name not in conflicts and name not in system_depends:
@@ -99,9 +101,9 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     # to download it from. However, since each Gitlab project
                     # may contain multiple packages, we must verify that no other
                     # package conflicts with one that's already in the workspace
-                    can_resolve = False
                     best_depends = depends
                     best_sysdep = system_depends
+                    best_score = None  # no solution yet
                     candidates = []
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     for pkg in ws_state.remote_packages[name]:
@@ -135,20 +137,20 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                         depends[name] = pkg
                         manifest = pkg.manifest
                         queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
-                        new_depends, new_sysdep, new_conflicts = try_resolve(queue, depends.copy(), system_depends.copy(), None)
+                        new_depends, new_sysdep, new_conflicts, new_score = try_resolve(queue, depends.copy(), system_depends.copy())
                         conflicts.update(new_conflicts)
                         if not new_conflicts:
                             # We can build a consistent workspace with that
                             # If we have multiple choices, we pick the one with
                             # the smallest number of soft-conflicts
-                            if not can_resolve or len(new_sysdep) < len(best_sysdep):
-                                can_resolve = True
+                            if best_score is None or new_score > best_score:
+                                best_score = new_score
                                 best_depends = new_depends
                                 best_sysdep = new_sysdep
                         # Try next available package
                         queue = old_queue
                         del depends[name]
-                    if can_resolve:
+                    if best_score is not None:
                         depends = best_depends
                         system_depends = best_sysdep
                     elif name in rosdep:
@@ -156,7 +158,8 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     else:
                         resolver_msgs.append("is not installable as system package")
                         conflicts[name] = resolver_msgs
-                    return depends, system_depends, conflicts
+                    score -= 10  # Small penalty for required download
+                    return depends, system_depends, conflicts, score + best_score
                 elif name in rosdep and depender is None:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     resolver_msgs.append("is not available from a configured Gitlab server")
@@ -168,10 +171,11 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                     resolver_msgs.append("is not available from a configured Gitlab server")
                     resolver_msgs.append("is not installable as system package")
                     conflicts[name] = resolver_msgs
-        return depends, system_depends, conflicts
+        score -= 100 * len(system_depends - apt_installed(system_depends))  # Large penalty for uninstalled system dependency
+        return depends, system_depends, conflicts, score
     rosdep = get_rosdep()
     queue = [(None, None, name) for name in packages]
-    depends, system_depends, conflicts = try_resolve(queue, None, None, None)
+    depends, system_depends, conflicts, _ = try_resolve(queue)
     return depends, system_depends, conflicts
 
 
