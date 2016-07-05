@@ -203,15 +203,6 @@ class WorkspaceTest(unittest.TestCase):
     def test_build(self):
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "1")
-        self.assertEqual(exitcode, 0)
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--unset-ros-root")
-        self.assertEqual(exitcode, 1)
-        exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--dry-run")
-        self.assertEqual(exitcode, 1)
-        self.assertIn("cannot detect ROS distribution", stdout)
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--set-ros-root", self.ros_root_dir)
-        self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--dry-run")
         self.assertEqual(exitcode, 1)
         self.assertIn("no packages to build", stdout)
@@ -453,9 +444,6 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(self.get_config_value("use_rosclipse"), False)
 
     def test_init_failures(self):
-        exitcode, stdout = helper.run_rosrepo("init", self.wsdir)
-        self.assertEqual(exitcode, 1)
-        self.assertIn("cannot detect ROS distribution", stdout)
         os.environ["HOME"] = self.wsdir
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 1)
