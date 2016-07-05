@@ -24,8 +24,9 @@ import os
 from .workspace import get_workspace_location, get_workspace_state
 from .cache import Cache
 from .config import Config
-from .ui import msg, fatal, escape, show_conflicts, show_missing_system_depends
+from .ui import msg, warning, fatal, escape, show_conflicts, show_missing_system_depends
 from .resolver import find_dependees, resolve_system_depends
+from .util import iteritems, is_deprecated_package, deprecated_package_info
 from .cmd_git import clone_packages
 
 
@@ -78,6 +79,12 @@ def run(args):
             msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
         missing = resolve_system_depends(system_depends, missing_only=True)
         show_missing_system_depends(missing)
+
+        for name, info in iteritems(depends):
+            if is_deprecated_package(info.manifest):
+                details = deprecated_package_info(info.manifest)
+                warning(("package '%s' is deprecated" % escape(name)) + (": %s" % escape(details) if details else "") + "\n")
+
     if not args.dry_run:
         config.write()
     return 0

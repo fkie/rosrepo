@@ -27,7 +27,7 @@ from .cache import Cache
 from .resolver import find_dependees
 from .workspace import get_workspace_location, get_workspace_state
 from .ui import msg, warning, escape, TableView, show_conflicts
-from .util import iteritems
+from .util import iteritems, is_deprecated_package
 
 
 def run(args):
@@ -77,7 +77,8 @@ def run(args):
                 ("@!@{yf}S@|" if in_default_set else ".") +
                 ("@!@{yf}P@|" if in_pinned_set else ".") +
                 ("@!@{bf}D@|" if not in_default_set and not in_pinned_set and in_dependee_set else ".") +
-                ("@!@{rf}C@|" if in_conflict_set else ".")
+                ("@!@{rf}C@|" if in_conflict_set else ".") +
+                ("@!@{rf}O@|" if is_deprecated_package(pkg.manifest) else ".")
             )
             if hasattr(pkg, "workspace_path"):
                 head, tail = os.path.split(pkg.workspace_path)
@@ -93,7 +94,7 @@ def run(args):
         if filter_table_entry(name, pkg_list, status, location):
             if name in ws_state.remote_packages:
                 for pkg in ws_state.remote_packages[name]:
-                    status.append("      *" if upstream == pkg.project else "")
+                    status.append("       *" if upstream == pkg.project else "")
                     location.append(escape(pkg.project.website))
             table.add_row("@{yf}" + escape(name), status, location)
             names.add(name)
@@ -119,6 +120,7 @@ def run(args):
             "@!@{yf}P@|=Pinned   "
             "@!@{bf}D@|=Dependee   "
             "@!@{rf}C@|=Conflict   "
+            "@!@{rf}O@|=Deprecated   "
             "\n", indent_first=2, indent_next=2, fd=sys.stdout
             )
         sys.stdout.write("\n")
