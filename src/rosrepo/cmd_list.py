@@ -14,7 +14,7 @@ from .config import Config
 from .cache import Cache
 from .resolver import find_dependees
 from .workspace import get_workspace_location, get_workspace_state
-from .ui import msg, warning, error, escape, TableView, show_conflicts
+from .ui import msg, warning, escape, TableView, show_conflicts
 from .util import iteritems
 
 
