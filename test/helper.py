@@ -107,8 +107,8 @@ class FakeRosdep(object):
         return True
 
 
-def fake_apt_installed(package):
-    return "installed" in package
+def fake_apt_installed(packages):
+    return set([p for p in packages if "installed" in p])
 
 
 @mock.patch("rosrepo.resolver._rosdep_instance", FakeRosdep())

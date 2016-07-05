@@ -8,13 +8,14 @@
 # Copyright (c) 2016 Fraunhofer FKIE
 #
 #
-from .ui import pick_dependency_resolution, msg, warning, error, escape
+from .ui import pick_dependency_resolution, warning, escape
 from .util import call_process, PIPE
 
 
 class Rosdep(object):
 
     def __init__(self):
+        self.cached_installers = {}
         try:
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
@@ -30,9 +31,7 @@ class Rosdep(object):
             self.view = None
 
     def __contains__(self, name):
-        if self.view is None:
-            return False
-        return name in self.view.keys()
+        return self.view is not None and name in self.view.keys()
 
     def ok(self):
         return self.view is not None
@@ -41,7 +40,11 @@ class Rosdep(object):
         d = self.view.lookup(dep)
         rule_installer, rule = \
             d.get_rule_for_platform(self.os_name, self.os_version, self.installer_keys, self.default_key)
-        installer = self.installer_ctx.get_installer(rule_installer)
+        if rule_installer in self.cached_installers:
+            installer = self.cached_installers[rule_installer]
+        else:
+            installer = self.installer_ctx.get_installer(rule_installer)
+            self.cached_installers[rule_installer] = installer
         resolved = installer.resolve(rule)
         return rule_installer, resolved
 
@@ -160,9 +163,13 @@ def find_dependees(packages, ws_state, auto_resolve=False):
     return depends, system_depends, conflicts
 
 
-def apt_installed(package):
-    exitcode, stdout, _ = call_process(["dpkg-query", "-f", "${Status}", "-W", package], stdout=PIPE, stderr=PIPE)
-    return exitcode == 0 and "ok installed" in stdout
+def apt_installed(packages):
+    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + list(packages), stdout=PIPE, stderr=PIPE)
+    result = set()
+    for line in stdout.split("\n"):
+        if "ok installed" in line:
+            result.add(line.split("|", 1)[0])
+    return result
 
 
 def resolve_system_depends(system_depends, missing_only=False):
@@ -176,5 +183,5 @@ def resolve_system_depends(system_depends, missing_only=False):
             else:
                 warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
     if missing_only:
-        return set(r for r in resolved if not apt_installed(r))
+        resolved -= apt_installed(resolved)
     return resolved
