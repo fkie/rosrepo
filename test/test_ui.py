@@ -111,3 +111,9 @@ class TerminalColorTest(unittest.TestCase):
             stderr = stderr.getvalue()
             self.assertIn("Hello there!", stderr)
             self.assertIn("Hi Timo!", stderr)
+
+    def test_reformat_paragraphs(self):
+        self.assertEqual(
+            ui.reformat_paragraphs("\n\n\nThis is a\nhard-wrapped paragraph.\n\nThis is a second paragraph in one line.\n\n    This is a hard-wrapped\n    paragraph with indentation.\n\r\n"),
+            "This is a hard-wrapped paragraph.\n\nThis is a second paragraph in one line.\n\nThis is a hard-wrapped paragraph with indentation."
+        )

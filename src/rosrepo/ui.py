@@ -112,9 +112,12 @@ def wrap_ansi_text(text, width, indent=0, indent_first=None, indent_next=None, s
 
 
 def reformat_paragraphs(text):
-    paragraphs = re.split("[\r|\n]+\s*[\r|\n]+", text)
-    paragraphs = [p.replace("\r", " ").replace("\n", " ").strip() for p in paragraphs]
-    return "\n\n".join(paragraphs)
+    paragraphs = re.split("[\r|\n]+\s*[\r|\n]+", text.strip())
+    result = []
+    for p in paragraphs:
+        lines = [l.strip() for l in p.split("\n")]
+        result.append(" ".join(lines))
+    return "\n\n".join(result)
 
 
 def escape(msg):
