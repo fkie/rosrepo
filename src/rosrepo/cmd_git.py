@@ -219,7 +219,7 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=Fals
     if not need_cloning:
         return False
     msg("@{cf}The following packages have to be cloned from Gitlab@|:\n")
-    msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent_first=4, indent_next=4)
+    msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent=4)
     if offline_mode:
         fatal("cannot clone projects in offline mode")
     projects = list(set(p.project for _, p in need_cloning))

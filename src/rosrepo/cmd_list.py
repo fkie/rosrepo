@@ -121,7 +121,7 @@ def run(args):
             "@!@{bf}D@|=Dependee   "
             "@!@{rf}C@|=Conflict   "
             "@!@{rf}O@|=Deprecated   "
-            "\n", indent_first=2, indent_next=2, fd=sys.stdout
+            "\n", indent=2, fd=sys.stdout
             )
         sys.stdout.write("\n")
     return 0

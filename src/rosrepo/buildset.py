@@ -24,7 +24,7 @@ import os
 from .workspace import get_workspace_location, get_workspace_state
 from .cache import Cache
 from .config import Config
-from .ui import msg, warning, fatal, escape, show_conflicts, show_missing_system_depends
+from .ui import msg, warning, fatal, escape, show_conflicts, show_missing_system_depends, reformat_paragraphs
 from .resolver import find_dependees, resolve_system_depends
 from .util import iteritems, is_deprecated_package, deprecated_package_info
 from .cmd_git import clone_packages
@@ -53,11 +53,11 @@ def run(args):
 
     if config["pinned_build"]:
         msg("@{cf}You have pinned the following packages (they will always be built)@|:\n")
-        msg(escape(", ".join(config["pinned_build"]) + "\n\n"), indent_first=4, indent_next=4)
+        msg(escape(", ".join(config["pinned_build"]) + "\n\n"), indent=4)
 
     if config["default_build"]:
         msg("@{cf}You have included the following packages in the default build@|:\n")
-        msg(escape(", ".join(config["default_build"]) + "\n\n"), indent_first=4, indent_next=4)
+        msg(escape(", ".join(config["default_build"]) + "\n\n"), indent=4)
     else:
         msg("@{cf}No packages selected for the default build@|\n\n")
 
@@ -70,20 +70,22 @@ def run(args):
         extra_depends = set(depends.keys()) - set(config["pinned_build"]) - set(config["default_build"])
         if extra_depends:
             msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
-            msg(escape(", ".join(sorted(extra_depends)) + "\n\n"), indent_first=4, indent_next=4)
+            msg(escape(", ".join(sorted(extra_depends)) + "\n\n"), indent=4)
 
         clone_packages(os.path.join(wsdir, "src"), depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
 
         if system_depends:
             msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
-            msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
+            msg(", ".join(sorted(system_depends)) + "\n\n", indent=4)
         missing = resolve_system_depends(system_depends, missing_only=True)
         show_missing_system_depends(missing)
 
         for name, info in iteritems(depends):
             if is_deprecated_package(info.manifest):
                 details = deprecated_package_info(info.manifest)
-                warning(("package '%s' is deprecated" % escape(name)) + (": %s" % escape(details) if details else "") + "\n")
+                warning("package '%s' is deprecated\n" % escape(name))
+                if details:
+                    msg("@{yf}" + reformat_paragraphs(escape(details)) + "\n\n", indent=4)
 
     if not args.dry_run:
         config.write()
