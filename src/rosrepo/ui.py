@@ -70,9 +70,13 @@ def pad_ansi_text(text, width, truncate=True, fill=" "):
     return text + fill[0] * (width - length)
 
 
-def wrap_ansi_text(text, width, indent_first=0, indent_next=0, suffix=""):
+def wrap_ansi_text(text, width, indent=0, indent_first=None, indent_next=None, suffix=""):
     if width is None:
         return text
+    if indent_first is None:
+        indent_first = indent
+    if indent_next is None:
+        indent_next = indent
     result = []
     chunks = text.split("\n")
     sl = len(suffix)
@@ -107,11 +111,17 @@ def wrap_ansi_text(text, width, indent_first=0, indent_next=0, suffix=""):
     return (suffix + "\n").join(result)
 
 
+def reformat_paragraphs(text):
+    paragraphs = re.split("[\r|\n]+\s*[\r|\n]+", text)
+    paragraphs = [p.replace("\r", " ").replace("\n", " ").strip() for p in paragraphs]
+    return "\n\n".join(paragraphs)
+
+
 def escape(msg):
     return msg.replace("@", "@@")
 
 
-def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_next=0, suffix="", fd=None):
+def msg(text, max_width=None, use_color=None, wrap=True, fd=None, **wrap_args):
     from .terminal_color import ansi
     if fd is None:
         fd = sys.stderr
@@ -124,7 +134,7 @@ def msg(text, max_width=None, use_color=None, wrap=True, indent_first=0, indent_
                 max_width, _ = get_terminal_size()
         except OSError:
             pass
-    fd.write(wrap_ansi_text(ansi_text, max_width, indent_first, indent_next, suffix) + (ansi('reset') if use_color else ""))
+    fd.write(wrap_ansi_text(ansi_text, max_width, **wrap_args) + (ansi('reset') if use_color else ""))
 
 
 def fatal(text):

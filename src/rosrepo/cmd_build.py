@@ -47,14 +47,14 @@ def run(args):
     if args.set_default:
         if args.packages:
             msg("@{cf}Replacing default build set with@|:\n")
-            msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
+            msg(", ".join(sorted(args.packages)) + "\n\n", indent=4)
         else:
             fatal("no packages given for new default build\n")
         config["default_build"] = sorted(args.packages)
     if args.set_pinned:
         if args.packages:
             msg("@{cf}Replacing pinned build set with@|:\n")
-            msg(", ".join(sorted(args.packages)) + "\n\n", indent_first=4, indent_next=4)
+            msg(", ".join(sorted(args.packages)) + "\n\n", indent=4)
         else:
             fatal("no packages given to be pinned")
         config["pinned_build"] = sorted(args.packages)
@@ -64,18 +64,18 @@ def run(args):
         build_set = set(args.packages)
         if build_set:
             msg("@{cf}You selected the following packages to be built@|:\n")
-            msg(", ".join(sorted(list(build_set))) + "\n\n", indent_first=4, indent_next=4)
+            msg(", ".join(sorted(list(build_set))) + "\n\n", indent=4)
     else:
         build_set = set(config["default_build"])
         if build_set:
             msg("@{cf}The following packages are included in the default build@|:\n")
-            msg(", ".join(sorted(list(build_set))) + "\n\n", indent_first=4, indent_next=4)
+            msg(", ".join(sorted(list(build_set))) + "\n\n", indent=4)
     if pinned_set - build_set:
         if build_set:
             msg("@{cf}The following pinned packages will also be built@|:\n")
         else:
             msg("@{cf}The following pinned packages will be built@|:\n")
-        msg(", ".join(sorted(list(pinned_set - build_set))) + "\n\n", indent_first=4, indent_next=4)
+        msg(", ".join(sorted(list(pinned_set - build_set))) + "\n\n", indent=4)
     build_set |= pinned_set
     if not build_set:
         fatal("no packages to build")
@@ -89,11 +89,11 @@ def run(args):
     depend_set = set(build_packages.keys()) - build_set
     if depend_set:
         msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
-        msg(", ".join(sorted(depend_set)) + "\n\n", indent_first=4, indent_next=4)
+        msg(", ".join(sorted(depend_set)) + "\n\n", indent=4)
 
     if system_depends:
         msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
-        msg(", ".join(sorted(system_depends)) + "\n\n", indent_first=4, indent_next=4)
+        msg(", ".join(sorted(system_depends)) + "\n\n", indent=4)
     missing = resolve_system_depends(system_depends, missing_only=True)
     show_missing_system_depends(missing)
     if missing and not args.ignore_missing_depends:
