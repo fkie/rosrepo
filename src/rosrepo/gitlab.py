@@ -25,7 +25,7 @@ import sys
 import os
 import yaml
 from dateutil.parser import parse as date_parse
-from git import Repo
+from .git import Repo
 try:
     from urllib import quote as urlquote
 except ImportError:

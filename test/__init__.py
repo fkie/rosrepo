@@ -20,7 +20,3 @@
 # limitations under the License.
 #
 #
-__author__ = "Timo Röhling <timo.roehling@fkie.fraunhofer.de>"
-__copyright__ = "Copyright (c) 2016 Fraunhofer FKIE"
-__license__ = "Apache-2.0"
-__version__ = "3.0.4"

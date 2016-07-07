@@ -26,7 +26,6 @@ import sys
 import os
 sys.stderr = sys.stdout
 
-import helper
 try:
     from mock import patch
 except ImportError:
@@ -34,6 +33,8 @@ except ImportError:
 
 import rosrepo.terminal_color as tc
 import rosrepo.ui as ui
+import test.helper as helper
+
 
 class TerminalColorTest(unittest.TestCase):
 

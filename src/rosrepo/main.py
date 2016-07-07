@@ -24,6 +24,7 @@ from .util import UserError
 from yaml import YAMLError
 from pickle import PickleError
 from .ui import error
+from .git import GitError
 
 
 def add_common_options(parser):
@@ -217,6 +218,8 @@ def run_rosrepo(args):  # pragma: no cover
         error("OS: %s\n\n" % str(e))
     except IOError as e:
         error("IO: %s\n\n" % str(e))
+    except GitError as e:
+        error("git: %s\n\n" % str(e))
     except KeyboardInterrupt:
         error("interrupted by user\n")
     return 1

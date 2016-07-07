@@ -20,7 +20,6 @@
 # limitations under the License.
 #
 from .util import call_process, PIPE, iteritems
-from functools import total_ordering
 try:
     from itertools import ifilter as filter, imap as map
 except ImportError:
@@ -39,7 +38,7 @@ class GitError(RuntimeError):
 
 class Git(object):
 
-    _local_args = ("stdin", "on_fail")
+    _local_args = ("stdin", "on_fail", "simulate")
 
     def __init__(self, wsdir):
         self._wsdir = wsdir
@@ -57,7 +56,11 @@ class Git(object):
                     if not isinstance(value, bool):
                         invoke.append(str(value))
             invoke += [str(a) for a in args]
-            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, input_data=kwargs.get("stdin", None))
+            if kwargs.get("simulate", False):
+                print(" ".join(invoke))
+                return ""
+            else:
+                exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, input_data=kwargs.get("stdin", None))
             if exitcode != 0:
                 on_fail = kwargs.get("on_fail", None)
                 if on_fail:
@@ -69,7 +72,6 @@ class Git(object):
         return f
 
 
-@total_ordering
 class Reference(object):
 
     def __init__(self, repo, name):
@@ -78,7 +80,7 @@ class Reference(object):
         self._resolved_name = None
 
     def __str__(self):
-        return self._resolve_name()
+        return self.name
 
     def __repr__(self):
         return "%s(%r, %r)" % (self.__class__.__name__, self._repo, self._name)
@@ -89,11 +91,8 @@ class Reference(object):
         else:
             return False
 
-    def __lt__(self, other):
-        if self._repo == other._repo:
-            return self._resolve_name() < other._resolve_name()
-        else:
-            return self._repo < other._repo
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __hash__(self):
         return self._resolve_name().__hash__()
@@ -114,14 +113,6 @@ class Reference(object):
     def __nonzero__(self):
         return self.__bool__()
 
-    @property
-    def full_name(self):
-        return self._resolve_name()
-
-    @property
-    def name(self):
-        return self.full_name.split("/", 2)[2]
-
     def __getattr__(self, name):
         return self._repo._make_ref(self._name + "/" + name)
 
@@ -138,14 +129,26 @@ class Reference(object):
             raise
 
     @property
+    def full_name(self):
+        return self._resolve_name()
+
+    @property
+    def name(self):
+        return self.full_name.split("/", 2)[2]
+
+    def points_at(self, other):
+        return self.commit_ish == other.commit_ish
+
+    def merge_base(self, other):
+        return self._repo._make_ref(self._repo.git.merge_base(self.full_name, other.full_name).strip())
+
+    @property
     def commit_ish(self):
-        ish = self._repo.git.rev_parse("%s^{commit}" % self._name, verify=True, on_fail="%r is not a commit object" % self._name)
-        return ish.strip()
+        return self._repo.git.rev_parse("%s^{commit}" % self._name, verify=True, on_fail="%r is not a commit object" % self._name).strip()
 
     @property
     def tree_ish(self):
-        ish = self._repo.git.rev_parse("%s^{tree}" % self._name, verify=True, on_fail="%r is not a commit object" % self._name)
-        return ish.strip()
+        return self._repo.git.rev_parse("%s^{tree}" % self._name, verify=True, on_fail="%r is not a commit object" % self._name).strip()
 
     @property
     def repo(self):
@@ -171,7 +174,7 @@ class RemoteReference(Reference):
 
     @property
     def remote(self):
-        return Remote(self.remote_name)
+        return Remote(self._repo, self.remote_name)
 
 
 class TagReference(Reference):
@@ -193,6 +196,17 @@ class BranchReference(Reference):
 
 
 class SymbolicReference(Reference):
+
+    def __getattr__(self, name):
+        raise AttributeError("no such attribute: %s" % name)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def reference(self):
+        return self._repo._make_ref(self._resolve_name())
 
     def _resolve_name(self):
         return self._repo.git.symbolic_ref(str(self._name), on_fail="%r is not a symbolic reference" % self._name).strip()
@@ -221,6 +235,9 @@ class Remote(object):
         else:
             return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __hash__(self):
         return self._name.__hash__()
 
@@ -231,26 +248,25 @@ class Remote(object):
         return self.repo._contains_ref("refs/remotes/" + self._name + "/", str(item))
 
     def __bool__(self):
-        try:
-            self._resolve_name()
-            return True
-        except GitError:
-            return False
+        return self._repo._has_refs("refs/remotes/" + self._name + "/")
+
+    def __nonzero__(self):
+        return self.__bool__()
 
     @property
     def fetch_url(self):
-        return None
+        return self._repo.git.remote("get-url", self._name).strip()
 
     @property
     def push_url(self):
-        return None
+        return self._repo.git.remote("get-url", "--push", self._name).strip()
 
     @property
     def url(self):
         return self.fetch_url
 
-    def fetch(self):
-        self._repo.git.fetch(self._name)
+    def fetch(self, *args, **kwargs):
+        self._repo.git.fetch(self._name, *args, **kwargs)
 
     @property
     def name(self):
@@ -292,7 +308,6 @@ class RemoteCollection(object):
         return Remote(self._repo, name)
 
 
-@total_ordering
 class Repo(object):
 
     def __init__(self, wsdir):
@@ -305,8 +320,17 @@ class Repo(object):
     def __eq__(self, other):
         return self._wsdir == other._wsdir
 
-    def __lt__(self, other):
-        return self._wsdir < other._wsdir
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return self._wsdir.__hash__()
+
+    def __bool__(self):
+        return self._has_refs()
+
+    def __nonzero__(self):
+        return self.__bool__()
 
     @property
     def git(self):
@@ -343,6 +367,10 @@ class Repo(object):
     def remote(self, name):
         return Remote(self, name)
 
+    def is_dirty(self):
+        stdout = self.git.status(porcelain=True).strip()
+        return stdout != ""
+
     def _make_ref(self, name):
         if name.startswith("refs/remotes/"):
             return RemoteReference(self, name)
@@ -363,7 +391,18 @@ class Repo(object):
         try:
             stdout = self._git.show_ref(name)
             for line in stdout.split("\n"):
-                ref_name = line.split(" ", 1)[1].strip()
+                ref_name = line.split(" ", 1)[-1].strip()
+                if ref_filter is None or ref_name.startswith(ref_filter):
+                    return True
+        except GitError:
+            pass
+        return False
+
+    def _has_refs(self, ref_filter=None):
+        try:
+            stdout = self._git.show_ref()
+            for line in stdout.split("\n"):
+                ref_name = line.split(" ", 1)[-1].strip()
                 if ref_filter is None or ref_name.startswith(ref_filter):
                     return True
         except GitError:

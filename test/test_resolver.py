@@ -26,13 +26,13 @@ import sys
 sys.stderr = sys.stdout
 import re
 
-import helper
 try:
     from mock import patch
 except ImportError:
     from unittest.mock import patch
 
 import rosrepo.resolver as resolver
+import test.helper as helper
 
 
 class ResolverTest(unittest.TestCase):
