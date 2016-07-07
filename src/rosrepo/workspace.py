@@ -245,7 +245,7 @@ def get_workspace_location(override):
                 "    @!rosrepo init %s/ros@|\n\n"
                 % escape(os.path.expanduser("~"))
             )
-    fatal("valid workspace location required")
+    fatal("valid workspace location required\n")
 
 
 def migrate_workspace(wsdir):
@@ -306,7 +306,7 @@ def migrate_workspace(wsdir):
                 shutil.move(path, srcdir)
             os.rmdir(repodir)
         except shutil.Error as e:
-            fatal(escape(str(e)))
+            fatal(escape(str(e)) + "\n")
         cfg.write()
     if wstype == 2:
         cfg = Config(wsdir)
@@ -368,7 +368,7 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                     "Please remove one of the versions or place a @{cf}CATKIN_IGNORE@| file "
                     "in its path to disable it.\n\n"
                 )
-                fatal("workspace has conflicting packages")
+                fatal("workspace has conflicting packages\n")
     if flags & WSFL_REMOTE_PROJECTS:
         ws_state.remote_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
     if flags & WSFL_WS_PROJECTS and ws_state.remote_projects is not None:

@@ -109,7 +109,7 @@ def run(args):
                     msg("Private token removed\n")
                 break
         else:
-            fatal("no such Gitlab server")
+            fatal("no such Gitlab server\n")
     if args.remove_credentials:
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
@@ -134,7 +134,7 @@ def run(args):
                     srv["private_token"] = private_token
                 break
         else:
-            fatal("no such Gitlab server")
+            fatal("no such Gitlab server\n")
     if args.set_gitlab_url:
         label, url = args.set_gitlab_url[0], urlunsplit(urlsplit(args.set_gitlab_url[1]))
         if args.private_token:
@@ -182,7 +182,7 @@ def run(args):
             need_clean = need_clean or args.set_compiler != config.get("compiler", None)
             config["compiler"] = args.set_compiler
         else:
-            fatal("unknown compiler")
+            fatal("unknown compiler\n")
     if args.unset_compiler and "compiler" in config:
         need_clean = True
         del config["compiler"]

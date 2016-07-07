@@ -65,7 +65,7 @@ def run(args):
         depends, system_depends, conflicts = find_dependees(config["pinned_build"] + config["default_build"], ws_state)
         show_conflicts(conflicts)
         if conflicts:
-            fatal("cannot resolve dependencies")
+            fatal("cannot resolve dependencies\n")
 
         extra_depends = set(depends.keys()) - set(config["pinned_build"]) - set(config["default_build"])
         if extra_depends:

@@ -98,7 +98,8 @@ class TerminalColorTest(unittest.TestCase):
             with patch("sys.stdin", stdin):
                 with patch("sys.stderr", stderr):
                     name = ui.readline("What is your name: ")
-                    ui.warning("Hello there!")
+                    ui.error("To Err Is Human\n")
+                    ui.warning("Hello there!\n")
                     ui.msg("Hi %s!" % name)
                     table = ui.TableView()
                     table.add_row("One", "1")
@@ -110,6 +111,7 @@ class TerminalColorTest(unittest.TestCase):
                     with patch("rosrepo.ui.get_terminal_size", lambda: (15, 5)):
                         table.write(fd=stderr)
             stderr = stderr.getvalue()
+            self.assertIn("Human", stderr)
             self.assertIn("Hello there!", stderr)
             self.assertIn("Hi Timo!", stderr)
 
