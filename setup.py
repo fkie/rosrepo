@@ -44,7 +44,7 @@ setup(
     package_dir  = {"": "src"},
     data_files   = [("/etc/bash_completion.d", ["bash/rosrepo"])],
     version      = rosrepo_version,
-    requires     = ["catkin_pkg", "dateutil", "git", "requests", "rosdep2", "yaml"],
+    requires     = ["catkin_pkg", "dateutil", "requests", "rosdep2", "yaml"],
     test_suite   = "nose.collector",
     entry_points = {
         "console_scripts": ["rosrepo = rosrepo.main:main"]

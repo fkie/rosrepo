@@ -31,9 +31,9 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
 from rosrepo.main import prepare_arguments, run_rosrepo as run_rosrepo_impl
-from rosrepo.util import call_process as real_call_process
-from subprocess import PIPE
+from rosrepo.util import call_process as real_call_process, PIPE
 
 
 def create_fake_ros_root(rosdir):

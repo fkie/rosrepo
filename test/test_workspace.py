@@ -23,11 +23,9 @@
 import unittest
 import os
 import shutil
-import helper
 import yaml
 import pickle
 from tempfile import mkdtemp
-from rosrepo.config import Config
 try:
     from mock import patch
 except ImportError:
@@ -36,6 +34,8 @@ except ImportError:
 import sys
 sys.stderr = sys.stdout
 
+from rosrepo.config import Config
+import test.helper as helper
 
 class WorkspaceTest(unittest.TestCase):
 
