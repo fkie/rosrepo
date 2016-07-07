@@ -22,14 +22,13 @@
 #
 import os
 import sys
-import shutil
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages
 from .config import Config
 from .cache import Cache
 from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, show_conflicts, show_missing_system_depends
-from .util import iteritems, path_has_prefix, makedirs, call_process
-from .git import Git, GitError, Repo
+from .util import iteritems, path_has_prefix, call_process
+from .git import Git, Repo
 
 
 def need_push(repo, remote_branch):
@@ -121,8 +120,14 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 head, tail = os.path.split(pkg.workspace_path)
                 path_list.append(escape(head + "/" if tail == name else pkg.workspace_path))
         table.add_row(escape(name), path_list, "no git")
-    table.sort(0)
-    table.write(sys.stdout)
+    if table.empty():
+        if found_packages:
+            msg("Everything is @!@{gf}up-to-date@|.\n")
+        else:
+            warning("no Git repositories\n")
+    else:
+        table.sort(0)
+        table.write(sys.stdout)
 
 
 def has_package_path(obj, paths):
@@ -165,7 +170,7 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
                 update_op(repo, None, None, tracking_remote, tracking_branch)
             except Exception as e:
                 error("cannot update '%s': %s\n" % (escape(path), escape(str(e))))
-    show_status(srcdir, packages, projects, other_git, ws_state)
+    show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
 
 
 def pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
