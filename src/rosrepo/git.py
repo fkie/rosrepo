@@ -134,13 +134,19 @@ class Reference(object):
 
     @property
     def name(self):
-        return self.full_name.split("/", 2)[2]
+        return self.full_name.split("/", 2)[-1]
 
     def points_at(self, other):
         return self.commit_ish == other.commit_ish
 
     def merge_base(self, other):
         return self._repo._make_ref(self._repo.git.merge_base(self.full_name, other.full_name).strip())
+
+    def tag(self, name, force=False):
+        if force:
+            self._repo.git.tag(name, self.full_name, f=True)
+        else:
+            self._repo.git.tag(name, self.full_name)
 
     @property
     def commit_ish(self):
@@ -178,14 +184,30 @@ class RemoteReference(Reference):
 
 
 class TagReference(Reference):
-    pass
+
+    @property
+    def reference(self):
+        return self._repo._make_ref(self._repo.git.rev_parse("%s^{}" % self.name, verify=True).strip())
+
+    @reference.setter
+    def reference(self, value):
+        self._repo.git.tag(self.name, value, f=True)
+
+    def delete(self):
+        self._repo.git.tag(self.name, d=True)
 
 
 class BranchReference(Reference):
 
     @property
     def branch_name(self):
-        return self._resolve_name().split("/", 2)[2]
+        return self._resolve_name().split("/", 2)[-1]
+
+    @branch_name.setter
+    def branch_name(self, value):
+        if self.name != value:
+            self._repo.git.branch(self.name, value, m=True)
+            self._resolved_name = None
 
     @property
     def tracking_branch(self):
@@ -193,6 +215,10 @@ class BranchReference(Reference):
             return self._repo._make_ref(self._repo.git.rev_parse("%s@{u}" % self.name, verify=True, symbolic_full_name=True).strip())
         except GitError:
             return None
+
+    @tracking_branch.setter
+    def tracking_branch(self, value):
+        self._repo.git.branch(self.name, set_upstream_to=value)
 
 
 class SymbolicReference(Reference):
@@ -254,16 +280,20 @@ class Remote(object):
         return self.__bool__()
 
     @property
-    def fetch_url(self):
+    def url(self):
         return self._repo.git.remote("get-url", self._name).strip()
+
+    @url.setter
+    def url(self, value):
+        self._repo.git.remote("set-url", self._name, value)
 
     @property
     def push_url(self):
         return self._repo.git.remote("get-url", "--push", self._name).strip()
 
-    @property
-    def url(self):
-        return self.fetch_url
+    @push_url.setter
+    def push_url(self, value):
+        self._repo.git.remote("set-url", "--push", self._name, value)
 
     def fetch(self, *args, **kwargs):
         self._repo.git.fetch(self._name, *args, **kwargs)
