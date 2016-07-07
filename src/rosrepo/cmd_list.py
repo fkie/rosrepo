@@ -106,7 +106,10 @@ def run(args):
                 table.add_row("@{yf}" + escape(name), status, location)
                 names.add(name)
     if table.empty() and not args.autocomplete:
-        warning("no packages matched your search filter\n")
+        if not ws_state.ws_packages and not ws_state.remote_packages:
+            warning("no packages\n")
+        else:
+            warning("no packages matched your search filter\n")
         return 0
     if args.package_names or args.autocomplete:
         sys.stdout.write("\n".join(sorted(names)) + "\n")
