@@ -121,7 +121,6 @@ class GitTest(unittest.TestCase):
 
         self.assertEqual(str(repo.remote("origin")), "origin")
         self.assertEqual(repo.remote("origin").url, self.upstream_gitdir)
-        self.assertEqual(repo.remote("origin").fetch_url, self.upstream_gitdir)
         self.assertEqual(repo.remote("origin").push_url, self.upstream_gitdir)
         self.assertTrue(repo.head.points_at(repo.heads.master))
         self.assertTrue(repo.head.points_at(repo.remotes.origin.master))

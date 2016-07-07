@@ -56,7 +56,7 @@ def run(args):
             msg("@{cf}Replacing pinned build set with@|:\n")
             msg(", ".join(sorted(args.packages)) + "\n\n", indent=4)
         else:
-            fatal("no packages given to be pinned")
+            fatal("no packages given to be pinned\n")
         config["pinned_build"] = sorted(args.packages)
     srcdir = os.path.join(wsdir, "src")
     pinned_set = set(config["pinned_build"])
@@ -78,11 +78,11 @@ def run(args):
         msg(", ".join(sorted(list(pinned_set - build_set))) + "\n\n", indent=4)
     build_set |= pinned_set
     if not build_set:
-        fatal("no packages to build")
+        fatal("no packages to build\n")
     build_packages, system_depends, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
     if conflicts:
-        fatal("cannot resolve dependencies")
+        fatal("cannot resolve dependencies\n")
     if not args.dry_run:
         config.write()
 
@@ -97,7 +97,7 @@ def run(args):
     missing = resolve_system_depends(system_depends, missing_only=True)
     show_missing_system_depends(missing)
     if missing and not args.ignore_missing_depends:
-        fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)")
+        fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)\n")
 
     clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run)
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
@@ -119,7 +119,7 @@ def run(args):
         catkin_lint += reduce(lambda x, y: x + y, (["--pkg", pkg] for pkg in build_packages.keys()))
         ret = call_process(catkin_lint)
         if ret != 0 and not args.dry_run:
-            fatal("catkin_lint reported errors")
+            fatal("catkin_lint reported errors\n")
 
     catkin_build = ["catkin", "build", "--workspace", wsdir]
     if args.dry_run:

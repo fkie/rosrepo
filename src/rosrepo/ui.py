@@ -164,13 +164,13 @@ def readline(prompt, fd=None):
 
 def get_credentials(domain):
     if not isatty(sys.stdin):
-        fatal("Need TTY to query credentials")
+        fatal("Need TTY to query credentials\n")
     if isatty(sys.stderr):
         fd = sys.stderr
     elif isatty(sys.stdout):
         fd = sys.stdout
     else:
-        fatal("Need TTY to query credentials")
+        fatal("Need TTY to query credentials\n")
     msg("\n@!Authentication required for @{cf}%s\n" % domain, fd=fd)
     while True:
         login = readline("Username: ", fd=fd)

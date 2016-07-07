@@ -22,14 +22,13 @@
 #
 import os
 import sys
-import shutil
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages
 from .config import Config
 from .cache import Cache
 from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, show_conflicts, show_missing_system_depends
-from .util import iteritems, path_has_prefix, makedirs, call_process
-from .git import Git, GitError, Repo
+from .util import iteritems, path_has_prefix, call_process
+from .git import Git, Repo
 
 
 def need_push(repo, remote_branch):
@@ -121,8 +120,14 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 head, tail = os.path.split(pkg.workspace_path)
                 path_list.append(escape(head + "/" if tail == name else pkg.workspace_path))
         table.add_row(escape(name), path_list, "no git")
-    table.sort(0)
-    table.write(sys.stdout)
+    if table.empty():
+        if found_packages:
+            msg("Everything is @!@{gf}up-to-date@|.\n")
+        else:
+            warning("no Git repositories\n")
+    else:
+        table.sort(0)
+        table.write(sys.stdout)
 
 
 def has_package_path(obj, paths):
@@ -165,7 +170,7 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
                 update_op(repo, None, None, tracking_remote, tracking_branch)
             except Exception as e:
                 error("cannot update '%s': %s\n" % (escape(path), escape(str(e))))
-    show_status(srcdir, packages, projects, other_git, ws_state)
+    show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
 
 
 def pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
@@ -199,13 +204,13 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=Fals
     msg("@{cf}The following packages have to be cloned from Gitlab@|:\n")
     msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent=4)
     if offline_mode:
-        fatal("cannot clone projects in offline mode")
+        fatal("cannot clone projects in offline mode\n")
     projects = list(set(p.project for _, p in need_cloning))
     for project in projects:
         git_subdir = compute_git_subdir(srcdir, project.server_path)
         msg("@{cf}Cloning@|: %s\n" % escape(git_subdir))
         if protocol not in project.url:
-            fatal("unsupported procotol type: %s" % protocol)
+            fatal("unsupported procotol type: %s\n" % protocol)
         Git(srcdir).clone(project.url[protocol], git_subdir, simulate=dry_run)
         msg("\n")
     return True
@@ -219,7 +224,7 @@ def run(args):
     ws_state = get_workspace_state(wsdir, config, cache=cache, offline_mode=args.offline)
     if args.git_cmd == "commit":
         if args.package not in ws_state.ws_packages:
-            fatal("package '%s' is not in workspace" % escape(args.package))
+            fatal("package '%s' is not in workspace\n" % escape(args.package))
         invoke = ["git-cola", "--repo", os.path.join(srcdir, ws_state.ws_packages[args.package][0].workspace_path)]
         if args.dry_run:
             msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
@@ -230,7 +235,7 @@ def run(args):
         depends, system_depends, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
         if conflicts:
             show_conflicts(conflicts)
-            fatal("cannot resolve dependencies")
+            fatal("cannot resolve dependencies\n")
         if not clone_packages(srcdir, depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
         missing = resolve_system_depends(system_depends, missing_only=True)
@@ -240,7 +245,7 @@ def run(args):
     if args.packages:
         for p in args.packages:
             if p not in ws_state.ws_packages:
-                fatal("package '%s' is not in workspace" % escape(p))
+                fatal("package '%s' is not in workspace\n" % escape(p))
         if args.no_depends:
             packages = set(args.packages)
         else:
