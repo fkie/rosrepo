@@ -154,9 +154,11 @@ def warning(text, use_color=None):
     msg("@!@{yf}%s: warning: %s" % (prog, text), use_color=use_color, indent_next=len(prog) + 11)
 
 
-def readline(prompt):
-    sys.stderr.write(prompt)
-    sys.stderr.flush()
+def readline(prompt, fd=None):
+    if fd is None:
+        fd = sys.stderr
+    fd.write(prompt)
+    fd.flush()
     return sys.stdin.readline().rstrip("\r\n")
 
 
@@ -171,7 +173,7 @@ def get_credentials(domain):
         fatal("Need TTY to query credentials")
     msg("\n@!Authentication required for @{cf}%s\n" % domain, fd=fd)
     while True:
-        login = readline("Username: ", fd_out=fd)
+        login = readline("Username: ", fd=fd)
         if login == "":
             continue
         passwd = getpass("Password: ")
