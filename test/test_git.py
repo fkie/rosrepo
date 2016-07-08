@@ -49,6 +49,7 @@ class GitTest(unittest.TestCase):
             f.write("Hello, World!\n")
         self.upstream_git.add("hello.txt")
         self.upstream_git.commit(m="First commit")
+        self.upstream_git.tag("ancient")
         with open(os.path.join(self.upstream_gitdir, "hello.txt"), "a") as f:
             f.write("Nice to see you...\n")
         self.upstream_git.add("hello.txt")
@@ -77,7 +78,16 @@ class GitTest(unittest.TestCase):
         repo = git.Repo(self.gitdir)
         upstream_repo = git.Repo(self.upstream_gitdir)
 
-        self.assertEqual(repo.head, repo.heads.master)
+        self.assertIsInstance(repo.refs, git.RootReference)
+        self.assertIsInstance(repo.refs.heads, git.Branches)
+        self.assertIsInstance(repo.refs.heads.master, git.BranchReference)
+        self.assertIsInstance(repo.refs.tags, git.Tags)
+        self.assertIsInstance(repo.refs.tags.ancient, git.TagReference)
+        self.assertIsInstance(repo.refs.remotes, git.Remotes)
+        self.assertIsInstance(repo.refs.remotes.origin, git.Remote)
+        self.assertIsInstance(repo.refs.remotes.origin.master, git.RemoteReference)
+
+        self.assertEqual(repo.head.commit, repo.heads.master.commit)
         self.assertRaises(AttributeError, lambda: repo.head.other)
         self.assertEqual(repo.refs.heads.master, repo.heads.master)
         self.assertEqual(repo.heads.master, repo.heads["master"])
@@ -86,10 +96,9 @@ class GitTest(unittest.TestCase):
         self.assertFalse(repo.heads.master.is_ancestor(repo.heads.other))
         self.assertTrue(repo.heads.master.merge_base(repo.heads.other).is_ancestor(repo.heads.master))
         self.assertTrue(repo.heads.master.merge_base(repo.heads.other).is_ancestor(repo.heads.other))
-        self.assertRaises(git.GitError, lambda: repo.heads.missing.full_name)
         self.assertTrue(repo.heads.master)
         self.assertFalse(repo.heads.missing)
-
+        
         self.assertTrue(repo.heads.master in repo.heads)
         self.assertFalse(repo.head in repo.heads)
         self.assertTrue("master" in repo.heads)
@@ -102,12 +111,13 @@ class GitTest(unittest.TestCase):
 
         self.assertEqual(repo.heads.master.branch_name, "master")
         self.assertEqual(repo.heads.other.branch_name, "other")
-        self.assertEqual(repo.heads.other.full_name, "refs/heads/other")
+        self.assertEqual(repo.heads.other.ref_name, "refs/heads/other")
         self.assertEqual(repo.heads.master.name, "master")
         self.assertEqual(str(repo.heads.master), "master")
         self.assertEqual(str(repo.head), "HEAD")
         self.assertEqual(repo.head.reference, repo.heads.master)
 
+        self.assertEqual(repo.refs.remotes.origin, repo.remotes.origin)
         self.assertEqual(repo.remotes.origin.master.name, "origin/master")
         self.assertEqual(repo.remotes.origin.master.remote_name, "origin")
         self.assertEqual(repo.remotes.origin.master.branch_name, "master")
@@ -116,12 +126,14 @@ class GitTest(unittest.TestCase):
         self.assertTrue("master" in repo.remotes.origin)
         self.assertTrue("origin/master" in repo.remotes.origin)
         self.assertFalse("missing" in repo.remotes.origin)
+        self.assertTrue(repo.remotes.origin.master in repo.remotes.origin)
+        self.assertFalse(repo.heads.master in repo.remotes.origin)
 
         for ref in repo.heads:
             self.assertIsInstance(ref, git.BranchReference)
         for remote in repo.remotes:
             self.assertIsInstance(remote, git.Remote)
-            self.assertTrue(remote["master"].points_at(repo.head))
+            self.assertTrue(remote["master"].commit == repo.head.commit)
         for ref in repo.remote("origin"):
             self.assertIsInstance(ref, git.RemoteReference)
             self.assertEqual (ref.remote, repo.remote("origin"))
@@ -131,10 +143,9 @@ class GitTest(unittest.TestCase):
         self.assertEqual(str(repo.remote("origin")), "origin")
         self.assertEqual(repo.remote("origin").url, self.upstream_gitdir)
         self.assertEqual(repo.remote("origin").push_url, self.upstream_gitdir)
-        self.assertTrue(repo.head.points_at(repo.heads.master))
-        self.assertTrue(repo.head.points_at(repo.remotes.origin.master))
-        self.assertEqual(repo.head.commit_ish, repo.heads.master.commit_ish)
-        self.assertEqual(repo.head.tree_ish, repo.heads.master.tree_ish)
+        self.assertTrue(repo.head.commit == repo.heads.master.commit)
+        self.assertTrue(repo.head.commit == repo.remotes.origin.master.commit)
+        self.assertEqual(repo.head.tree, repo.heads.master.tree)
 
         self.assertEqual(repo.heads.master.tracking_branch, repo.remotes.origin.master)
         self.assertIsNone(upstream_repo.heads.master.tracking_branch)
@@ -142,14 +153,18 @@ class GitTest(unittest.TestCase):
         self.assertNotEqual(repo.remotes.origin, upstream_repo.remotes.origin)
 
         s = set([repo.heads.master, repo.heads.other])
-        self.assertIn(repo.head, s)
+        self.assertIn(repo.head.reference, s)
         s = set([repo.remotes.origin])
         self.assertIn(repo.remote("origin"), s)
         s = set([repo])
         self.assertIn(repo, s)
         self.assertEqual(repr(repo), "Repo(%r)" % self.gitdir)
-        self.assertEqual(repr(repo.refs), "Reference(Repo(%r), %r)" % (self.gitdir, "refs"))
         self.assertEqual(repr(repo.remotes.origin), "Remote(Repo(%r), %r)" % (self.gitdir, "origin"))
+        
+        def simulate_git_fail(*args, **kwargs):
+            raise git.GitError("", exitcode=128)
+        with patch("rosrepo.git.call_process", simulate_git_fail):
+            self.assertRaises(git.GitError, repo.heads.master.is_ancestor, repo.head)
 
     def test_write_access(self):
         def del_helper(arg):
@@ -159,9 +174,9 @@ class GitTest(unittest.TestCase):
         test_branch = repo.heads.new("test_branch")
         self.assertEqual(test_branch, repo.heads.test_branch)
         self.assertTrue(test_branch)
-        self.assertFalse(test_branch == repo.head)
+        self.assertFalse(test_branch.commit == repo.head.reference)
         test_branch.checkout()
-        self.assertTrue(test_branch == repo.head)
+        self.assertTrue(test_branch == repo.head.reference)
         repo.heads.master.checkout()
         test_branch.branch_name = "renamed_branch"
         self.assertTrue(test_branch)
@@ -178,13 +193,13 @@ class GitTest(unittest.TestCase):
         repo.heads.master.checkout()
         self.assertRaises(git.GitError, lambda: test2.delete())
         self.assertTrue(test2)
-        test2.force_delete()
+        test2.delete(force=True)
         self.assertFalse(test2)
         test_tag = repo.tags.new("test")
         self.assertTrue(test_tag)
-        self.assertTrue(test_tag.points_at(repo.head))
+        self.assertTrue(test_tag.commit == repo.head.commit)
         test_tag.reference = repo.heads.other
-        self.assertTrue(test_tag.points_at(repo.heads.other))
+        self.assertTrue(test_tag.commit == repo.heads.other.commit)
         test_tag.delete()
         self.assertFalse(test_tag)
         stdout = StringIO()
@@ -198,24 +213,25 @@ class GitTest(unittest.TestCase):
         test_tag = repo.tags.new("test")
         self.assertTrue(test_tag)
         self.assertTrue(repo.tags.test)
-        self.assertTrue(test_tag.points_at(repo.head))
-        self.assertTrue(test_tag.points_at(test_tag.reference))
+        self.assertTrue(test_tag.commit == repo.head.commit)
+        self.assertTrue(test_tag.commit == test_tag.reference)
         del repo.tags.test
         self.assertFalse(repo.tags.test)
+        self.assertFalse(test_tag)
         test_tag = repo.refs.tags.new("test")
         self.assertTrue(test_tag)
-        self.assertTrue(test_tag.points_at(repo.head))
+        self.assertTrue(test_tag.commit == repo.head.commit)
         test_tag.reference = repo.heads.other
-        self.assertFalse(test_tag.points_at(repo.head))
-        self.assertTrue(test_tag.points_at(repo.heads.other))
+        self.assertFalse(test_tag.commit == repo.head.commit)
+        self.assertTrue(test_tag.commit == repo.heads.other.commit)
         del repo.tags["test"]
         self.assertFalse(repo.tags.test)
+        self.assertFalse(test_tag)
         example_remote = repo.remotes.new("example", self.upstream_gitdir)
         self.assertEqual(example_remote, repo.remotes.example)
-        self.assertFalse(example_remote)
-        example_remote.fetch()
         self.assertTrue(example_remote)
-        self.assertTrue(example_remote.master.points_at(repo.remotes.origin.master))
+        example_remote.fetch()
+        self.assertTrue(example_remote.master.commit == repo.remotes.origin.master.commit)
         example_remote.delete()
         self.assertFalse(example_remote)
         example_remote = repo.refs.remotes.new("example", "invalid")
@@ -223,11 +239,14 @@ class GitTest(unittest.TestCase):
         example_remote.push_url = "still_invalid"
         example_remote.fetch()
         self.assertTrue(example_remote)
-        self.assertTrue(example_remote.master.points_at(repo.remotes.origin.master))
+        self.assertTrue(example_remote.master.commit == repo.remotes.origin.master.commit)
         self.assertNotEqual(example_remote.url, example_remote.push_url)
         self.assertEqual(example_remote.name, "example")
+        self.assertTrue(repo.remotes.example)
         example_remote.name = "shiny"
         self.assertEqual(example_remote.name, "shiny")
-        example_remote.delete()
-        self.assertRaises(git.GitError, repo.refs.new, "weirdo")
-
+        self.assertFalse(repo.remotes.example)
+        self.assertTrue(repo.remotes.shiny)
+        del repo.remotes.shiny
+        self.assertFalse(repo.remotes.shiny)
+        self.assertFalse(example_remote)

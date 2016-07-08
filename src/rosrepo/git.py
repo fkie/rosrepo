@@ -21,7 +21,7 @@
 #
 from .util import call_process, PIPE, iteritems
 try:
-    from itertools import ifilter as filter, imap as map
+    from itertools import imap as map
 except ImportError:
     pass
 
@@ -36,7 +36,7 @@ class GitError(RuntimeError):
         return self._exitcode
 
 
-class GitCommandProxy(object):
+class GitCommand(object):
 
     _local_args = ("stdin", "on_fail", "simulate")
 
@@ -44,12 +44,12 @@ class GitCommandProxy(object):
         self._args = args
 
     def __getattr__(self, name):
-        return GitCommandProxy(self._args + [name.replace("_", "-")])
+        return GitCommand(self._args + [name.replace("_", "-")])
 
     def __call__(self, *args, **kwargs):
         invoke = self._args
         for key, value in iteritems(kwargs):
-            if key not in GitCommandProxy._local_args:
+            if value is not None and key not in GitCommand._local_args:
                 param = ("--" if len(key) > 1 else "-") + ("no-" if isinstance(value, bool) and not value else "") + key.replace("_", "-")
                 invoke.append(param)
                 if not isinstance(value, bool):
@@ -76,43 +76,198 @@ class Git(object):
         self._wsdir = wsdir
 
     def __getattr__(self, name):
-        return GitCommandProxy(["git", "-C", self._wsdir, name.replace("_", "-")])
+        return GitCommand(["git", "-C", self._wsdir, name.replace("_", "-")])
 
 
-class Reference(object):
+class GitObject(object):
 
-    def __init__(self, repo, name):
+    def __init__(self, repo, ref):
         self._repo = repo
-        self._name = name
-        self._resolved_name = None
+        self._ref = ref
 
     def __str__(self):
-        return self.name
+        return self._ref
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__, self._repo, self._name)
+        return "%s(%r, %r)" % (self.__class__.__name__, self._repo, self._ref)
 
     def __eq__(self, other):
-        if self._repo == other._repo:
-            return self._resolve_name() == other._resolve_name()
-        else:
-            return False
+        return self._repo == other._repo and self._ref == other._ref
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return self._resolve_name().__hash__()
+        return self._ref.__hash__()
 
-    def __iter__(self):
-        return self._repo._iter_refs(self._name + "/")
+    @property
+    def repo(self):
+        return self._repo
+
+    @property
+    def ref_name(self):
+        return self._ref
+
+    def _resolve_ref(self, ref):
+        try:
+            stdout = self.repo.git.rev_parse(ref, verify=True)
+            return stdout.strip() or None
+        except GitError:
+            return None
+
+    def _find_ref(self, name, scope=None):
+        try:
+            stdout = self.repo.git.show_ref(name)
+            data = (s.split(" ", 1)[-1].strip() for s in stdout.split("\n"))
+            for r in data:
+                if scope is None or r.startswith(scope):
+                    return r
+        except GitError:
+            pass
+        return None
+
+    def _iter_ref(self, flt, cls):
+        stdout = self.repo.git.show_ref()
+        data = (s.split(" ", 1)[-1].strip() for s in stdout.split("\n"))
+        result = set()
+        for r in data:
+            ok, value = flt(r)
+            if ok:
+                result.add(value)
+        return map(cls, result)
+
+
+class RootReference(GitObject):
+
+    def __init__(self, repo):
+        super(RootReference, self).__init__(repo, "refs")
+        self._branches = Branches(self.repo)
+        self._tags = Tags(self._repo)
+        self._remotes = Remotes(self.repo)
+
+    @property
+    def heads(self):
+        return self._branches
+
+    @property
+    def tags(self):
+        return self._tags
+
+    @property
+    def remotes(self):
+        return self._remotes
+
+    def _from_ref(self, name):
+        head, tail = name.split("/", 1)
+        if head == "heads":
+            return self._branches._from_ref(tail)
+        if head == "tags":
+            return self._tags._from_ref(tail)
+        if head == "remotes":
+            return self._remotes._from_ref(tail)
+        return None
+
+
+class ReferenceCollection(GitObject):
+
+    def __init__(self, repo, ref, cls):
+        super(ReferenceCollection, self).__init__(repo, ref)
+        self._cls = cls
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self._repo)
+
+    def __getattr__(self, name):
+        return self._cls(name)
+
+    def __getitem__(self, name):
+        return self.__getattr__(name)
+
+    def __delattr__(self, name):
+        pass
+
+    def __delitem__(self, name):
+        return self.__delattr__(name)
 
     def __contains__(self, item):
-        return self.repo._contains_ref(self._name + "/", str(item))
+        return self._find_ref(item.ref_name if hasattr(item, "ref_name") else str(item), scope=self._ref + "/") is not None
+
+    def __iter__(self):
+        return self._iter_ref(
+            flt=lambda x: (x.startswith(self._ref + "/"), x[len(self._ref) + 1:]),
+            cls=self._cls
+        )
+
+    def _from_ref(self, name):
+        return self._cls(name)
+
+
+class Branches(ReferenceCollection):
+
+    def __init__(self, repo):
+        super(Branches, self).__init__(repo, "refs/heads", lambda x: BranchReference(repo, x))
+
+    def __delattr__(self, name):
+        self.repo.git.branch(name, delete=True)
+
+    def new(self, name, *args, **kwargs):
+        self.repo.git.branch(name, *args, **kwargs)
+        return self._cls(name)
+
+
+class Tags(ReferenceCollection):
+
+    def __init__(self, repo):
+        super(Tags, self).__init__(repo, "refs/tags", lambda x: TagReference(repo, x))
+
+    def __delattr__(self, name):
+        self.repo.git.tag(name, delete=True)
+
+    def new(self, name, *args, **kwargs):
+        self.repo.git.tag(name, *args, **kwargs)
+        return self._cls(name)
+
+
+class Remotes(ReferenceCollection):
+
+    def __init__(self, repo):
+        super(Remotes, self).__init__(repo, "refs/remotes", lambda x: Remote(repo, x))
+
+    def __iter__(self):
+        remote_names = (r.strip() for r in self.repo.git.remote().split("\n") if r)
+        return map(self._cls, remote_names)
+
+    def __contains__(self, name):
+        remote_names = (r.strip() for r in self.repo.git.remote().split("\n") if r)
+        return name in remote_names
+
+    def __delattr__(self, name):
+        self.repo.git.remote.remove(name)
+
+    def new(self, name, url, *args, **kwargs):
+        self.repo.git.remote.add(name, url, *args, **kwargs)
+        return self._cls(name)
+
+    def _from_ref(self, name):
+        head, tail = name.split("/", 1)
+        return self._cls(head)._from_ref(tail)
+
+
+class Remote(ReferenceCollection):
+
+    def __init__(self, repo, name):
+        super(Remote, self).__init__(repo, "refs/remotes/" + name, lambda x: RemoteReference(repo, self, x))
+        self._name = name
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (self.__class__.__name__, self._repo, self._name)
+
+    def __str__(self):
+        return self._name
 
     def __bool__(self):
         try:
-            self._resolve_name()
+            self.repo.git.remote.get_url(self._name)
             return True
         except GitError:
             return False
@@ -120,219 +275,133 @@ class Reference(object):
     def __nonzero__(self):
         return self.__bool__()
 
-    def __getattr__(self, name):
-        return self._repo._make_ref(self._name + "/" + name)
+    @property
+    def name(self):
+        return self._name
 
-    def __delattr__(self, name):
-        victim_deleter = self.__getattr__(name).delete
-        if hasattr(victim_deleter, "__call__"):
-            victim_deleter()
+    @name.setter
+    def name(self, new_name):
+        self.repo.git.remote.rename(self._name, new_name)
+        self._name = new_name
 
-    def __getitem__(self, name):
-        return self.__getattr__(name)
+    @property
+    def url(self):
+        return self.repo.git.remote.get_url(self._name).strip()
 
-    def __delitem__(self, name):
-        self.__delattr__(name)
+    @url.setter
+    def url(self, value):
+        self.repo.git.remote.set_url(self._name, value)
+
+    @property
+    def push_url(self):
+        return self.repo.git.remote.get_url(self._name, push=True).strip()
+
+    @push_url.setter
+    def push_url(self, value):
+        self.repo.git.remote.set_url(self._name, value, push=True)
+
+    def fetch(self, *args, **kwargs):
+        self.repo.git.fetch(self._name, *args, **kwargs)
+
+    def delete(self):
+        self.repo.git.remote.remove(self._name)
+
+
+class Reference(GitObject):
+
+    def __bool__(self):
+        return self._resolve_ref(self._ref) is not None
+
+    def __nonzero__(self):
+        return self.__bool__()
 
     def is_ancestor(self, other):
         try:
-            self._repo.git.merge_base(self.full_name, other.full_name, is_ancestor=True)
+            self.repo.git.merge_base(self.commit, other.commit, is_ancestor=True)
             return True
         except GitError as e:
             if e.status == 1:
                 return False
             raise
 
-    @property
-    def full_name(self):
-        return self._resolve_name()
-
-    @property
-    def name(self):
-        return self.full_name.split("/", 2)[-1]
-
-    def points_at(self, other):
-        return self.commit_ish == other.commit_ish
-
     def merge_base(self, other):
-        return self._repo._make_ref(self._repo.git.merge_base(self.full_name, other.full_name).strip())
-
-    def new(self, name, *args, **kwargs):
-        if self._name == "refs/remotes":
-            return RemoteCollection(self._repo).new(name, *args, **kwargs)
-        if self._name == "refs/heads":
-            self._repo.git.branch(name, *args, **kwargs)
-            return BranchReference(self._repo, name)
-        if self._name == "refs/tags":
-            self._repo.git.tag(name, *args, **kwargs)
-            return TagReference(self._repo, name)
-        raise GitError("%r cannot be created" % (self._name + "/" + name))
+        return Reference(self.repo, self.repo.git.merge_base(self.commit, other.commit).strip())
 
     @property
-    def commit_ish(self):
-        return self._repo.git.rev_parse("%s^{commit}" % self._name, verify=True, on_fail="%r is not a commit object" % self._name).strip()
+    def tag(self):
+        return GitObject(self.repo, self.repo.git.rev_parse(self._ref + "^{tag}", verify=True, on_fail="%r does not refer to a tag object" % self._ref).strip())
 
     @property
-    def tree_ish(self):
-        return self._repo.git.rev_parse("%s^{tree}" % self._name, verify=True, on_fail="%r is not a commit object" % self._name).strip()
+    def commit(self):
+        return GitObject(self.repo, self.repo.git.rev_parse(self._ref + "^{commit}", verify=True, on_fail="%r does not refer to a commit object" % self._ref).strip())
 
     @property
-    def repo(self):
-        return self._repo
-
-    def _resolve_name(self):
-        if self._resolved_name is None:
-            self._resolved_name = self._repo.git.rev_parse(self._name, verify=True, symbolic_full_name=True, on_fail="%r is not a valid reference" % self._name).strip()
-            if self._resolved_name == "":
-                self._resolved_name = self._name
-        return self._resolved_name
-
-    def _invalidate(self):
-        self._resolved_name = None
+    def tree(self):
+        return GitObject(self.repo, self.repo.git.rev_parse(self._ref + "^{tree}", verify=True, on_fail="%r does not refer to a tree object" % self._ref).strip())
 
 
 class RemoteReference(Reference):
 
+    def __init__(self, repo, remote, name):
+        super(RemoteReference, self).__init__(repo, "refs/remotes/" + remote.name + "/" + name)
+        self._remote = remote
+        self._name = name
+
+    def __str__(self):
+        return "%s/%s" % (self._remote.name, self._name)
+
     @property
     def remote_name(self):
-        return self._resolve_name().split("/", 3)[2]
+        return self._remote.name
 
     @property
     def branch_name(self):
-        return self._resolve_name().split("/", 3)[3]
+        return self._name
+
+    @property
+    def name(self):
+        return self._remote.name + "/" + self._name
 
     @property
     def remote(self):
-        return Remote(self._repo, self.remote_name)
+        return self._remote
 
 
 class TagReference(Reference):
 
-    @property
-    def reference(self):
-        return self._repo._make_ref(self._repo.git.rev_parse("%s^{}" % self.name, verify=True).strip())
-
-    @reference.setter
-    def reference(self, value):
-        self._repo.git.tag(self.name, value, force=True)
-
-    def delete(self):
-        self._repo.git.tag(self.name, delete=True)
-        self._invalidate()
-
-
-class BranchReference(Reference):
-
-    @property
-    def branch_name(self):
-        return self._resolve_name().split("/", 2)[-1]
-
-    @branch_name.setter
-    def branch_name(self, value):
-        if self.name != value:
-            self._repo.git.branch(self.name, value, move=True)
-            self._name = "refs/heads/%s" % value
-            self._invalidate()
-
-    @property
-    def tracking_branch(self):
-        try:
-            return self._repo._make_ref(self._repo.git.rev_parse("%s@{u}" % self.name, verify=True, symbolic_full_name=True).strip())
-        except GitError:
-            return None
-
-    @tracking_branch.setter
-    def tracking_branch(self, value):
-        self._repo.git.branch(self.name, set_upstream_to=value)
-
-    def checkout(self):
-        self._repo.git.checkout(self.name)
-
-    def delete(self):
-        self._repo.git.branch(self.name, delete=True)
-        self._invalidate()
-
-    def force_delete(self):
-        self._repo.git.branch(self.name, delete=True, force=True)
-        self._invalidate()
-
-
-class SymbolicReference(Reference):
-
-    def __getattr__(self, name):
-        raise AttributeError("no such attribute: %s" % name)
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def reference(self):
-        return self._repo._make_ref(self._resolve_name())
-
-    def _resolve_name(self):
-        return self._repo.git.symbolic_ref(str(self._name), on_fail="%r is not a symbolic reference" % self._name).strip()
-
-
-class Remote(object):
     def __init__(self, repo, name):
-        self._repo = repo
+        super(TagReference, self).__init__(repo, "refs/tags/" + name)
         self._name = name
 
     def __str__(self):
         return self._name
 
-    def __repr__(self):
-        return "Remote(%r, %r)" % (self._repo, self._name)
+    @property
+    def name(self):
+        return self._name
 
-    def __getattr__(self, name):
-        return RemoteReference(self._repo, "refs/remotes/" + self._name + "/" + str(name))
-
-    def __getitem__(self, name):
-        return self.__getattr__(name)
-
-    def __eq__(self, other):
-        if self._repo == other._repo:
-            return self._name == other._name
-        else:
-            return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return self._name.__hash__()
-
-    def __iter__(self):
-        return self._repo._iter_refs("refs/remotes/" + self._name + "/")
-
-    def __contains__(self, item):
-        return self.repo._contains_ref("refs/remotes/" + self._name + "/", str(item))
-
-    def __bool__(self):
-        return self._repo._has_refs("refs/remotes/" + self._name + "/")
-
-    def __nonzero__(self):
-        return self.__bool__()
+    tag_name = name
 
     @property
-    def url(self):
-        return self._repo.git.remote.get_url(self._name).strip()
+    def reference(self):
+        return Reference(self.repo, self.repo.git.rev_parse(self._ref + "^{}", verify=True, on_fail="%r is not a valid reference" % self._ref).strip())
 
-    @url.setter
-    def url(self, value):
-        self._repo.git.remote.set_url(self._name, value)
+    @reference.setter
+    def reference(self, value):
+        self.repo.git.tag(self.name, value, force=True)
 
-    @property
-    def push_url(self):
-        return self._repo.git.remote.get_url(self._name, push=True).strip()
+    def delete(self):
+        self.repo.git.tag(self.name, delete=True)
 
-    @push_url.setter
-    def push_url(self, value):
-        self._repo.git.remote.set_url(self._name, value, push=True)
 
-    def fetch(self, *args, **kwargs):
-        self._repo.git.fetch(self._name, *args, **kwargs)
+class BranchReference(Reference):
+
+    def __init__(self, repo, name):
+        super(BranchReference, self).__init__(repo, "refs/heads/" + name)
+        self._name = name
+
+    def __str__(self):
+        return self._name
 
     @property
     def name(self):
@@ -340,56 +409,46 @@ class Remote(object):
 
     @name.setter
     def name(self, value):
-        self._repo.git.remote.rename(self._name, value)
-        self._name = value
+        if self._name != value:
+            self.repo.git.branch(self._name, value, move=True)
+            self._ref = "refs/heads/" + value
+            self._name = value
+
+    branch_name = name
 
     @property
-    def repo(self):
-        return self._repo
+    def tracking_branch(self):
+        try:
+            tb = self.repo.git.rev_parse(self._name + "@{u}", verify=True, symbolic_full_name=True).strip()
+            return self.repo.from_ref(tb)
+        except GitError:
+            return None
 
-    def delete(self):
-        self._repo.git.remote.remove(self._name)
+    @tracking_branch.setter
+    def tracking_branch(self, value):
+        self.repo.git.branch(self._name, set_upstream_to=value)
+
+    def checkout(self, *args, **kwargs):
+        self.repo.git.checkout(self._name, *args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self.repo.git.branch(self._name, delete=True, *args, **kwargs)
 
 
-class RemoteCollection(object):
-    def __init__(self, repo):
-        self._repo = repo
+class SymbolicReference(Reference):
 
-    def __getattr__(self, name):
-        return Remote(self._repo, name)
+    def __init__(self, repo, name):
+        super(SymbolicReference, self).__init__(repo, name)
+        self._name = name
 
-    def __delattr__(self, name):
-        self._repo.git.remote.remove(name)
+    @property
+    def name(self):
+        return self._name
 
-    def __getitem__(self, name):
-        return self.__getattr__(name)
-
-    def __delitem__(self, name):
-        self.__delattr__(name)
-
-    def __contains__(self, item):
-        return str(item) in self._get_all_remotes()
-
-    def __iter__(self):
-        return map(self._make_remote, self._get_all_remotes())
-
-    def new(self, name, *args, **kwargs):
-        self._repo.git.remote.add(name, *args, **kwargs)
-        return Remote(self._repo, name)
-
-    def _get_all_remotes(self):
-        stdout = self._repo._git.show_ref()
-        found = set()
-        for line in stdout.split("\n"):
-            ref_name = line.split(" ", 1)[-1]
-            if ref_name.startswith("refs/remotes/"):
-                remote_name = ref_name.split("/", 3)[2]
-                if remote_name not in found:
-                    found.add(remote_name)
-        return found
-
-    def _make_remote(self, name):
-        return Remote(self._repo, name)
+    @property
+    def reference(self):
+        ref = self.repo.git.symbolic_ref(self._name, on_fail="%r is not a symbolic reference" % self._name).strip()
+        return self.repo.from_ref(ref) or Reference(self.repo, ref)
 
 
 class Repo(object):
@@ -397,6 +456,7 @@ class Repo(object):
     def __init__(self, wsdir):
         self._wsdir = wsdir
         self._git = Git(wsdir)
+        self._refs = RootReference(self)
 
     def __repr__(self):
         return "Repo(%r)" % self._wsdir
@@ -411,7 +471,11 @@ class Repo(object):
         return self._wsdir.__hash__()
 
     def __bool__(self):
-        return self._has_refs()
+        try:
+            self.git.show_ref()
+            return True
+        except GitError:
+            return False
 
     def __nonzero__(self):
         return self.__bool__()
@@ -422,7 +486,7 @@ class Repo(object):
 
     @property
     def refs(self):
-        return Reference(self, "refs")
+        return self._refs
 
     @property
     def head(self):
@@ -438,57 +502,25 @@ class Repo(object):
 
     @property
     def heads(self):
-        return Reference(self, "refs/heads")
+        return self.refs.heads
 
     @property
     def tags(self):
-        return Reference(self, "refs/tags")
+        return self.refs.tags
 
     @property
     def remotes(self):
-        return RemoteCollection(self)
+        return self.refs.remotes
 
     def remote(self, name):
-        return Remote(self, name)
+        return self.refs.remotes[name]
 
     def is_dirty(self):
         stdout = self.git.status(porcelain=True).strip()
         return stdout != ""
 
-    def _make_ref(self, name):
-        if name.startswith("refs/remotes/"):
-            return RemoteReference(self, name)
-        if name.startswith("refs/tags/"):
-            return TagReference(self, name)
-        if name.startswith("refs/heads/"):
-            return BranchReference(self, name)
-        return Reference(self, name)
-
-    def _iter_refs(self, ref_filter):
-        def f(ref_name):
-            return ref_filter is None or ref_name.startswith(ref_filter)
-        stdout = self._git.show_ref()
-        data = (s.split(" ", 1)[-1].strip() for s in stdout.split("\n"))
-        return map(self._make_ref, filter(f, data))
-
-    def _contains_ref(self, ref_filter, name):
-        try:
-            stdout = self._git.show_ref(name)
-            for line in stdout.split("\n"):
-                ref_name = line.split(" ", 1)[-1].strip()
-                if ref_filter is None or ref_name.startswith(ref_filter):
-                    return True
-        except GitError:
-            pass
-        return False
-
-    def _has_refs(self, ref_filter=None):
-        try:
-            stdout = self._git.show_ref()
-            for line in stdout.split("\n"):
-                ref_name = line.split(" ", 1)[-1].strip()
-                if ref_filter is None or ref_name.startswith(ref_filter):
-                    return True
-        except GitError:
-            pass
-        return False
+    def from_ref(self, name):
+        head, tail = name.split("/", 1)
+        if head == "refs":
+            return self.refs._from_ref(tail)
+        return None
