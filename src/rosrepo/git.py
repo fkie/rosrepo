@@ -36,40 +36,47 @@ class GitError(RuntimeError):
         return self._exitcode
 
 
-class Git(object):
+class GitCommandProxy(object):
 
     _local_args = ("stdin", "on_fail", "simulate")
+
+    def __init__(self, args):
+        self._args = args
+
+    def __getattr__(self, name):
+        return GitCommandProxy(self._args + [name.replace("_", "-")])
+
+    def __call__(self, *args, **kwargs):
+        invoke = self._args
+        for key, value in iteritems(kwargs):
+            if key not in GitCommandProxy._local_args:
+                param = ("--" if len(key) > 1 else "-") + ("no-" if isinstance(value, bool) and not value else "") + key.replace("_", "-")
+                invoke.append(param)
+                if not isinstance(value, bool):
+                    invoke.append(str(value))
+        invoke += [str(a) for a in args]
+        simulate = kwargs.get("simulate", False)
+        if simulate:
+            print(" ".join(invoke))
+            return ""
+        else:
+            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, input_data=kwargs.get("stdin", None))
+        if exitcode != 0:
+            on_fail = kwargs.get("on_fail", None)
+            if on_fail:
+                raise GitError(on_fail, exitcode)
+            else:
+                raise GitError(stderr.split("\n", 1)[0], exitcode)
+        return stdout
+
+
+class Git(object):
 
     def __init__(self, wsdir):
         self._wsdir = wsdir
 
     def __getattr__(self, name):
-        def f(*args, **kwargs):
-            invoke = ["git", "-C", self._wsdir, cmd_name]
-            for key, value in iteritems(kwargs):
-                if key not in Git._local_args:
-                    param = key.replace("_", "-")
-                    if isinstance(value, bool) and not value:
-                        param = "no-" + param
-                    param = ("--" if len(param) > 1 else "-") + param
-                    invoke.append(param)
-                    if not isinstance(value, bool):
-                        invoke.append(str(value))
-            invoke += [str(a) for a in args]
-            if kwargs.get("simulate", False):
-                print(" ".join(invoke))
-                return ""
-            else:
-                exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, input_data=kwargs.get("stdin", None))
-            if exitcode != 0:
-                on_fail = kwargs.get("on_fail", None)
-                if on_fail:
-                    raise GitError(on_fail, exitcode)
-                else:
-                    raise GitError(stderr.split("\n", 1)[0], exitcode)
-            return stdout
-        cmd_name = name.replace("_", "-")
-        return f
+        return GitCommandProxy(["git", "-C", self._wsdir, name.replace("_", "-")])
 
 
 class Reference(object):
@@ -116,8 +123,16 @@ class Reference(object):
     def __getattr__(self, name):
         return self._repo._make_ref(self._name + "/" + name)
 
+    def __delattr__(self, name):
+        victim_deleter = self.__getattr__(name).delete
+        if hasattr(victim_deleter, "__call__"):
+            victim_deleter()
+
     def __getitem__(self, name):
         return self.__getattr__(name)
+
+    def __delitem__(self, name):
+        self.__delattr__(name)
 
     def is_ancestor(self, other):
         try:
@@ -142,11 +157,16 @@ class Reference(object):
     def merge_base(self, other):
         return self._repo._make_ref(self._repo.git.merge_base(self.full_name, other.full_name).strip())
 
-    def tag(self, name, force=False):
-        if force:
-            self._repo.git.tag(name, self.full_name, f=True)
-        else:
-            self._repo.git.tag(name, self.full_name)
+    def new(self, name, *args, **kwargs):
+        if self._name == "refs/remotes":
+            return RemoteCollection(self._repo).new(name, *args, **kwargs)
+        if self._name == "refs/heads":
+            self._repo.git.branch(name, *args, **kwargs)
+            return BranchReference(self._repo, name)
+        if self._name == "refs/tags":
+            self._repo.git.tag(name, *args, **kwargs)
+            return TagReference(self._repo, name)
+        raise GitError("%r cannot be created" % (self._name + "/" + name))
 
     @property
     def commit_ish(self):
@@ -166,6 +186,9 @@ class Reference(object):
             if self._resolved_name == "":
                 self._resolved_name = self._name
         return self._resolved_name
+
+    def _invalidate(self):
+        self._resolved_name = None
 
 
 class RemoteReference(Reference):
@@ -191,10 +214,11 @@ class TagReference(Reference):
 
     @reference.setter
     def reference(self, value):
-        self._repo.git.tag(self.name, value, f=True)
+        self._repo.git.tag(self.name, value, force=True)
 
     def delete(self):
-        self._repo.git.tag(self.name, d=True)
+        self._repo.git.tag(self.name, delete=True)
+        self._invalidate()
 
 
 class BranchReference(Reference):
@@ -206,8 +230,9 @@ class BranchReference(Reference):
     @branch_name.setter
     def branch_name(self, value):
         if self.name != value:
-            self._repo.git.branch(self.name, value, m=True)
-            self._resolved_name = None
+            self._repo.git.branch(self.name, value, move=True)
+            self._name = "refs/heads/%s" % value
+            self._invalidate()
 
     @property
     def tracking_branch(self):
@@ -219,6 +244,17 @@ class BranchReference(Reference):
     @tracking_branch.setter
     def tracking_branch(self, value):
         self._repo.git.branch(self.name, set_upstream_to=value)
+
+    def checkout(self):
+        self._repo.git.checkout(self.name)
+
+    def delete(self):
+        self._repo.git.branch(self.name, delete=True)
+        self._invalidate()
+
+    def force_delete(self):
+        self._repo.git.branch(self.name, delete=True, force=True)
+        self._invalidate()
 
 
 class SymbolicReference(Reference):
@@ -281,19 +317,19 @@ class Remote(object):
 
     @property
     def url(self):
-        return self._repo.git.remote("get-url", self._name).strip()
+        return self._repo.git.remote.get_url(self._name).strip()
 
     @url.setter
     def url(self, value):
-        self._repo.git.remote("set-url", self._name, value)
+        self._repo.git.remote.set_url(self._name, value)
 
     @property
     def push_url(self):
-        return self._repo.git.remote("get-url", "--push", self._name).strip()
+        return self._repo.git.remote.get_url(self._name, push=True).strip()
 
     @push_url.setter
     def push_url(self, value):
-        self._repo.git.remote("set-url", "--push", self._name, value)
+        self._repo.git.remote.set_url(self._name, value, push=True)
 
     def fetch(self, *args, **kwargs):
         self._repo.git.fetch(self._name, *args, **kwargs)
@@ -302,9 +338,17 @@ class Remote(object):
     def name(self):
         return self._name
 
+    @name.setter
+    def name(self, value):
+        self._repo.git.remote.rename(self._name, value)
+        self._name = value
+
     @property
     def repo(self):
         return self._repo
+
+    def delete(self):
+        self._repo.git.remote.remove(self._name)
 
 
 class RemoteCollection(object):
@@ -314,14 +358,24 @@ class RemoteCollection(object):
     def __getattr__(self, name):
         return Remote(self._repo, name)
 
+    def __delattr__(self, name):
+        self._repo.git.remote.remove(name)
+
     def __getitem__(self, name):
         return self.__getattr__(name)
+
+    def __delitem__(self, name):
+        self.__delattr__(name)
 
     def __contains__(self, item):
         return str(item) in self._get_all_remotes()
 
     def __iter__(self):
         return map(self._make_remote, self._get_all_remotes())
+
+    def new(self, name, *args, **kwargs):
+        self._repo.git.remote.add(name, *args, **kwargs)
+        return Remote(self._repo, name)
 
     def _get_all_remotes(self):
         stdout = self._repo._git.show_ref()
