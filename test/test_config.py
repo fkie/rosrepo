@@ -41,10 +41,16 @@ class ConfigTest(unittest.TestCase):
 
     def test_storage(self):
         cfg = Config(self.wsdir)
+        cfg.set_default("default", "value")
         cfg["test"] = "value"
         cfg["unicode"] = u"ÄÖÜ"
+        cfg.set_default("test", "wrong_value")
+        self.assertEqual(cfg.get("test"), "value")
         self.assertTrue("test" in cfg)
         self.assertFalse("missing" in cfg)
+        self.assertTrue("default" in cfg)
+        del cfg["default"]
+        self.assertTrue("default" not in cfg)
         self.assertEqual(sorted([k for k in cfg]), ["test", "unicode", "version"])
         self.assertEqual(len(cfg), 3)
         cfg.write()
