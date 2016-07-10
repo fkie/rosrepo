@@ -37,7 +37,7 @@ class GitError(RuntimeError):
 
 
 class GitCommand(object):
-
+    __slots__ = ("_args")
     _local_args = ("stdin", "on_fail", "simulate")
 
     def __init__(self, args):
@@ -71,6 +71,7 @@ class GitCommand(object):
 
 
 class Git(object):
+    __slots__ = ("_wsdir")
 
     def __init__(self, wsdir):
         self._wsdir = wsdir
@@ -80,6 +81,7 @@ class Git(object):
 
 
 class GitObject(object):
+    __slots__ = ("_repo", "_ref")
 
     def __init__(self, repo, ref):
         self._repo = repo
@@ -138,6 +140,7 @@ class GitObject(object):
 
 
 class RootReference(GitObject):
+    __slots__ = ("_branches", "_tags", "_remotes")
 
     def __init__(self, repo):
         super(RootReference, self).__init__(repo, "refs")
@@ -174,6 +177,7 @@ class RootReference(GitObject):
 
 
 class ReferenceCollection(GitObject):
+    __slots__ = ("_cls")
 
     def __init__(self, repo, ref, cls):
         super(ReferenceCollection, self).__init__(repo, ref)
@@ -207,6 +211,7 @@ class ReferenceCollection(GitObject):
 
 
 class Branches(ReferenceCollection):
+    __slots__ = ()
 
     def __init__(self, repo):
         super(Branches, self).__init__(repo, "refs/heads", lambda x: BranchReference(repo, x))
@@ -220,6 +225,7 @@ class Branches(ReferenceCollection):
 
 
 class Tags(ReferenceCollection):
+    __slots__ = ()
 
     def __init__(self, repo):
         super(Tags, self).__init__(repo, "refs/tags", lambda x: TagReference(repo, x))
@@ -233,6 +239,7 @@ class Tags(ReferenceCollection):
 
 
 class Remotes(ReferenceCollection):
+    __slots__ = ()
 
     def __init__(self, repo):
         super(Remotes, self).__init__(repo, "refs/remotes", lambda x: Remote(repo, x))
@@ -263,6 +270,7 @@ class Remotes(ReferenceCollection):
 
 
 class Remote(ReferenceCollection):
+    __slots__ = ("_name")
 
     def __init__(self, repo, name):
         super(Remote, self).__init__(repo, "refs/remotes/" + name, lambda x: RemoteReference(repo, self, x))
@@ -317,6 +325,7 @@ class Remote(ReferenceCollection):
 
 
 class Reference(GitObject):
+    __slots__ = ()
 
     def __bool__(self):
         return self._resolve_ref(self._ref) is not None
@@ -350,6 +359,7 @@ class Reference(GitObject):
 
 
 class RemoteReference(Reference):
+    __slots__ = ("_remote", "_name")
 
     def __init__(self, repo, remote, name):
         super(RemoteReference, self).__init__(repo, "refs/remotes/" + remote.name + "/" + name)
@@ -377,6 +387,7 @@ class RemoteReference(Reference):
 
 
 class TagReference(Reference):
+    __slots__ = ("_name")
 
     def __init__(self, repo, name):
         super(TagReference, self).__init__(repo, "refs/tags/" + name)
@@ -404,6 +415,7 @@ class TagReference(Reference):
 
 
 class BranchReference(Reference):
+    __slots__ = ("_name")
 
     def __init__(self, repo, name):
         super(BranchReference, self).__init__(repo, "refs/heads/" + name)
@@ -445,6 +457,7 @@ class BranchReference(Reference):
 
 
 class SymbolicReference(Reference):
+    __slots__ = ("_name")
 
     def __init__(self, repo, name):
         super(SymbolicReference, self).__init__(repo, name)
@@ -461,6 +474,7 @@ class SymbolicReference(Reference):
 
 
 class Repo(object):
+    __slots__ = ("_wsdir", "_git", "_refs")
 
     def __init__(self, wsdir):
         self._wsdir = wsdir
