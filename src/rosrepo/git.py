@@ -158,7 +158,12 @@ class RootReference(GitObject):
         return self._remotes
 
     def _from_ref(self, name):
-        head, tail = name.split("/", 1)
+        if name == "":
+            return self
+        if "/" in name:
+            head, tail = name.split("/", 1)
+        else:
+            head, tail = name, ""
         if head == "heads":
             return self._branches._from_ref(tail)
         if head == "tags":
@@ -183,9 +188,6 @@ class ReferenceCollection(GitObject):
     def __getitem__(self, name):
         return self.__getattr__(name)
 
-    def __delattr__(self, name):
-        pass
-
     def __delitem__(self, name):
         return self.__delattr__(name)
 
@@ -199,6 +201,8 @@ class ReferenceCollection(GitObject):
         )
 
     def _from_ref(self, name):
+        if name == "":
+            return self
         return self._cls(name)
 
 
@@ -249,7 +253,12 @@ class Remotes(ReferenceCollection):
         return self._cls(name)
 
     def _from_ref(self, name):
-        head, tail = name.split("/", 1)
+        if name == "":
+            return self
+        if "/" in name:
+            head, tail = name.split("/", 1)
+        else:
+            head, tail = name, ""
         return self._cls(head)._from_ref(tail)
 
 
@@ -520,7 +529,16 @@ class Repo(object):
         return stdout != ""
 
     def from_ref(self, name):
-        head, tail = name.split("/", 1)
-        if head == "refs":
+        if name == "HEAD":
+            return self.head
+        if name == "ORIG_HEAD":
+            return self.orig_head
+        if name == "FETCH_HEAD":
+            return self.fetch_head
+        if "/" in name:
+            name, tail = name.split("/", 1)
+        else:
+            tail = ""
+        if name == "refs":
             return self.refs._from_ref(tail)
         return None

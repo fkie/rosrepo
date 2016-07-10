@@ -77,6 +77,10 @@ class GitTest(unittest.TestCase):
     def test_read_access(self):
         repo = git.Repo(self.gitdir)
         upstream_repo = git.Repo(self.upstream_gitdir)
+        invalid_repo = git.Repo("invalid")
+        self.assertTrue(repo)
+        self.assertFalse(invalid_repo)
+        self.assertNotEqual(repo, upstream_repo)
 
         self.assertIsInstance(repo.refs, git.RootReference)
         self.assertIsInstance(repo.refs.heads, git.Branches)
@@ -86,6 +90,20 @@ class GitTest(unittest.TestCase):
         self.assertIsInstance(repo.refs.remotes, git.Remotes)
         self.assertIsInstance(repo.refs.remotes.origin, git.Remote)
         self.assertIsInstance(repo.refs.remotes.origin.master, git.RemoteReference)
+
+        self.assertEqual(repo.from_ref("invalid"), None)
+        self.assertEqual(repo.from_ref("HEAD"), repo.head)
+        self.assertEqual(repo.from_ref("ORIG_HEAD"), repo.orig_head)
+        self.assertEqual(repo.from_ref("FETCH_HEAD"), repo.fetch_head)
+        self.assertEqual(repo.from_ref("refs"), repo.refs)
+        self.assertEqual(repo.from_ref("refs/heads"), repo.refs.heads)
+        self.assertEqual(repo.from_ref("refs/remotes"), repo.remotes)
+        self.assertEqual(repo.from_ref("refs/tags"), repo.tags)
+        self.assertEqual(repo.from_ref("refs/invalid"), None)
+        self.assertEqual(repo.from_ref("refs/heads/master"), repo.heads.master)
+        self.assertEqual(repo.from_ref("refs/tags/foo"), repo.tags.foo)
+        self.assertEqual(repo.from_ref("refs/remotes/bar"), repo.remotes.bar)
+        self.assertEqual(repo.from_ref("refs/remotes/bar/master"), repo.remotes.bar.master)
 
         self.assertEqual(repo.head.commit, repo.heads.master.commit)
         self.assertRaises(AttributeError, lambda: repo.head.other)
@@ -114,8 +132,14 @@ class GitTest(unittest.TestCase):
         self.assertEqual(repo.heads.other.ref_name, "refs/heads/other")
         self.assertEqual(repo.heads.master.name, "master")
         self.assertEqual(str(repo.heads.master), "master")
+        self.assertEqual(str(repo.tags.ancient), "ancient")
         self.assertEqual(str(repo.head), "HEAD")
+        self.assertEqual(repo.head.name, "HEAD")
         self.assertEqual(repo.head.reference, repo.heads.master)
+        self.assertEqual(str(repo.orig_head), "ORIG_HEAD")
+        self.assertFalse(repo.orig_head)
+        self.assertEqual(str(repo.fetch_head), "FETCH_HEAD")
+        self.assertFalse(repo.fetch_head)
 
         self.assertEqual(repo.refs.remotes.origin, repo.remotes.origin)
         self.assertEqual(repo.remotes.origin.master.name, "origin/master")
@@ -158,18 +182,33 @@ class GitTest(unittest.TestCase):
         self.assertIn(repo.remote("origin"), s)
         s = set([repo])
         self.assertIn(repo, s)
+
         self.assertEqual(repr(repo), "Repo(%r)" % self.gitdir)
         self.assertEqual(repr(repo.remotes.origin), "Remote(Repo(%r), %r)" % (self.gitdir, "origin"))
+        self.assertEqual(repr(repo.heads), "Branches(Repo(%r))" % self.gitdir)
+        self.assertEqual(repr(repo.heads.master), "BranchReference(Repo(%r), %r)" % (self.gitdir, "refs/heads/master"))
         
         def simulate_git_fail(*args, **kwargs):
-            raise git.GitError("", exitcode=128)
+            return 128, "", "fail"
         with patch("rosrepo.git.call_process", simulate_git_fail):
             self.assertRaises(git.GitError, repo.heads.master.is_ancestor, repo.head)
+            self.assertRaises(git.GitError, repo.git.reset, on_fail="myfail")
 
     def test_write_access(self):
         def del_helper(arg):
             del arg
         repo = git.Repo(self.gitdir)
+        self.assertFalse(repo.is_dirty())
+        with open(os.path.join(self.gitdir, "untracked.txt"), "w") as f:
+            f.write("ha")
+        self.assertTrue(repo.is_dirty())
+        os.unlink(os.path.join(self.gitdir, "untracked.txt"))
+        self.assertFalse(repo.is_dirty())
+        with open(os.path.join(self.gitdir, "hello.txt"), "w") as f:
+            f.write("Good bye")
+        self.assertTrue(repo.is_dirty())
+        repo.git.reset(hard=True)
+        self.assertFalse(repo.is_dirty())        
         self.assertFalse(repo.heads.test_branch)
         test_branch = repo.heads.new("test_branch")
         self.assertEqual(test_branch, repo.heads.test_branch)
@@ -195,9 +234,15 @@ class GitTest(unittest.TestCase):
         self.assertTrue(test2)
         test2.delete(force=True)
         self.assertFalse(test2)
+        repo.heads.new("test3")
+        self.assertTrue(repo.heads.test3)
+        del repo.heads.test3
+        self.assertFalse(repo.heads.test3)
         test_tag = repo.tags.new("test")
         self.assertTrue(test_tag)
+        self.assertRaises(git.GitError, lambda: test_tag.tag)  # lightweight tag
         self.assertTrue(test_tag.commit == repo.head.commit)
+        self.assertTrue(test_tag.tree == repo.head.tree)
         test_tag.reference = repo.heads.other
         self.assertTrue(test_tag.commit == repo.heads.other.commit)
         test_tag.delete()
