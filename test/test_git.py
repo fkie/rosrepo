@@ -202,6 +202,14 @@ class GitTest(unittest.TestCase):
         with open(os.path.join(self.gitdir, "untracked.txt"), "w") as f:
             f.write("ha")
         self.assertTrue(repo.is_dirty())
+        with repo.temporary_stash():
+            self.assertFalse(repo.is_dirty())
+            repo.git.checkout(repo.heads.other)
+            self.assertEqual(repo.head.reference, repo.heads.other)
+            with open(os.path.join(self.gitdir, "hello.txt"), "w") as f:
+                f.write("Good bye")
+        self.assertTrue(repo.is_dirty())
+        self.assertEqual(repo.head.reference, repo.heads.master)
         os.unlink(os.path.join(self.gitdir, "untracked.txt"))
         self.assertFalse(repo.is_dirty())
         with open(os.path.join(self.gitdir, "hello.txt"), "w") as f:

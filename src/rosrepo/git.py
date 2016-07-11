@@ -473,6 +473,25 @@ class SymbolicReference(Reference):
         return self.repo.from_ref(ref) or Reference(self.repo, ref)
 
 
+class StashContext(object):
+    __slots__ = ("_repo", "_head")
+
+    def __init__(self, repo):
+        self._repo = repo
+
+    def __enter__(self):
+        self._head = self._repo.head.reference
+        self._repo.git.stash.save(all=True)
+        return self
+
+    def __exit__(self, t, v, tb):
+        self._repo.git.reset(hard=True)
+        self._repo.git.clean("-f", "-d", "-x")
+        self._repo.git.checkout(self._head)
+        self._repo.git.stash.pop()
+        return False
+
+
 class Repo(object):
     __slots__ = ("_wsdir", "_git", "_refs")
 
@@ -541,6 +560,9 @@ class Repo(object):
     def is_dirty(self):
         stdout = self.git.status(porcelain=True).strip()
         return stdout != ""
+
+    def temporary_stash(self):
+        return StashContext(self)
 
     def from_ref(self, name):
         if name == "HEAD":
