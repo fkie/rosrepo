@@ -176,6 +176,8 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
 def pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
     def do_pull(repo, master_remote, master_branch, tracking_remote, tracking_branch):
         if need_pull(repo, tracking_branch):
+            stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
+            msg(stdout, indent_first=2, indent_next=10)
             repo.git.merge(tracking_branch, ff_only=True, simulate=dry_run)
     update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run)
 
@@ -183,6 +185,8 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False
 def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
     def do_push(repo, master_remote, master_branch, tracking_remote, tracking_branch):
         if need_push(repo, tracking_branch):
+            stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (tracking_branch, repo.head.reference), "--", simulate=dry_run)
+            msg(stdout, indent_first=2, indent_next=10)
             repo.git.push(tracking_remote, "%s:%s" % (repo.head.reference, tracking_branch.branch_name), simulate=dry_run)
 
     update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run)
