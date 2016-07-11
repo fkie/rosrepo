@@ -38,7 +38,9 @@ def add_common_options(parser):
 
 def prepare_arguments(parser):
     from . import __version__
+    from argparse import SUPPRESS
     parser.add_argument("--version", action="version", version="%s" % __version__)
+    parser.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     cmds = parser.add_subparsers(metavar="ACTION", title="Actions", description="The following actions are available:", dest="command")
 
     # init
@@ -144,23 +146,28 @@ def prepare_arguments(parser):
     git_cmds = p.add_subparsers(metavar="COMMAND", title="Git commands", dest="git_cmd")
     # git clone
     q = git_cmds.add_parser("clone", help="clone packages from Gitlab repository")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL for remote access (default: ssh)")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clone")
     # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("-m", "--modified", action="store_true", help="only show packages which are not up-to-date")
     q.add_argument("--no-depends", action="store_true", help="do not include dependent packages")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
     # git push
     q = git_cmds.add_parser("push", help="push commits to upstream repository")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--no-depends", action="store_true", help="do not push dependent packages")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to push")
     # git pull
     q = git_cmds.add_parser("pull", help="pull commits from upstream repository")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--no-depends", action="store_true", help="do not pull dependent packages")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")
     # git commit
     q = git_cmds.add_parser("commit", help="commit local changes for a package")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("package", metavar="PACKAGE", help="package to commit")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)

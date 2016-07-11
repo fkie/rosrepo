@@ -32,11 +32,11 @@ from .git import Git, Repo
 
 
 def need_push(repo, remote_branch):
-    return not repo.head.points_at(remote_branch) and remote_branch.is_ancestor(repo.head)
+    return repo.head.commit != remote_branch.commit and remote_branch.is_ancestor(repo.head)
 
 
 def need_pull(repo, remote_branch):
-    return not repo.head.points_at(remote_branch) and repo.head.is_ancestor(remote_branch)
+    return repo.head.commit != remote_branch.commit and repo.head.is_ancestor(remote_branch)
 
 
 def get_origin(repo, project):
@@ -64,7 +64,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 status.append("@!@{yf}needs push")
             elif need_pull(repo, tracking_branch):
                 status.append("@!@{cf}needs pull")
-            elif not repo.head.points_at(tracking_branch):
+            elif repo.head.commit != tracking_branch.commit:
                 status.append("@!@{yf}needs merge")
         if master_branch is not None and tracking_branch != master_branch:
             status.append("@!@{yf}other track")
