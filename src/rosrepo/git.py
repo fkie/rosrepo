@@ -51,9 +51,13 @@ class GitCommand(object):
         for key, value in iteritems(kwargs):
             if value is not None and key not in GitCommand._local_args:
                 param = ("--" if len(key) > 1 else "-") + ("no-" if isinstance(value, bool) and not value else "") + key.replace("_", "-")
-                invoke.append(param)
-                if not isinstance(value, bool):
-                    invoke.append(str(value))
+                if isinstance(value, bool):
+                    invoke.append(param)
+                else:
+                    if len(key) > 1:
+                        invoke.append("%s=%s" % (param, str(value)))
+                    else:
+                        invoke += [param, str(value)]
         invoke += [str(a) for a in args]
         simulate = kwargs.get("simulate", False)
         if simulate:
@@ -94,7 +98,7 @@ class GitObject(object):
         return "%s(%r, %r)" % (self.__class__.__name__, self._repo, self._ref)
 
     def __eq__(self, other):
-        return self._repo == other._repo and self._ref == other._ref
+        return isinstance(other, GitObject) and self._repo == other._repo and self._ref == other._ref
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -474,21 +478,25 @@ class SymbolicReference(Reference):
 
 
 class StashContext(object):
-    __slots__ = ("_repo", "_head")
+    __slots__ = ("_repo", "_head", "_simulate", "_need_stash")
 
-    def __init__(self, repo):
+    def __init__(self, repo, simulate=None):
         self._repo = repo
+        self._simulate = simulate
 
     def __enter__(self):
         self._head = self._repo.head.reference
-        self._repo.git.stash.save(all=True)
+        self._need_stash = (self._repo.git.status(porcelain=True, ignored=True).strip() != "")
+        if self._need_stash:
+            self._repo.git.stash.save(all=True, simulate=self._simulate)
         return self
 
     def __exit__(self, t, v, tb):
-        self._repo.git.reset(hard=True)
-        self._repo.git.clean("-f", "-d", "-x")
-        self._repo.git.checkout(self._head)
-        self._repo.git.stash.pop()
+        self._repo.git.reset(hard=True, simulate=self._simulate)
+        self._repo.git.clean("-f", "-d", "-x", simulate=self._simulate)
+        self._repo.git.checkout(self._head, simulate=self._simulate)
+        if self._need_stash:
+            self._repo.git.stash.pop(simulate=self._simulate)
         return False
 
 
@@ -504,7 +512,7 @@ class Repo(object):
         return "Repo(%r)" % self._wsdir
 
     def __eq__(self, other):
-        return self._wsdir == other._wsdir
+        return type(self) == type(other) and self._wsdir == other._wsdir
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -543,6 +551,10 @@ class Repo(object):
         return SymbolicReference(self, "FETCH_HEAD")
 
     @property
+    def merge_head(self):
+        return SymbolicReference(self, "MERGE_HEAD")
+
+    @property
     def heads(self):
         return self.refs.heads
 
@@ -561,8 +573,14 @@ class Repo(object):
         stdout = self.git.status(porcelain=True).strip()
         return stdout != ""
 
-    def temporary_stash(self):
-        return StashContext(self)
+    def conflicts(self):
+        stdout = self.git.diff(name_only=True, diff_filter="U").strip()
+        if stdout == "":
+            return []
+        return [s.strip() for s in stdout.split("\n")]
+
+    def temporary_stash(self, simulate=None):
+        return StashContext(self, simulate=simulate)
 
     def from_ref(self, name):
         if name == "HEAD":
@@ -571,6 +589,8 @@ class Repo(object):
             return self.orig_head
         if name == "FETCH_HEAD":
             return self.fetch_head
+        if name == "MERGE_HEAD":
+            return self.merge_head
         if "/" in name:
             name, tail = name.split("/", 1)
         else:

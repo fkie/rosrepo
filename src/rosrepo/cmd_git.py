@@ -28,15 +28,37 @@ from .cache import Cache
 from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, show_conflicts, show_missing_system_depends
 from .util import iteritems, path_has_prefix, call_process
-from .git import Git, Repo
+from .git import Git, Repo, GitError
 
 
-def need_push(repo, remote_branch):
-    return repo.head.commit != remote_branch.commit and remote_branch.is_ancestor(repo.head)
+def need_push(local_branch, remote_branch=None):
+    if local_branch is None:
+        return False
+    if remote_branch is None:
+        remote_branch = local_branch.tracking_branch
+    if remote_branch is None:
+        return False
+    return local_branch.commit != remote_branch.commit and remote_branch.is_ancestor(local_branch)
 
 
-def need_pull(repo, remote_branch):
-    return repo.head.commit != remote_branch.commit and repo.head.is_ancestor(remote_branch)
+def need_pull(local_branch, remote_branch=None):
+    if local_branch is None:
+        return False
+    if remote_branch is None:
+        remote_branch = local_branch.tracking_branch
+    if remote_branch is None:
+        return False
+    return local_branch.commit != remote_branch.commit and local_branch.is_ancestor(remote_branch)
+
+
+def is_up_to_date(local_branch, remote_branch=None):
+    if local_branch is None:
+        return False
+    if remote_branch is None:
+        remote_branch = local_branch.tracking_branch
+    if remote_branch is None:
+        return False
+    return local_branch.commit == remote_branch.commit
 
 
 def get_origin(repo, project):
@@ -48,32 +70,48 @@ def get_origin(repo, project):
 
 
 def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=True, cache=None):
-    def create_status(repo, master_branch, tracking_branch):
+    def create_status(repo, master_branch, master_remote_branch, tracking_branch):
         status = []
+        if repo.merge_head:
+            if repo.conflicts():
+                status.append("@!@{rf}merge conflicts")
+            else:
+                status.append("@!@{yf}merged, needs commit")
+            return status
         if repo.is_dirty():
             status.append("@!@{yf}needs commit")
-        is_local_branch = False
-        if tracking_branch is None:
-            if master_branch is not None:
-                tracking_branch = master_branch
-                is_local_branch = True
-            else:
-                status.append("@!@{rf}no upstream")
         if tracking_branch is not None:
-            if need_push(repo, tracking_branch):
+            if master_remote_branch is not None and tracking_branch != master_remote_branch:
+                status.append("@!@{rf}remote '%s'" % master_remote_branch.remote)
+            if need_push(repo.head.reference):
                 status.append("@!@{yf}needs push")
-            elif need_pull(repo, tracking_branch):
+            elif need_pull(repo.head.reference):
                 status.append("@!@{cf}needs pull")
-            elif repo.head.commit != tracking_branch.commit:
-                status.append("@!@{yf}needs merge")
-        if master_branch is not None and tracking_branch != master_branch:
-            status.append("@!@{yf}other track")
+            elif not is_up_to_date(repo.head.reference):
+                status.append("@!@{yf}needs pull -M")
+        else:
+            status.append("@!branch '%s'" % repo.head.reference)
+            if master_branch is None:
+                status.append("@!@{rf}no remote")
+            if is_up_to_date(master_branch) or need_push(master_branch):
+                if need_pull(repo.head, master_branch):
+                    status.append("@!@{cf}needs pull -L")
+                else:
+                    if not master_branch.is_ancestor(repo.head):
+                        status.append("@!@{yf}needs merge --from-master")
+                    if not is_up_to_date(repo.head, master_branch):
+                        status.append("@!@{yf}needs merge --to-master")
+            if master_branch is not None and master_remote_branch is not None:
+                if need_push(master_branch):
+                    status.append("@!@{yf}%s needs push" % master_branch)
+                elif need_pull(master_branch):
+                    status.append("@!@{cf}%s needs pull" % master_branch)
+                elif not is_up_to_date(master_branch):
+                    status.append("@!@{yf}%s needs merge" % master_branch)
         if not status:
             if not show_up_to_date:
                 return None
             status.append("@!@{gf}up-to-date")
-        elif is_local_branch:
-            status.append("@!@{yf}no track")
         return status
 
     table = TableView("Package", "Path", "Status")
@@ -81,12 +119,17 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
     found_packages = set()
     for project in projects:
         repo = Repo(os.path.join(srcdir, project.workspace_path))
+        master_remote = get_origin(repo, project)
+        if master_remote is not None:
+            master_remote_branch = master_remote[project.master_branch]
+            master_branch = next((b for b in repo.heads if b.tracking_branch == master_remote_branch), None)
+        else:
+            master_remote_branch = None
+            master_branch = None
         tracking_branch = repo.head.reference.tracking_branch
-        origin = get_origin(repo, project)
-        master_branch = origin[project.master_branch] if origin is not None else None
         ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
         found_packages |= set(ws_packages.keys())
-        status = create_status(repo, master_branch, tracking_branch)
+        status = create_status(repo, master_branch, master_remote_branch, tracking_branch)
         if status is not None:
             for name, pkg_list in iteritems(ws_packages):
                 if name not in packages:
@@ -102,7 +145,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         tracking_branch = repo.head.reference.tracking_branch
         ws_packages = find_catkin_packages(srcdir, path, cache=cache)
         found_packages |= set(ws_packages.keys())
-        status = create_status(repo, None, tracking_branch)
+        status = create_status(repo, None, None, tracking_branch)
         if status is not None:
             for name, pkg_list in iteritems(ws_packages):
                 if name not in packages:
@@ -137,59 +180,127 @@ def has_package_path(obj, paths):
     return False
 
 
-def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, dry_run=False):
+def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, dry_run=False, action="update", fetch_remote=True):
     for project in projects:
         repo = Repo(os.path.join(srcdir, project.workspace_path))
         master_remote = get_origin(repo, project)
-        master_branch = master_remote[project.master_branch] if master_remote is not None else None
-        tracking_branch = repo.head.reference.tracking_branch
-        if tracking_branch is None:
-            tracking_branch = master_branch
-            tracking_remote = master_remote
+        if master_remote is not None:
+            master_remote_branch = master_remote[project.master_branch]
+            master_branch = next((b for b in repo.heads if b.tracking_branch == master_remote_branch), None)
         else:
-            tracking_remote = tracking_branch.remote
+            master_branch = None
+        tracking_branch = repo.head.reference.tracking_branch
+        tracking_remote = tracking_branch.remote if tracking_branch is not None else None
         try:
-            if master_remote is not None:
+            if fetch_remote and master_remote is not None:
                 msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
                 master_remote.fetch(simulate=dry_run)
-            if tracking_remote is not None and master_remote != tracking_remote:
+            if fetch_remote and tracking_remote is not None and master_remote != tracking_remote:
                 msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
                 tracking_remote.fetch(simulate=dry_run)
-            if tracking_branch is not None:
-                update_op(repo, master_remote, master_branch, tracking_remote, tracking_branch)
+            update_op(repo, master_branch, tracking_branch)
         except Exception as e:
-            error("cannot update '%s': %s\n" % (escape(project.name), escape(str(e))))
+            error("cannot %s '%s': %s\n" % (action, escape(project.name), escape(str(e))))
     for path in other_git:
         repo = Repo(os.path.join(srcdir, path))
         tracking_branch = repo.head.reference.tracking_branch
-        if tracking_branch is not None:
-            tracking_remote = tracking_branch.remote
-            try:
+        try:
+            if fetch_remote and tracking_branch is not None:
+                tracking_remote = tracking_branch.remote
                 msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
                 tracking_remote.fetch(simulate=dry_run)
-                update_op(repo, None, None, tracking_remote, tracking_branch)
-            except Exception as e:
-                error("cannot update '%s': %s\n" % (escape(path), escape(str(e))))
+            update_op(repo, None, tracking_branch)
+        except Exception as e:
+            error("cannot %s '%s': %s\n" % (action, escape(path), escape(str(e))))
     show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
 
 
-def pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
-    def do_pull(repo, master_remote, master_branch, tracking_remote, tracking_branch):
-        if need_pull(repo, tracking_branch):
-            stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
-            msg(stdout, indent_first=2, indent_next=10)
-            repo.git.merge(tracking_branch, ff_only=True, simulate=dry_run)
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run)
+def pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=False, merge=False, dry_run=False):
+    def do_pull(repo, master_branch, tracking_branch):
+        if repo.merge_head:
+            raise GitError("unfinished merge detected")
+        if tracking_branch is not None:
+            if need_pull(repo.head, tracking_branch):
+                stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
+                msg(stdout, indent_first=2, indent_next=10)
+                repo.git.merge(tracking_branch, ff_only=True, on_fail="conflicts", simulate=dry_run)
+            elif repo.head.commit != tracking_branch.commit and merge:
+                stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
+                msg(stdout, indent_first=2, indent_next=10)
+                robust_merge(repo, tracking_branch, m="Merge changes from %s into %s" % (tracking_branch. repo.head.reference), on_fail="conflicts", simulate=dry_run)
+        if master_branch is not None:
+            if repo.head.reference != master_branch and need_pull(master_branch):
+                stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (master_branch, master_branch.tracking_branch), "--", simulate=dry_run)
+                msg(stdout, indent_first=2, indent_next=10)
+                with repo.temporary_stash(simulate=dry_run):
+                    repo.git.checkout(master_branch, simulate=dry_run)
+                    repo.git.merge(master_branch.tracking_branch, ff_only=True, on_fail="conflicts", simulate=dry_run)
+            if update_local and (is_up_to_date(master_branch) or need_push(master_branch)) and need_pull(repo.head, master_branch):
+                stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, master_branch), "--", simulate=dry_run)
+                msg(stdout, indent_first=2, indent_next=10)
+                repo.git.merge(master_branch, ff_only=True, on_fail="conflicts", simulate=dry_run)
+
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run, action="pull")
 
 
 def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
-    def do_push(repo, master_remote, master_branch, tracking_remote, tracking_branch):
-        if need_push(repo, tracking_branch):
+    def do_push(repo, master_branch, tracking_branch):
+        if repo.merge_head:
+            raise GitError("unfinished merge detected")
+        if tracking_branch is not None and need_push(repo.head, tracking_branch):
             stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (tracking_branch, repo.head.reference), "--", simulate=dry_run)
             msg(stdout, indent_first=2, indent_next=10)
-            repo.git.push(tracking_remote, "%s:%s" % (repo.head.reference, tracking_branch.branch_name), simulate=dry_run)
+            repo.git.push(tracking_branch.remote, "%s:%s" % (repo.head.reference, tracking_branch.branch_name), simulate=dry_run)
+        if master_branch is not None and repo.head.reference != master_branch and need_push(master_branch):
+            stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (master_branch.tracking_branch, master_branch), "--", simulate=dry_run)
+            msg(stdout, indent_first=2, indent_next=10)
+            repo.git.push(master_branch.tracking_branch.remote, "%s:%s" % (master_branch, master_branch.tracking_branch.branch_name), simulate=dry_run)
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run)
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, action="push")
+
+
+def robust_merge(repo, *args, **kwargs):
+    try:
+        repo.git.merge(*args, **kwargs)
+    except GitError:
+        if repo.conflicts():
+            repo.git.mergetool()
+        else:
+            raise
+        if not repo.conflicts():
+            repo.git.commit(m=kwargs.get("m", kwargs.get("message", None)))
+        else:
+            raise
+
+
+def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
+    def do_merge(repo, master_branch, tracking_branch):
+        if args.abort:
+            repo.git.merge(abort=True, simulate=args.dry_run)
+            return
+        if args.resolve:
+            repo.git.mergetool()
+            return
+        if repo.merge_head:
+            raise GitError("unfinished previous merge")
+        if master_branch is None:
+            return
+        if repo.head.commit == master_branch.commit:
+            return
+        if tracking_branch is not None and tracking_branch != master_branch.tracking_branch:
+            raise GitError("will not merge with foreign tracking branch")
+        if master_branch.commit != master_branch.tracking_branch.commit and not need_push(repo, master_branch.tracking_branch, master_branch):
+            raise GitError("will not merge with outdated master branch")
+        if args.from_master or args.sync:
+            robust_merge(repo, master_branch, m="Merge changes from %s into %s" % (master_branch, repo.head.reference), on_fail="conflicts", simulate=args.dry_run)
+        if args.to_master or args.sync:
+            with repo.temporary_stash(simulate=args.dry_run):
+                active_branch = repo.head.reference
+                repo.git.checkout(master_branch, simulate=args.dry_run)
+                robust_merge(repo, active_branch, m="Merge changes from %s into %s" % (active_branch, master_branch), on_fail="conflicts", simulate=args.dry_run)
+    if (args.from_master or args.to_master) and not args.packages:
+        fatal("you must explicitly list packages for merge operations")
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_merge, dry_run=args.dry_run, action="merge", fetch_remote=not args.abort and not args.resolve)
 
 
 def compute_git_subdir(srcdir, name):
@@ -267,7 +378,9 @@ def run(args):
     if args.git_cmd == "status":
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=not args.modified, cache=cache)
     if args.git_cmd == "pull":
-        pull_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+        pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
     if args.git_cmd == "push":
         push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+    if args.git_cmd == "merge":
+        merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     return 0
