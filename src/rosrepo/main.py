@@ -164,11 +164,26 @@ def prepare_arguments(parser):
     q = git_cmds.add_parser("pull", help="pull commits from upstream repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--no-depends", action="store_true", help="do not pull dependent packages")
+    q.add_argument("-L", "--update-local", action="store_true", help="also act on local branches (which are not tracking)")
+    q.add_argument("-M", "--merge", action="store_true", help="merge changes if branches have diverged")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")
+    # git merge
+    q = git_cmds.add_parser("merge", help="merge local branches with upstream")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    q.add_argument("--no-depends", action="store_true", help="do not include dependent packages in merge selection")
+    g = q.add_argument_group("possible merge types")
+    m = g.add_mutually_exclusive_group(required=True)
+    m.add_argument("--from-master", action="store_true", help="merge changes from master into active branch, leaving master unchanged")
+    m.add_argument("--to-master", action="store_true", help="merge changes from the active branch into master, leaving the active branch unchanged")
+    m.add_argument("--sync", action="store_true", help="sync all changes from active branch and master, updating both")
+    m.add_argument("--resolve", action="store_true", help="resolve merge conflicts with git-mergetool")
+    m.add_argument("--abort", action="store_true", help="abort an unfinished merge")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to merge")
     # git commit
     q = git_cmds.add_parser("commit", help="commit local changes for a package")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
-    q.add_argument("package", metavar="PACKAGE", help="package to commit")
+    q.add_argument("--no-depends", action="store_true", help="do not include dependent packages in selection")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to commit")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 

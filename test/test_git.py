@@ -81,6 +81,7 @@ class GitTest(unittest.TestCase):
         self.assertTrue(repo)
         self.assertFalse(invalid_repo)
         self.assertNotEqual(repo, upstream_repo)
+        self.assertEqual(repo.workspace, self.gitdir)
 
         self.assertIsInstance(repo.refs, git.RootReference)
         self.assertIsInstance(repo.refs.heads, git.Branches)
@@ -95,6 +96,7 @@ class GitTest(unittest.TestCase):
         self.assertEqual(repo.from_ref("HEAD"), repo.head)
         self.assertEqual(repo.from_ref("ORIG_HEAD"), repo.orig_head)
         self.assertEqual(repo.from_ref("FETCH_HEAD"), repo.fetch_head)
+        self.assertEqual(repo.from_ref("MERGE_HEAD"), repo.merge_head)
         self.assertEqual(repo.from_ref("refs"), repo.refs)
         self.assertEqual(repo.from_ref("refs/heads"), repo.refs.heads)
         self.assertEqual(repo.from_ref("refs/remotes"), repo.remotes)
@@ -140,6 +142,10 @@ class GitTest(unittest.TestCase):
         self.assertFalse(repo.orig_head)
         self.assertEqual(str(repo.fetch_head), "FETCH_HEAD")
         self.assertFalse(repo.fetch_head)
+        self.assertEqual(str(repo.merge_head), "MERGE_HEAD")
+        self.assertFalse(repo.merge_head)
+        self.assertEqual(repo.conflicts(), [])
+
 
         self.assertEqual(repo.refs.remotes.origin, repo.remotes.origin)
         self.assertEqual(repo.remotes.origin.master.name, "origin/master")
@@ -202,6 +208,16 @@ class GitTest(unittest.TestCase):
         with open(os.path.join(self.gitdir, "untracked.txt"), "w") as f:
             f.write("ha")
         self.assertTrue(repo.is_dirty())
+        with repo.temporary_stash():
+            self.assertFalse(repo.is_dirty())
+            repo.git.checkout(repo.heads.other)
+            self.assertEqual(repo.head.reference, repo.heads.other)
+            with open(os.path.join(self.gitdir, "hello.txt"), "w") as f:
+                f.write("Good bye")
+            self.assertRaises(git.GitError, repo.git.merge, repo.heads.master)
+            self.assertEqual(repo.conflicts(), ["other.txt"])
+        self.assertTrue(repo.is_dirty())
+        self.assertEqual(repo.head.reference, repo.heads.master)
         os.unlink(os.path.join(self.gitdir, "untracked.txt"))
         self.assertFalse(repo.is_dirty())
         with open(os.path.join(self.gitdir, "hello.txt"), "w") as f:
@@ -250,7 +266,7 @@ class GitTest(unittest.TestCase):
         stdout = StringIO()
         with patch("sys.stdout", stdout):
             repo.git.branch("dream", set_upstream_to=repo.remotes.origin.master, simulate=True)
-        self.assertEqual(stdout.getvalue(), "git -C %s branch --set-upstream-to origin/master dream\n" % self.gitdir)
+        self.assertEqual(stdout.getvalue(), "git -C %s branch --set-upstream-to=origin/master dream\n" % self.gitdir)
         self.assertFalse(repo.heads.dream)
         self.assertEqual(repo.heads.other.tracking_branch, repo.remotes.origin.other)
         repo.heads.other.tracking_branch = repo.remotes.origin.master
