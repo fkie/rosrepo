@@ -531,6 +531,10 @@ class Repo(object):
         return self.__bool__()
 
     @property
+    def workspace(self):
+        return self._wsdir
+
+    @property
     def git(self):
         return self._git
 

@@ -188,7 +188,7 @@ _rosrepo_complete()
                 fi
                 return 0
                 ;;
-            push|pull|merge)
+            push|pull|merge|commit)
                 rosrepo_cmd[1]="list"
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
@@ -204,15 +204,6 @@ _rosrepo_complete()
 		                fi
                 else
                         COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
-                fi
-                return 0
-                ;;
-            commit)
-                if [ "$nargs" -eq 3 ]
-                then
-                    rosrepo_cmd[1]="list"
-                    rosrepo_cmd+=("-W")
-                    COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
                 return 0
                 ;;

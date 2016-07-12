@@ -259,6 +259,21 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False
     update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, action="push")
 
 
+def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
+    def do_commit(repo, master_branch, tracking_branch):
+        if repo.merge_head:
+            raise GitError("unfinished merge detected")
+        if repo.is_dirty():
+            msg("@{cf}Commit@| %s\n" % repo.workspace)
+            invoke = ["git-cola", "--repo", repo.workspace]
+            if dry_run:
+                msg("@{cf}Invoking@|: %s\n" % " ".join(invoke))
+            else:
+                call_process(invoke)
+
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_commit, dry_run=dry_run, fetch_remote=False, action="commit")
+
+
 def robust_merge(repo, *args, **kwargs):
     try:
         repo.git.merge(*args, **kwargs)
@@ -292,11 +307,13 @@ def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
         if master_branch.commit != master_branch.tracking_branch.commit and not need_push(repo, master_branch.tracking_branch, master_branch):
             raise GitError("will not merge with outdated master branch")
         if args.from_master or args.sync:
+            msg("@{cf}Merging@| %s: %s into %s\n" % (os.path.relpath(repo.workspace, srcdir), master_branch, repo.head.reference))
             robust_merge(repo, master_branch, m="Merge changes from %s into %s" % (master_branch, repo.head.reference), on_fail="conflicts", simulate=args.dry_run)
         if args.to_master or args.sync:
             with repo.temporary_stash(simulate=args.dry_run):
                 active_branch = repo.head.reference
                 repo.git.checkout(master_branch, simulate=args.dry_run)
+                msg("@{cf}Merging@| %s: %s into %s\n" % (os.path.relpath(repo.workspace, srcdir), active_branch, master_branch))
                 robust_merge(repo, active_branch, m="Merge changes from %s into %s" % (active_branch, master_branch), on_fail="conflicts", simulate=args.dry_run)
     if (args.from_master or args.to_master) and not args.packages:
         fatal("you must explicitly list packages for merge operations")
@@ -337,15 +354,6 @@ def run(args):
     cache = Cache(wsdir)
     srcdir = os.path.join(wsdir, "src")
     ws_state = get_workspace_state(wsdir, config, cache=cache, offline_mode=args.offline)
-    if args.git_cmd == "commit":
-        if args.package not in ws_state.ws_packages:
-            fatal("package '%s' is not in workspace\n" % escape(args.package))
-        invoke = ["git-cola", "--repo", os.path.join(srcdir, ws_state.ws_packages[args.package][0].workspace_path)]
-        if args.dry_run:
-            msg("@{cf}Invoking@|: %s\n" % escape(" ".join(invoke)), indent_next=11)
-            return 0
-        else:
-            return call_process(invoke)
     if args.git_cmd == "clone":
         depends, system_depends, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
         if conflicts:
@@ -383,4 +391,6 @@ def run(args):
         push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
     if args.git_cmd == "merge":
         merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
+    if args.git_cmd == "commit":
+        commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
     return 0

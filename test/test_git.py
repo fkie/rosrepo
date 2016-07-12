@@ -81,6 +81,7 @@ class GitTest(unittest.TestCase):
         self.assertTrue(repo)
         self.assertFalse(invalid_repo)
         self.assertNotEqual(repo, upstream_repo)
+        self.assertEqual(repo.workspace, self.gitdir)
 
         self.assertIsInstance(repo.refs, git.RootReference)
         self.assertIsInstance(repo.refs.heads, git.Branches)

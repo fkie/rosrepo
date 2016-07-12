@@ -182,7 +182,8 @@ def prepare_arguments(parser):
     # git commit
     q = git_cmds.add_parser("commit", help="commit local changes for a package")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
-    q.add_argument("package", metavar="PACKAGE", help="package to commit")
+    q.add_argument("--no-depends", action="store_true", help="do not include dependent packages in selection")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to commit")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 
