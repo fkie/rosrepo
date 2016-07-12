@@ -20,6 +20,7 @@ Depends: ${python:Depends}, ${misc:Depends},
     python-rosdep,
     python-setuptools,
     python-yaml
+Recommends: git-cola, meld
 Conflicts: python3-rosrepo
 Description: Manage ROS workspaces with multiple Gitlab repositories
  - More comfortable management of package builds and dependencies
@@ -38,6 +39,7 @@ Depends: ${python3:Depends}, ${misc:Depends},
     python3-rosdep,
     python3-setuptools,
     python3-yaml
+Recommends: git-cola, meld
 Description: Manage ROS workspaces with multiple Gitlab repositories
  - More comfortable management of package builds and dependencies
  - Mark packages as pinned so they will always be built
