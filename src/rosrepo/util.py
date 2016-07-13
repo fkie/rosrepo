@@ -88,6 +88,13 @@ def path_has_prefix(path, prefix):
     return False
 
 
+def env_path_list_contains(path_list, path):
+    if path_list not in os.environ:
+        return False
+    paths = os.environ[path_list].split(os.pathsep)
+    return path in paths
+
+
 def makedirs(path):
     if not os.path.isdir(path):
         os.makedirs(path)
