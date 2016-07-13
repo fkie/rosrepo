@@ -134,13 +134,14 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                         result = pick_dependency_resolution(name, candidates)
                         if result is not None:
                             candidates = [result]
+                    local_conflicts = {}
                     for pkg in candidates:
-                        old_queue = list(queue)
                         depends[name] = pkg
                         manifest = pkg.manifest
-                        queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
-                        new_depends, new_sysdep, new_conflicts, new_score = try_resolve(queue, depends.copy(), system_depends.copy())
+                        candidate_queue = [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
+                        new_depends, new_sysdep, new_conflicts, new_score = try_resolve(candidate_queue, depends.copy(), system_depends.copy())
                         conflicts.update(new_conflicts)
+                        local_conflicts.update(new_conflicts)
                         if not new_conflicts:
                             # We can build a consistent workspace with that
                             # If we have multiple choices, we pick the one with
@@ -152,18 +153,18 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                                 best_depends = new_depends
                                 best_sysdep = new_sysdep
                         # Try next available package
-                        queue = old_queue
                         del depends[name]
                     if best_score is not None:
-                        depends = best_depends
-                        system_depends = best_sysdep
+                        depends.update(best_depends)
+                        system_depends |= best_sysdep
+                        score -= 10  # Small penalty for required download
                     elif name in rosdep:
                         system_depends.add(name)
+                        best_score = -1  # small penalty for relying on system package
                     else:
+                        resolver_msgs.append("is not installable from a configured Gitlab server due to problems with " + ", ".join("@{cf}%s@|" % s for s in sorted(local_conflicts.keys())))
                         resolver_msgs.append("is not installable as system package")
                         conflicts[name] = resolver_msgs
-                    score -= 10  # Small penalty for required download
-                    return depends, system_depends, conflicts, score + best_score
                 elif name in rosdep and depender is None:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     resolver_msgs.append("is not available from a configured Gitlab server")
