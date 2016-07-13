@@ -26,8 +26,8 @@ from .cmd_git import clone_packages
 from .resolver import find_dependees, resolve_system_depends
 from .config import Config
 from .cache import Cache
-from .ui import msg, fatal, show_conflicts, show_missing_system_depends
-from .util import call_process, find_program, iteritems, getmtime, PIPE
+from .ui import msg, warning, fatal, show_conflicts, show_missing_system_depends
+from .util import call_process, find_program, iteritems, getmtime, PIPE, env_path_list_contains
 from functools import reduce
 
 
@@ -156,4 +156,12 @@ def run(args):
                         msg("@{cf}Updating rosclipse project files@|: %s\n" % name)
                         if not args.dry_run:
                             call_process([rosclipse, name])
+
+    if not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
+        warning("%s is not in PATH\n" % os.path.join(wsdir, "devel", "bin"))
+        msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
+    if not env_path_list_contains("ROS_PACKAGE_PATH", os.path.join(wsdir, "src")):
+        warning("%s is not in ROS_PACKAGE_PATH\n" % os.path.join(wsdir, "src"))
+        msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
+
     return ret
