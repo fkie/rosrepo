@@ -72,6 +72,9 @@ def get_origin(repo, project):
 def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=True, cache=None):
     def create_status(repo, master_branch, master_remote_branch, tracking_branch):
         status = []
+        if repo.detached_head():
+            status.append("@!@{rf}detached HEAD")
+            return status
         if repo.merge_head:
             if repo.conflicts():
                 status.append("@!@{rf}merge conflicts")
@@ -126,7 +129,10 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         else:
             master_remote_branch = None
             master_branch = None
-        tracking_branch = repo.head.reference.tracking_branch
+        if not repo.detached_head():
+            tracking_branch = repo.head.reference.tracking_branch
+        else:
+            tracking_branch = None
         ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
         found_packages |= set(ws_packages.keys())
         status = create_status(repo, master_branch, master_remote_branch, tracking_branch)
@@ -183,15 +189,15 @@ def has_package_path(obj, paths):
 def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, dry_run=False, action="update", fetch_remote=True):
     for project in projects:
         repo = Repo(os.path.join(srcdir, project.workspace_path))
-        master_remote = get_origin(repo, project)
-        if master_remote is not None:
-            master_remote_branch = master_remote[project.master_branch]
-            master_branch = next((b for b in repo.heads if b.tracking_branch == master_remote_branch), None)
-        else:
-            master_branch = None
-        tracking_branch = repo.head.reference.tracking_branch
-        tracking_remote = tracking_branch.remote if tracking_branch is not None else None
         try:
+            master_remote = get_origin(repo, project)
+            if master_remote is not None:
+                master_remote_branch = master_remote[project.master_branch]
+                master_branch = next((b for b in repo.heads if b.tracking_branch == master_remote_branch), None)
+            else:
+                master_branch = None
+            tracking_branch = repo.head.reference.tracking_branch
+            tracking_remote = tracking_branch.remote if tracking_branch is not None else None
             if fetch_remote and master_remote is not None:
                 msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
                 master_remote.fetch(simulate=dry_run)
@@ -200,11 +206,11 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
                 tracking_remote.fetch(simulate=dry_run)
             update_op(repo, master_branch, tracking_branch)
         except Exception as e:
-            error("cannot %s '%s': %s\n" % (action, escape(project.name), escape(str(e))))
+            error("cannot %s '%s': %s\n" % (action, escape(project.workspace_path), escape(str(e))))
     for path in other_git:
         repo = Repo(os.path.join(srcdir, path))
-        tracking_branch = repo.head.reference.tracking_branch
         try:
+            tracking_branch = repo.head.reference.tracking_branch
             if fetch_remote and tracking_branch is not None:
                 tracking_remote = tracking_branch.remote
                 msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
@@ -302,8 +308,9 @@ def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
             return
         if repo.head.commit == master_branch.commit:
             return
-        if tracking_branch is not None and tracking_branch != master_branch.tracking_branch:
-            raise GitError("will not merge with foreign tracking branch")
+        if tracking_branch is not None:
+            if tracking_branch.remote != master_branch.tracking_branch.remote:
+                raise GitError("will not merge with foreign tracking branch")
         if master_branch.commit != master_branch.tracking_branch.commit and not need_push(repo, master_branch.tracking_branch, master_branch):
             raise GitError("will not merge with outdated master branch")
         if args.from_master or args.sync:

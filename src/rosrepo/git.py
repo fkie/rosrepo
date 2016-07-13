@@ -573,6 +573,13 @@ class Repo(object):
     def remote(self, name):
         return self.refs.remotes[name]
 
+    def detached_head(self):
+        try:
+            self.head.reference
+            return False
+        except GitError:
+            return True
+
     def is_dirty(self):
         stdout = self.git.status(porcelain=True).strip()
         return stdout != ""
