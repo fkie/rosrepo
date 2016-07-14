@@ -475,6 +475,17 @@ class WorkspaceTest(unittest.TestCase):
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--no-rosclipse")
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("use_rosclipse"), False)
+        #######################
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--no-env-cache")
+        self.assertEqual(exitcode, 0)
+        self.assertEqual(self.get_config_value("use_env_cache"), False)
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--env-cache")
+        self.assertEqual(exitcode, 0)
+        self.assertEqual(self.get_config_value("use_env_cache"), True)
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--no-env-cache")
+        self.assertEqual(exitcode, 0)
+        self.assertEqual(self.get_config_value("use_env_cache"), False)
+        #######################
 
     def test_init_failures(self):
         with patch("rosrepo.cmd_init.find_ros_root", lambda x: None):

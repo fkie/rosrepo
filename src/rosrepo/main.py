@@ -64,7 +64,7 @@ def prepare_arguments(parser):
     g.add_argument("--show-gitlab-urls", action="store_true", help="show all configured Gitlab servers")
     g.add_argument("--gitlab-login", metavar="LABEL", help="acquire private token for the Gitlab server named LABEL")
     g.add_argument("--gitlab-logout", metavar="LABEL", help="delete private token for the Gitlab server named LABEL")
-    g.add_argument("--private-token", metavar="TOKEN", help="set private token for Gitlab server access explicitly")
+    g.add_argument("--private-token", metavar="TOKEN", help="set private token for Gitlab server access explicitly (can be used with --set-gitlab-url and --gitlab-login)")
     g = p.add_argument_group("credential storage options")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--no-store-credentials", action="store_true", help="do not store private tokens in config")
@@ -78,7 +78,7 @@ def prepare_arguments(parser):
     m.add_argument("--install", action="store_true", help="run installation routine for packages")
     m.add_argument("--no-install", action="store_true", help="do not run installation routine for packages")
     m = g.add_mutually_exclusive_group(required=False)
-    m.add_argument("--set-compiler", help="override compiler to build packages")
+    m.add_argument("--set-compiler", metavar="COMPILER", help="override compiler to build packages")
     m.add_argument("--unset-compiler", action="store_true", help="reset compiler override")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--rosclipse", action="store_true", help="use rosclipse to update Eclipse project files")
@@ -86,6 +86,9 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--catkin-lint", action="store_true", help="use catkin_lint to check packages before build")
     m.add_argument("--no-catkin-lint", action="store_true", help="do not use catkin_lint to check packages before build")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--env-cache", action="store_true", help="cache build environment settings to build workspace faster")
+    m.add_argument("--no-env-cache", action="store_true", help="do not cache build environment settings")
     from .cmd_config import run as config_func
     p.set_defaults(func=config_func)
 
@@ -131,6 +134,9 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--catkin-lint", action="store_true", help="force catkin_lint to check packages before build")
     m.add_argument("--no-catkin-lint", action="store_true", help="do not run catkin_lint to check packages before build")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--env-cache", action="store_true", help="cache build environment settings to build workspace faster")
+    m.add_argument("--no-env-cache", action="store_true", help="do not cache build environment settings")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--set-default", action="store_true", help="use selected packages as new default build set")
     m.add_argument("--set-pinned", action="store_true", help="use selected packages as new pinned build set, i.e. build them always")
@@ -190,6 +196,7 @@ def prepare_arguments(parser):
     # clean
     p = cmds.add_parser("clean", help="clean workspace")
     add_common_options(p)
+    p.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
     from .cmd_clean import run as clean_func
     p.set_defaults(func=clean_func)
 

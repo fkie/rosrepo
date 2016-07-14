@@ -84,8 +84,9 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         if repo.is_dirty():
             status.append("@!@{yf}needs commit")
         if tracking_branch is not None:
-            if master_remote_branch is not None and tracking_branch != master_remote_branch:
-                status.append("@!@{rf}remote '%s'" % master_remote_branch.remote)
+            if master_remote_branch is not None:
+                if tracking_branch.remote != master_remote_branch.remote:
+                    status.append("@!@{rf}remote '%s'" % tracking_branch.remote)
             if need_push(repo.head.reference):
                 status.append("@!@{yf}needs push")
             elif need_pull(repo.head.reference):
@@ -104,17 +105,20 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                         status.append("@!@{yf}needs merge --from-master")
                     if not is_up_to_date(repo.head, master_branch):
                         status.append("@!@{yf}needs merge --to-master")
-            if master_branch is not None and master_remote_branch is not None:
-                if need_push(master_branch):
-                    status.append("@!@{yf}%s needs push" % master_branch)
-                elif need_pull(master_branch):
-                    status.append("@!@{cf}%s needs pull" % master_branch)
-                elif not is_up_to_date(master_branch):
-                    status.append("@!@{yf}%s needs merge" % master_branch)
+        if master_branch is not None and master_remote_branch is not None and tracking_branch != master_remote_branch:
+            if need_push(master_branch):
+                status.append("@!@{yf}%s needs push" % master_branch)
+            elif need_pull(master_branch):
+                status.append("@!@{cf}%s needs pull" % master_branch)
+            elif not is_up_to_date(master_branch):
+                status.append("@!@{yf}%s needs merge" % master_branch)
         if not status:
             if not show_up_to_date:
                 return None
-            status.append("@!@{gf}up-to-date")
+            if master_remote_branch is not None and master_remote_branch != tracking_branch:
+                status.append("@!@{gf}up-to-date@|(%s)" % tracking_branch)
+            else:
+                status.append("@!@{gf}up-to-date")
         return status
 
     table = TableView("Package", "Path", "Status")
