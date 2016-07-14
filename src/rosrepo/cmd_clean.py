@@ -29,4 +29,5 @@ def run(args):
     catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
     if args.dry_run:
         catkin_clean.append("--dry-run")
+    catkin_clean += args.packages
     return call_process(catkin_clean)

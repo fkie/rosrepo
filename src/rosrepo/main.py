@@ -190,6 +190,7 @@ def prepare_arguments(parser):
     # clean
     p = cmds.add_parser("clean", help="clean workspace")
     add_common_options(p)
+    p.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
     from .cmd_clean import run as clean_func
     p.set_defaults(func=clean_func)
 
