@@ -199,6 +199,12 @@ def run(args):
     if args.no_catkin_lint:
         config["use_catkin_lint"] = False
 
+    config.set_default("use_env_cache", True)
+    if args.env_cache:
+        config["use_env_cache"] = True
+    if args.no_env_cache:
+        config["use_env_cache"] = False
+
     config.write()
 
     ros_rootdir = find_ros_root(config.get("ros_root"))

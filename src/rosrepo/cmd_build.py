@@ -131,6 +131,9 @@ def run(args):
     if args.keep_going:
         catkin_build += ["--continue-on-failure"]
 
+    if (args.env_cache or config.get("use_env_cache", True)) and not args.no_env_cache:
+        catkin_build += ["--env-cache"]
+
     if args.jobs:
         catkin_build += ["-j", str(args.jobs), "-p", str(args.jobs)]
     elif "job_limit" in config:

@@ -86,6 +86,9 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--catkin-lint", action="store_true", help="use catkin_lint to check packages before build")
     m.add_argument("--no-catkin-lint", action="store_true", help="do not use catkin_lint to check packages before build")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--env-cache", action="store_true", help="cache build environment settings to build workspace faster")
+    m.add_argument("--no-env-cache", action="store_true", help="do not cache build environment settings")
     from .cmd_config import run as config_func
     p.set_defaults(func=config_func)
 
@@ -131,6 +134,9 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--catkin-lint", action="store_true", help="force catkin_lint to check packages before build")
     m.add_argument("--no-catkin-lint", action="store_true", help="do not run catkin_lint to check packages before build")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--env-cache", action="store_true", help="cache build environment settings to build workspace faster")
+    m.add_argument("--no-env-cache", action="store_true", help="do not cache build environment settings")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--set-default", action="store_true", help="use selected packages as new default build set")
     m.add_argument("--set-pinned", action="store_true", help="use selected packages as new pinned build set, i.e. build them always")
