@@ -1,0 +1,6 @@
+site_name: rosrepo
+theme: readthedocs
+pages:
+- Home: index.md
+- Installation: install.md
+- Initialize your workspace: cmd_init.md
