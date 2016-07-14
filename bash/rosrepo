@@ -120,7 +120,7 @@ _rosrepo_complete()
     ####
     if [ "$cmd" = "config" ]
     then
-	COMPREPLY=($(compgen -W "$common_opts --set-gitlab-url --unset-gitlab-url --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint" -- "$arg"))
+	COMPREPLY=($(compgen -W "$common_opts --set-gitlab-url --unset-gitlab-url --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --env-cache --no-env-cache" -- "$arg"))
         return 0
     fi
     ####
@@ -145,7 +145,14 @@ _rosrepo_complete()
     ####
     if [ "$cmd" = "clean" ]
     then
-        COMPREPLY=($(compgen -W "$common_opts" -- "$arg"))
+        rosrepo_cmd[1]="list"
+        rosrepo_cmd+=("-B")
+        if [ "${arg:0:1}" = "-" ]
+        then
+            COMPREPLY=($(compgen -W "$common_opts" -- "$arg"))
+        else
+            COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+        fi
         return 0
     fi
     ####
