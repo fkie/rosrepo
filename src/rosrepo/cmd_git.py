@@ -204,10 +204,10 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
             tracking_remote = tracking_branch.remote if tracking_branch is not None else None
             if fetch_remote and master_remote is not None:
                 msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
-                master_remote.fetch(simulate=dry_run)
+                master_remote.fetch(simulate=dry_run, console=True)
             if fetch_remote and tracking_remote is not None and master_remote != tracking_remote:
                 msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
-                tracking_remote.fetch(simulate=dry_run)
+                tracking_remote.fetch(simulate=dry_run, console=True)
             update_op(repo, master_branch, tracking_branch)
         except Exception as e:
             error("cannot %s '%s': %s\n" % (action, escape(project.workspace_path), escape(str(e))))
@@ -218,7 +218,7 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
             if fetch_remote and tracking_branch is not None:
                 tracking_remote = tracking_branch.remote
                 msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
-                tracking_remote.fetch(simulate=dry_run)
+                tracking_remote.fetch(simulate=dry_run, console=True)
             update_op(repo, None, tracking_branch)
         except Exception as e:
             error("cannot %s '%s': %s\n" % (action, escape(path), escape(str(e))))
@@ -233,22 +233,22 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=
             if need_pull(repo.head, tracking_branch):
                 stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
                 msg(stdout, indent_first=2, indent_next=10)
-                repo.git.merge(tracking_branch, ff_only=True, on_fail="conflicts", simulate=dry_run)
+                repo.git.merge(tracking_branch, ff_only=True, on_fail="conflicts", simulate=dry_run, console=True)
             elif repo.head.commit != tracking_branch.commit and merge:
                 stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
                 msg(stdout, indent_first=2, indent_next=10)
-                robust_merge(repo, tracking_branch, m="Merge changes from %s into %s" % (tracking_branch. repo.head.reference), on_fail="conflicts", simulate=dry_run)
+                robust_merge(repo, tracking_branch, m="Merge changes from %s into %s" % (tracking_branch. repo.head.reference), on_fail="conflicts", simulate=dry_run, console=True)
         if master_branch is not None:
             if repo.head.reference != master_branch and need_pull(master_branch):
                 stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (master_branch, master_branch.tracking_branch), "--", simulate=dry_run)
                 msg(stdout, indent_first=2, indent_next=10)
                 with repo.temporary_stash(simulate=dry_run):
                     repo.git.checkout(master_branch, simulate=dry_run)
-                    repo.git.merge(master_branch.tracking_branch, ff_only=True, on_fail="conflicts", simulate=dry_run)
+                    repo.git.merge(master_branch.tracking_branch, ff_only=True, on_fail="conflicts", simulate=dry_run, console=True)
             if update_local and (is_up_to_date(master_branch) or need_push(master_branch)) and need_pull(repo.head, master_branch):
                 stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, master_branch), "--", simulate=dry_run)
                 msg(stdout, indent_first=2, indent_next=10)
-                repo.git.merge(master_branch, ff_only=True, on_fail="conflicts", simulate=dry_run)
+                repo.git.merge(master_branch, ff_only=True, on_fail="conflicts", simulate=dry_run, console=True)
 
     update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run, action="pull")
 
@@ -260,11 +260,11 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False
         if tracking_branch is not None and need_push(repo.head, tracking_branch):
             stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (tracking_branch, repo.head.reference), "--", simulate=dry_run)
             msg(stdout, indent_first=2, indent_next=10)
-            repo.git.push(tracking_branch.remote, "%s:%s" % (repo.head.reference, tracking_branch.branch_name), simulate=dry_run)
+            repo.git.push(tracking_branch.remote, "%s:%s" % (repo.head.reference, tracking_branch.branch_name), simulate=dry_run, console=True)
         if master_branch is not None and repo.head.reference != master_branch and need_push(master_branch):
             stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (master_branch.tracking_branch, master_branch), "--", simulate=dry_run)
             msg(stdout, indent_first=2, indent_next=10)
-            repo.git.push(master_branch.tracking_branch.remote, "%s:%s" % (master_branch, master_branch.tracking_branch.branch_name), simulate=dry_run)
+            repo.git.push(master_branch.tracking_branch.remote, "%s:%s" % (master_branch, master_branch.tracking_branch.branch_name), simulate=dry_run, console=True)
 
     update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, action="push")
 
@@ -351,10 +351,10 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=Fals
     projects = list(set(p.project for _, p in need_cloning))
     for project in projects:
         git_subdir = compute_git_subdir(srcdir, project.server_path)
-        msg("@{cf}Cloning@|: %s\n" % escape(git_subdir))
         if protocol not in project.url:
             fatal("unsupported procotol type: %s\n" % protocol)
-        Git(srcdir).clone(project.url[protocol], git_subdir, simulate=dry_run)
+        msg("@{cf}Cloning@|: %s\n" % escape(project.url[protocol]))
+        Git(srcdir).clone(project.url[protocol], git_subdir, simulate=dry_run, console=True)
         msg("\n")
     return True
 

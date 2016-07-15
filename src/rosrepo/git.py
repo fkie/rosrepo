@@ -19,6 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 from .util import call_process, PIPE, iteritems
 try:
     from itertools import imap as map
@@ -38,7 +39,7 @@ class GitError(RuntimeError):
 
 class GitCommand(object):
     __slots__ = ("_args")
-    _local_args = ("stdin", "on_fail", "simulate")
+    _local_args = ("stdin", "on_fail", "simulate", "console")
 
     def __init__(self, args):
         self._args = args
@@ -63,8 +64,12 @@ class GitCommand(object):
         if simulate:
             print(" ".join(invoke))
             return ""
+        elif kwargs.get("console", False):
+            exitcode = call_process(invoke, env={"PATH": os.environ.get("PATH", "")})
+            stdout = None
+            stderr = "command failed: %s" % " ".join(invoke) if exitcode != 0 else None
         else:
-            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, input_data=kwargs.get("stdin", None))
+            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, env={"PATH": os.environ.get("PATH", "")}, input_data=kwargs.get("stdin", None))
         if exitcode != 0:
             on_fail = kwargs.get("on_fail", None)
             if on_fail:

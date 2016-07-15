@@ -37,6 +37,8 @@ try:
 except ImportError:
     from io import StringIO
 
+from .helper import call_process
+
 import rosrepo.git as git
 
 class GitTest(unittest.TestCase):
@@ -188,6 +190,15 @@ class GitTest(unittest.TestCase):
         self.assertIn(repo.remote("origin"), s)
         s = set([repo])
         self.assertIn(repo, s)
+
+        stdout = StringIO()
+        with patch("sys.stdout", stdout):
+            with patch("sys.stderr", stdout):
+                with patch("rosrepo.git.call_process", call_process):
+                    repo.git.status(console=True)
+        stdout = stdout.getvalue()
+        self.assertIn("On branch master", stdout)
+        self.assertIn("nothing to commit", stdout)
 
         self.assertEqual(repr(repo), "Repo(%r)" % self.gitdir)
         self.assertEqual(repr(repo.remotes.origin), "Remote(Repo(%r), %r)" % (self.gitdir, "origin"))
