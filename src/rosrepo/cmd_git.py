@@ -366,6 +366,8 @@ def run(args):
     srcdir = os.path.join(wsdir, "src")
     ws_state = get_workspace_state(wsdir, config, cache=cache, offline_mode=args.offline)
     if args.git_cmd == "clone":
+        if args.all:
+            args.packages = set(ws_state.ws_packages.keys() + ws_state.remote_packages.keys())
         depends, system_depends, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
         if conflicts:
             show_conflicts(conflicts)

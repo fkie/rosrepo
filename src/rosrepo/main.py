@@ -154,7 +154,9 @@ def prepare_arguments(parser):
     q = git_cmds.add_parser("clone", help="clone packages from Gitlab repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL for remote access (default: ssh)")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clone")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("-a", "--all", action="store_true", help="clone EVERYTHING. It's your bandwidth and disk space after all.")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clone")
     # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
