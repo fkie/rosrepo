@@ -65,11 +65,11 @@ class GitCommand(object):
             print(" ".join(invoke))
             return ""
         elif kwargs.get("console", False):
-            exitcode = call_process(invoke, env={"PATH": os.environ.get("PATH", "")})
+            exitcode = call_process(invoke, env=self._clean_env())
             stdout = None
             stderr = "command failed: %s" % " ".join(invoke) if exitcode != 0 else None
         else:
-            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, env={"PATH": os.environ.get("PATH", "")}, input_data=kwargs.get("stdin", None))
+            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self._clean_env(), input_data=kwargs.get("stdin", None))
         if exitcode != 0:
             on_fail = kwargs.get("on_fail", None)
             if on_fail:
@@ -77,6 +77,13 @@ class GitCommand(object):
             else:
                 raise GitError(stderr.split("\n", 1)[0], exitcode)
         return stdout
+
+    def _clean_env(self):
+        result = {}
+        for key in os.environ.keys():
+            if key.startswith("GIT_") or key == "PATH" or key == "HOME":
+                result[key] = os.environ[key]
+        return result
 
 
 class Git(object):
