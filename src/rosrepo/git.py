@@ -19,6 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 from .util import call_process, PIPE, iteritems
 try:
     from itertools import imap as map
@@ -38,7 +39,7 @@ class GitError(RuntimeError):
 
 class GitCommand(object):
     __slots__ = ("_args")
-    _local_args = ("stdin", "on_fail", "simulate")
+    _local_args = ("stdin", "on_fail", "simulate", "console")
 
     def __init__(self, args):
         self._args = args
@@ -63,8 +64,12 @@ class GitCommand(object):
         if simulate:
             print(" ".join(invoke))
             return ""
+        elif kwargs.get("console", False):
+            exitcode = call_process(invoke, env={"PATH": os.environ.get("PATH", "")})
+            stdout = None
+            stderr = "command failed: %s" % " ".join(invoke) if exitcode != 0 else None
         else:
-            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, input_data=kwargs.get("stdin", None))
+            exitcode, stdout, stderr = call_process(invoke, stdin=PIPE, stdout=PIPE, stderr=PIPE, env={"PATH": os.environ.get("PATH", "")}, input_data=kwargs.get("stdin", None))
         if exitcode != 0:
             on_fail = kwargs.get("on_fail", None)
             if on_fail:
@@ -164,7 +169,7 @@ class RootReference(GitObject):
     def remotes(self):
         return self._remotes
 
-    def _from_ref(self, name):
+    def _from_string(self, name):
         if name == "":
             return self
         if "/" in name:
@@ -172,11 +177,11 @@ class RootReference(GitObject):
         else:
             head, tail = name, ""
         if head == "heads":
-            return self._branches._from_ref(tail)
+            return self._branches._from_string(tail)
         if head == "tags":
-            return self._tags._from_ref(tail)
+            return self._tags._from_string(tail)
         if head == "remotes":
-            return self._remotes._from_ref(tail)
+            return self._remotes._from_string(tail)
         return None
 
 
@@ -208,7 +213,7 @@ class ReferenceCollection(GitObject):
             cls=self._cls
         )
 
-    def _from_ref(self, name):
+    def _from_string(self, name):
         if name == "":
             return self
         return self._cls(name)
@@ -263,14 +268,14 @@ class Remotes(ReferenceCollection):
         self.repo.git.remote.add(name, url, *args, **kwargs)
         return self._cls(name)
 
-    def _from_ref(self, name):
+    def _from_string(self, name):
         if name == "":
             return self
         if "/" in name:
             head, tail = name.split("/", 1)
         else:
             head, tail = name, ""
-        return self._cls(head)._from_ref(tail)
+        return self._cls(head)._from_string(tail)
 
 
 class Remote(ReferenceCollection):
@@ -324,8 +329,8 @@ class Remote(ReferenceCollection):
     def fetch(self, *args, **kwargs):
         self.repo.git.fetch(self._name, *args, **kwargs)
 
-    def delete(self):
-        self.repo.git.remote.remove(self._name)
+    def delete(self, *args, **kwargs):
+        self.repo.git.remote.remove(self._name, *args, **kwargs)
 
 
 class Reference(GitObject):
@@ -414,8 +419,8 @@ class TagReference(Reference):
     def reference(self, value):
         self.repo.git.tag(self.name, value, force=True)
 
-    def delete(self):
-        self.repo.git.tag(self.name, delete=True)
+    def delete(self, *args, **kwargs):
+        self.repo.git.tag(self.name, delete=True, *args, **kwargs)
 
 
 class BranchReference(Reference):
@@ -445,7 +450,7 @@ class BranchReference(Reference):
     def tracking_branch(self):
         try:
             tb = self.repo.git.rev_parse(self._name + "@{u}", verify=True, symbolic_full_name=True).strip()
-            return self.repo.from_ref(tb)
+            return self.repo.from_string(tb)
         except GitError:
             return None
 
@@ -474,7 +479,7 @@ class SymbolicReference(Reference):
     @property
     def reference(self):
         ref = self.repo.git.symbolic_ref(self._name, on_fail="%r is not a symbolic reference" % self._name).strip()
-        return self.repo.from_ref(ref) or Reference(self.repo, ref)
+        return self.repo.from_string(ref) or Reference(self.repo, ref)
 
 
 class StashContext(object):
@@ -593,7 +598,7 @@ class Repo(object):
     def temporary_stash(self, simulate=None):
         return StashContext(self, simulate=simulate)
 
-    def from_ref(self, name):
+    def from_string(self, name):
         if name == "HEAD":
             return self.head
         if name == "ORIG_HEAD":
@@ -607,5 +612,5 @@ class Repo(object):
         else:
             tail = ""
         if name == "refs":
-            return self.refs._from_ref(tail)
+            return self.refs._from_string(tail)
         return None

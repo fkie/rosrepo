@@ -168,7 +168,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                         else:
                             cache_update = True
                             if verbose:
-                                msg("@{cf}Fetching@|: %s\n" % p.website)
+                                msg("@{cf}Updating@|: %s\n" % p.website)
                             manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
                             old_manifests = {}
                             if cached_p is not None:
@@ -186,12 +186,12 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                                 try:
                                     manifest = parse_package_string(xml_data, filename)
                                 except InvalidPackage as e:
-                                    warning("'%s' hosts invalid package '%s': %s\n" % (p.website, filename, str(e)))
+                                    warning("invalid package manifest '%s': %s\n" % (filename, str(e)))
                                     manifest = None
                                 p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
                         projects.append(p)
         except IOError as e:
-            error("cannot update from %s: %s\n" % (url, e))
+            error("cannot update from '%s': %s\n" % (url, e))
             projects = server_cache.projects
             cache_update = False
         if cache is not None:
@@ -259,7 +259,7 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, verbose=T
             if config.get("store_credentials", True):
                 gitlab_cfg["private_token"] = private_token
                 config.write()
-        gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, verbose=verbose)
+        gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", 1), verbose=verbose)
     return gitlab_projects
 
 

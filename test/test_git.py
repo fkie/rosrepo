@@ -37,6 +37,8 @@ try:
 except ImportError:
     from io import StringIO
 
+from .helper import call_process
+
 import rosrepo.git as git
 
 class GitTest(unittest.TestCase):
@@ -92,20 +94,20 @@ class GitTest(unittest.TestCase):
         self.assertIsInstance(repo.refs.remotes.origin, git.Remote)
         self.assertIsInstance(repo.refs.remotes.origin.master, git.RemoteReference)
 
-        self.assertEqual(repo.from_ref("invalid"), None)
-        self.assertEqual(repo.from_ref("HEAD"), repo.head)
-        self.assertEqual(repo.from_ref("ORIG_HEAD"), repo.orig_head)
-        self.assertEqual(repo.from_ref("FETCH_HEAD"), repo.fetch_head)
-        self.assertEqual(repo.from_ref("MERGE_HEAD"), repo.merge_head)
-        self.assertEqual(repo.from_ref("refs"), repo.refs)
-        self.assertEqual(repo.from_ref("refs/heads"), repo.refs.heads)
-        self.assertEqual(repo.from_ref("refs/remotes"), repo.remotes)
-        self.assertEqual(repo.from_ref("refs/tags"), repo.tags)
-        self.assertEqual(repo.from_ref("refs/invalid"), None)
-        self.assertEqual(repo.from_ref("refs/heads/master"), repo.heads.master)
-        self.assertEqual(repo.from_ref("refs/tags/foo"), repo.tags.foo)
-        self.assertEqual(repo.from_ref("refs/remotes/bar"), repo.remotes.bar)
-        self.assertEqual(repo.from_ref("refs/remotes/bar/master"), repo.remotes.bar.master)
+        self.assertEqual(repo.from_string("invalid"), None)
+        self.assertEqual(repo.from_string("HEAD"), repo.head)
+        self.assertEqual(repo.from_string("ORIG_HEAD"), repo.orig_head)
+        self.assertEqual(repo.from_string("FETCH_HEAD"), repo.fetch_head)
+        self.assertEqual(repo.from_string("MERGE_HEAD"), repo.merge_head)
+        self.assertEqual(repo.from_string("refs"), repo.refs)
+        self.assertEqual(repo.from_string("refs/heads"), repo.refs.heads)
+        self.assertEqual(repo.from_string("refs/remotes"), repo.remotes)
+        self.assertEqual(repo.from_string("refs/tags"), repo.tags)
+        self.assertEqual(repo.from_string("refs/invalid"), None)
+        self.assertEqual(repo.from_string("refs/heads/master"), repo.heads.master)
+        self.assertEqual(repo.from_string("refs/tags/foo"), repo.tags.foo)
+        self.assertEqual(repo.from_string("refs/remotes/bar"), repo.remotes.bar)
+        self.assertEqual(repo.from_string("refs/remotes/bar/master"), repo.remotes.bar.master)
 
         self.assertEqual(repo.head.commit, repo.heads.master.commit)
         self.assertRaises(AttributeError, lambda: repo.head.other)
@@ -188,6 +190,15 @@ class GitTest(unittest.TestCase):
         self.assertIn(repo.remote("origin"), s)
         s = set([repo])
         self.assertIn(repo, s)
+
+        stdout = StringIO()
+        with patch("sys.stdout", stdout):
+            with patch("sys.stderr", stdout):
+                with patch("rosrepo.git.call_process", call_process):
+                    repo.git.status(console=True)
+        stdout = stdout.getvalue()
+        self.assertIn("On branch master", stdout)
+        self.assertIn("nothing to commit", stdout)
 
         self.assertEqual(repr(repo), "Repo(%r)" % self.gitdir)
         self.assertEqual(repr(repo.remotes.origin), "Remote(Repo(%r), %r)" % (self.gitdir, "origin"))
