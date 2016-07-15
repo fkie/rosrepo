@@ -21,10 +21,15 @@
 #
 #
 import sys
+import requests
+try:
+    from urlparse import urljoin
+except ImportError:
+    from urllib.parse import urljoin
 from .workspace import find_ros_root, get_workspace_location
 from .gitlab import acquire_gitlab_private_token
 from .config import Config
-from .ui import TableView, msg, fatal, escape
+from .ui import TableView, msg, warning, fatal, escape
 from .common import DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
 from .util import call_process
 
@@ -127,9 +132,21 @@ def run(args):
                 if args.private_token:
                     private_token = args.private_token
                 else:
-                    if args.offline:
-                        fatal("cannot acquire Gitlab private token in offline mode\n")
-                    private_token = acquire_gitlab_private_token(label, url)
+                    private_token = None
+                    if "private_token" in srv:
+                        private_token = srv["private_token"]
+                        if not args.offline:
+                            r = requests.get(urljoin(url, "api/v3/projects"), headers={"PRIVATE-TOKEN": private_token})
+                            if r.status_code == 401:
+                                private_token = None
+                            else:
+                                msg("stored Gitlab private token is valid\n")
+                        else:
+                            warning("cannot verify Gitlab private token in offline mode\n")
+                    if private_token is None:
+                        if args.offline:
+                            fatal("cannot acquire Gitlab private token in offline mode\n")
+                        private_token = acquire_gitlab_private_token(label, url)
                 if config["store_credentials"]:
                     srv["private_token"] = private_token
                 break
@@ -140,19 +157,35 @@ def run(args):
         if args.private_token:
             private_token = args.private_token
         else:
-            if args.offline:
-                fatal("cannot acquire Gitlab private token in offline mode\n")
-            private_token = acquire_gitlab_private_token(label, url)
+            private_token = None
         config.set_default("gitlab_servers", [])
         for srv in config["gitlab_servers"]:
             if srv.get("label", None) == label:
                 srv["url"] = url
-                if private_token is not None and config["store_credentials"]:
+                if config["store_credentials"]:
+                    if private_token is None and "private_token" in srv:
+                        private_token = srv["private_token"]
+                        if not args.offline:
+                            r = requests.get(urljoin(url, "api/v3/projects"), headers={"PRIVATE-TOKEN": private_token})
+                            if r.status_code == 401:
+                                private_token = None
+                            else:
+                                msg("stored Gitlab private token is valid\n")
+                        else:
+                            warning("cannot verify Gitlab private token in offline mode\n")
+                    if private_token is None:
+                        if args.offline:
+                            fatal("cannot acquire Gitlab private token in offline mode\n")
+                        private_token = acquire_gitlab_private_token(label, url)
                     srv["private_token"] = private_token
                 break
         else:
             srv = {"label": label, "url": url}
-            if private_token is not None and config["store_credentials"]:
+            if config["store_credentials"]:
+                if private_token is None:
+                    if args.offline:
+                        fatal("cannot acquire Gitlab private token in offline mode\n")
+                    private_token = acquire_gitlab_private_token(label, url)
                 srv["private_token"] = private_token
             config["gitlab_servers"].append(srv)
     if args.unset_gitlab_url:

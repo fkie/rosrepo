@@ -130,10 +130,20 @@ def fake_apt_installed(packages):
     return set([p for p in packages if "installed" in p])
 
 
+class FakeResponse(object):
+    def __init__(self, _status_code):
+        self.status_code = _status_code
+
+
+def fake_requests_get(*args, **kwargs):
+    return FakeResponse(401)
+
+
 @mock.patch("rosrepo.resolver._rosdep_instance", FakeRosdep())
 @mock.patch("rosrepo.resolver.apt_installed", fake_apt_installed)
 @mock.patch("rosrepo.cmd_build.call_process", no_call_process)
 @mock.patch("rosrepo.cmd_build.find_program", find_program)
+@mock.patch("requests.get", fake_requests_get)
 @mock.patch("rosrepo.cmd_config.acquire_gitlab_private_token", fake_acquire_user_token)
 @mock.patch("rosrepo.cmd_config.call_process", call_process)
 @mock.patch("rosrepo.cmd_clean.call_process", call_process)
