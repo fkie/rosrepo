@@ -22,6 +22,7 @@
 #
 import os
 import sys
+import re
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages
 from .config import Config
 from .cache import Cache
@@ -359,6 +360,30 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=Fals
     return True
 
 
+def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
+    if args.move_host:
+        old_host, new_host = args.move_host
+        for path in [project.workspace_path for project in projects] + other_git:
+            repo = Repo(os.path.join(srcdir, path))
+            for remote in repo.remotes:
+                old_url = remote.url
+                new_url = re.sub("([/@])%s([/:])" % old_host.replace(".", "\\."), "\\1%s\\2" % new_host, old_url)
+                if old_url != new_url:
+                    msg("@{cf}Updating@|: %s @!->@| %s\n" % (old_url, new_url), indent_next=10)
+                    if not args.dry_run:
+                        remote.url = new_url
+    if args.protocol:
+        for project in projects:
+            repo = Repo(os.path.join(srcdir, project.workspace_path))
+            master_remote = get_origin(repo, project)
+            old_url = master_remote.url
+            new_url = project.url.get(args.protocol, old_url)
+            if old_url != new_url:
+                msg("@{cf}Updating@|: %s @!->@| %s\n" % (old_url, new_url), indent_next=10)
+                if not args.dry_run:
+                    master_remote.url = new_url
+
+
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
@@ -406,4 +431,6 @@ def run(args):
         merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     if args.git_cmd == "commit":
         commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+    if args.git_cmd == "remote":
+        remote_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     return 0

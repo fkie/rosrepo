@@ -49,10 +49,10 @@ _rosrepo_complete()
             -r|--ros-root)
                 [ "$cmd" = "init" ] && shift
                 ;;
-            --with-private-token|--unset-gitlab-url|-j|--job-limit|--set-compiler)
+            --with-private-token|--unset-gitlab-url|-j|--job-limit|--set-compiler|protocol)
                 shift
                 ;;
-            --set-gitlab-url)
+            --set-gitlab-url|--move-host)
                 shift 2
                 ;;
             -*)
@@ -95,12 +95,18 @@ _rosrepo_complete()
             COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
             return 0
             ;;
+        --move-host)
+            return 0
+            ;;
     esac
     case "$prev2" in
          --set-gitlab-url)
             rosrepo_cmd[1]="config"
             rosrepo_cmd+=("--get-gitlab-url" "$prev")
             COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            return 0
+            ;;
+        --move-host)
             return 0
             ;;
     esac
@@ -177,7 +183,7 @@ _rosrepo_complete()
     then
         if [ "$nargs" -eq 2 ]
         then
-            COMPREPLY=($(compgen -W "$common_opts clone status push pull merge commit" -- "$arg"))
+            COMPREPLY=($(compgen -W "$common_opts clone status push pull merge commit remote" -- "$arg"))
             return 0
         fi
         case "$cmd2" in
@@ -203,7 +209,7 @@ _rosrepo_complete()
                 fi
                 return 0
                 ;;
-            push|pull|merge|commit)
+            push|pull|merge|commit|remote)
                 rosrepo_cmd[1]="list"
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
@@ -216,6 +222,10 @@ _rosrepo_complete()
                     if [ "$cmd2" == "merge" ]
                     then
                         COMPREPLY+=($(compgen -W "--from-master --to-master --sync --abort --resolve" -- "$arg"))
+                    fi
+                    if [ "$cmd2" == "remote" ]
+                    then
+                        COMPREPLY+=($(compgen -W "--protocol --move-host" -- "$arg"))
                     fi
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
