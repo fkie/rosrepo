@@ -192,6 +192,13 @@ def prepare_arguments(parser):
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--no-depends", action="store_true", help="do not include dependent packages in selection")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to commit")
+    # git remote
+    q = git_cmds.add_parser("remote", help="change upstream settings for Git projects")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    q.add_argument("--no-depends", action="store_true", help="do not include dependent packages")
+    q.add_argument("--protocol", help="switch protocol for remote URLs")
+    q.add_argument("--move-host", metavar=("OLD_HOST", "NEW_HOST"), nargs=2, help="change host name for all remote URLs after a server move")
+    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 
