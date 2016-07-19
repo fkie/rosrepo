@@ -42,6 +42,7 @@ class WorkspaceTest(unittest.TestCase):
     def setUp(self):
         self.ros_root_dir = mkdtemp()
         self.wsdir = mkdtemp()
+        self.homedir = mkdtemp()
         helper.create_fake_ros_root(self.ros_root_dir)
         helper.create_package(self.wsdir, "alpha", ["beta", "gamma", "installed-system"])
         helper.create_package(self.wsdir, "beta", ["delta"])
@@ -52,10 +53,11 @@ class WorkspaceTest(unittest.TestCase):
         helper.create_package(self.wsdir, "incomplete", ["missing-system"])
         helper.create_package(self.wsdir, "ancient", [], deprecated=True)
         helper.create_package(self.wsdir, "ancient2", [], deprecated="Walking Dead")
-        os.environ = {"PATH": "/usr/bin:/bin"}  # rosdep2 dies without PATH variable
+        os.environ = {"HOME": self.homedir, "XDG_CONFIG_HOME": os.path.join(self.homedir, ".config"), "PATH": "/usr/bin:/bin"}  # rosdep2 dies without PATH variable
 
     def tearDown(self):
         shutil.rmtree(self.wsdir, ignore_errors=True)
+        shutil.rmtree(self.homedir, ignore_errors=True)
         shutil.rmtree(self.ros_root_dir, ignore_errors=True)
         self.ros_root_dir = None
         self.wsdir = None
@@ -332,6 +334,10 @@ class WorkspaceTest(unittest.TestCase):
             self.assertEqual(exitcode, 1)
             self.assertIn("cannot detect ROS distribution", stdout)
         #######################
+        os.chmod(self.homedir, 0)
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir)
+        self.assertEqual(exitcode, 0)
+        os.chmod(self.homedir, 0o755)
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "16")
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("job_limit"), 16)
