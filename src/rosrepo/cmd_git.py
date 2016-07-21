@@ -238,7 +238,7 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=
             elif repo.head.commit != tracking_branch.commit and merge:
                 stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (repo.head.reference, tracking_branch), "--", simulate=dry_run)
                 msg(stdout, indent_first=2, indent_next=10)
-                robust_merge(repo, tracking_branch, m="Merge changes from %s into %s" % (tracking_branch. repo.head.reference), on_fail="conflicts", simulate=dry_run, console=True)
+                robust_merge(repo, tracking_branch, m="Merge changes from %s into %s" % (tracking_branch, repo.head.reference), on_fail="conflicts", simulate=dry_run, console=True)
         if master_branch is not None:
             if repo.head.reference != master_branch and need_pull(master_branch):
                 stdout = repo.git.log(r"--pretty=%h [%an] %s", "%s..%s" % (master_branch, master_branch.tracking_branch), "--", simulate=dry_run)
@@ -290,7 +290,11 @@ def robust_merge(repo, *args, **kwargs):
         repo.git.merge(*args, **kwargs)
     except GitError:
         if repo.conflicts():
-            repo.git.mergetool()
+            invoke = ["git", "-C", repo.workspace, "mergetool"]
+            if kwargs.get("dry_run", False):
+                msg("@{cf}Invoking@|: %s\n" % " ".join(invoke))
+            else:
+                call_process(invoke)
         else:
             raise
         if not repo.conflicts():
