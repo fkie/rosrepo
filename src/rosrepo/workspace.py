@@ -25,7 +25,7 @@ from catkin_pkg.package import parse_package, InvalidPackage, PACKAGE_MANIFEST_F
 from .config import Config, ConfigError, Version
 from .cache import Cache
 from .gitlab import get_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects
-from .util import path_has_prefix, iteritems, NamedTuple
+from .util import path_has_prefix, iteritems, NamedTuple, is_deprecated_package
 from .ui import msg, warning, fatal, escape
 
 
@@ -363,6 +363,8 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                 msg("You have multiple versions of the package @{cf}%s@| in your workspace:\n\n" % escape(name))
                 for pkg in pkg_list:
                     msg("     - @{cf}%s@|\n" % escape(os.path.join(wsdir, "src", pkg.workspace_path)))
+                    if is_deprecated_package(pkg.manifest):
+                        msg("       @{rf}(deprecated)@|\n")
                 msg(
                     "\n"
                     "Please remove one of the versions or place a @{cf}CATKIN_IGNORE@| file "
@@ -382,4 +384,5 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                 for prj in ws_state.ws_projects:
                     if path_has_prefix(pkg.workspace_path, prj.workspace_path):
                         pkg.project = prj
+                        break
     return ws_state

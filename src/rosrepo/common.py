@@ -21,6 +21,9 @@
 #
 #
 import re
+import os
+from .util import makedirs
+
 
 COMPILER_LIST = [
     [r"gcc|gnu", "gcc", "g++"],
@@ -38,6 +41,48 @@ DEFAULT_CMAKE_ARGS = [
     "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,defs",
     "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,defs"
 ]
+
+DEFAULT_GIT_IGNORE = set([
+    "*.egg-info/",
+    "__pycache__/",
+    ".settings/",
+    "CATKIN_IGNORE",
+    ".catkin_tools/",
+    ".rosrepo/",
+    ".catkin_workspace",
+    ".catkin",
+    ".coverage",
+    ".*.swp",
+    "*~",
+    "*.bak",
+    "*.orig",
+    "*.py[cdo]",
+    "*.o",
+    "lib*.a",
+    "lib*.so",
+    "lib*.so.*",
+    "*.bag",
+])
+
+
+def update_default_git_ignore():
+    config_home = os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
+    gitconfig_dir = os.path.join(config_home, "git")
+    gitignore_file = os.path.join(gitconfig_dir, "ignore")
+    gitignore = set()
+    try:
+        with open(gitignore_file, "r") as f:
+            gitignore = set([e for e in f.read().split("\n") if e])
+    except IOError:
+        pass
+    if not DEFAULT_GIT_IGNORE.issubset(gitignore):
+        gitignore |= set(DEFAULT_GIT_IGNORE)
+        try:
+            makedirs(gitconfig_dir)
+            with open(gitignore_file, "w") as f:
+                f.write("\n".join(sorted(list(gitignore))))
+        except (OSError, IOError):
+            pass
 
 
 def get_c_compiler(s):

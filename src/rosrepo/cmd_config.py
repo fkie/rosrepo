@@ -30,7 +30,7 @@ from .workspace import find_ros_root, get_workspace_location
 from .gitlab import acquire_gitlab_private_token
 from .config import Config
 from .ui import TableView, msg, warning, fatal, escape
-from .common import DEFAULT_CMAKE_ARGS, get_c_compiler, get_cxx_compiler
+from .common import DEFAULT_CMAKE_ARGS, update_default_git_ignore, get_c_compiler, get_cxx_compiler
 from .util import call_process
 
 
@@ -239,6 +239,7 @@ def run(args):
         config["use_env_cache"] = False
 
     config.write()
+    update_default_git_ignore()
 
     ros_rootdir = find_ros_root(config.get("ros_root"))
     if ros_rootdir is None:
