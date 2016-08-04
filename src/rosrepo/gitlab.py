@@ -142,7 +142,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                 etag = {}
                 if server_cache.etag is not None:
                     etag.update({"If-None-Match": server_cache.etag})
-                r = s.get(urljoin(url, "api/v3/projects"), headers=etag, timeout=timeout)
+                r = s.get(urljoin(url, "api/v3/projects/?per_page=100"), headers=etag, timeout=timeout)
                 r.raise_for_status()
                 if r.status_code == 304:
                     projects = server_cache.projects

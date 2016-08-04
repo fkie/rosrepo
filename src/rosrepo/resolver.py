@@ -163,7 +163,7 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                         best_score = -1  # small penalty for relying on system package
                     else:
                         resolver_msgs.append("is not installable from a configured Gitlab server due to problems with " + ", ".join("@{cf}%s@|" % s for s in sorted(local_conflicts.keys())))
-                        resolver_msgs.append("is not installable as system package")
+                        resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                         conflicts[name] = resolver_msgs
                 elif name in rosdep and depender is None:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
@@ -174,7 +174,7 @@ def find_dependees(packages, ws_state, auto_resolve=False):
                 else:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     resolver_msgs.append("is not available from a configured Gitlab server")
-                    resolver_msgs.append("is not installable as system package")
+                    resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                     conflicts[name] = resolver_msgs
         score -= 100 * len(system_depends - apt_installed(system_depends))  # Large penalty for uninstalled system dependency
         return depends, system_depends, conflicts, score
