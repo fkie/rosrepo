@@ -117,8 +117,14 @@ def find_workspace(override=None):
             return os.path.realpath(override)
         return None
     wsdir = os.getcwd()
-    if is_workspace(wsdir):
-        return os.path.realpath(wsdir)
+    while wsdir:
+        if is_workspace(wsdir):
+            return os.path.realpath(wsdir)
+        if os.path.ismount(wsdir):
+            break
+        wsdir, tail = os.path.split(wsdir)
+        if not tail:
+            break
     if "ROS_PACKAGE_PATH" in os.environ:
         candidates = os.environ["ROS_PACKAGE_PATH"].split(os.pathsep)
         for path in candidates:
