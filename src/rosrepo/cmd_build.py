@@ -164,7 +164,10 @@ def run(args):
         warning("%s is not in PATH\n" % os.path.join(wsdir, "devel", "bin"))
         msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
     if not env_path_list_contains("ROS_PACKAGE_PATH", os.path.join(wsdir, "src")):
-        warning("%s is not in ROS_PACKAGE_PATH\n" % os.path.join(wsdir, "src"))
-        msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
-
+        for name, pkg in iteritems(build_packages):
+            if not pkg.manifest.is_metapackage() and hasattr(pkg, "workspace_path") and pkg.workspace_path is not None:
+                pkgdir = os.path.join(wsdir, "src", pkg.workspace_path)
+                if not env_path_list_contains("ROS_PACKAGE_PATH", pkgdir):
+                    warning("%s is not in ROS_PACKAGE_PATH\n" % pkgdir)
+                    msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
     return ret

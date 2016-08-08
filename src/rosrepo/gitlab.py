@@ -216,11 +216,10 @@ def find_catkin_packages_from_gitlab_projects(projects, result=None):
 
 
 def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
-    def repo_has_project_url(repo, project):
-        for r in repo.remotes:
-            for _, url in iteritems(project.url):
-                if r.url == url:
-                    return True
+    def repo_has_project_url(repo_urls, project):
+        for _, url in iteritems(project.url):
+            if url in repo_urls:
+                return True
         return False
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
     result = []
@@ -228,9 +227,12 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     for curdir, subdirs, _ in os.walk(base_path, followlinks=True):
         if ".git" in subdirs:
             repo = Repo(curdir)
+            repo_urls = set()
+            for r in repo.remotes:
+                repo_urls.add(r.url)
             path = os.path.relpath(curdir, srcdir)
             for project in projects:
-                if repo_has_project_url(repo, project):
+                if repo_has_project_url(repo_urls, project):
                     assert project.workspace_path is None or project.workspace_path == path
                     project.workspace_path = path
                     for p in project.packages:
