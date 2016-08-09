@@ -1,3 +1,9 @@
+rosrepo (3.0.20-1) unstable; urgency=medium
+
+  * New release.
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 09 Aug 2016 19:04:13 +0200
+
 rosrepo (3.0.19-1) unstable; urgency=medium
 
   * New release.
