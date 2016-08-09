@@ -411,11 +411,11 @@ def run(args):
         for p in args.packages:
             if p not in ws_state.ws_packages:
                 fatal("package '%s' is not in workspace\n" % escape(p))
-        if args.no_depends:
-            packages = set(args.packages)
-        else:
+        if args.with_depends:
             packages, _, conflicts = find_dependees(args.packages, ws_state)
             show_conflicts(conflicts)
+        else:
+            packages = set(args.packages)
         paths = []
         for name in packages:
             paths += [p.workspace_path for p in ws_state.ws_packages[name]]

@@ -192,7 +192,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                   COMPREPLY=($(compgen -W "-m --modified --no-depends" -- "$arg"))
+                   COMPREPLY=($(compgen -W "-m --modified --with-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
@@ -214,7 +214,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                    COMPREPLY=($(compgen -W "--dry-run --no-depends" -- "$arg"))
+                    COMPREPLY=($(compgen -W "--dry-run --with-depends" -- "$arg"))
                     if [ "$cmd2" == "pull" ]
                     then
                         COMPREPLY+=($(compgen -W "-M --merge -L --update-local" -- "$arg"))
