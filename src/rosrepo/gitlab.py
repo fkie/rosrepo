@@ -164,6 +164,8 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                     )
                     if cached_p is not None and cached_p.last_modified == p.last_modified:
                         p.packages = cached_p.packages
+                        for prj in p.packages:
+                            prj.project = p
                     else:
                         cache_update = True
                         if verbose:
