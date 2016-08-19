@@ -397,7 +397,9 @@ def run(args):
     if args.git_cmd == "clone":
         if args.all:
             args.packages = set(ws_state.ws_packages.keys() + ws_state.remote_packages.keys())
-        depends, system_depends, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False)
+        if not args.packages:
+            fatal("no packages specified")
+        depends, system_depends, conflicts = find_dependees(args.packages, ws_state, auto_resolve=False, ignore_missing=args.ignore_missing_depends)
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies\n")
