@@ -111,7 +111,7 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
                     for pkg in ws_state.remote_packages[name]:
                         # Is the package project in the workspace already?
                         if pkg.project in ws_state.ws_projects:
-                            resolver_msgs.append("cannot be cloned from @{cf}%s@| because that repository is cloned in @{cf}%s/@| already" % (escape(pkg.project.name), escape(pkg.project.workspace_path)))
+                            resolver_msgs.append("not found in project @{cf}%s@| which is cloned in @{cf}%s/@| (maybe you need to @{cf}git pull@| the latest version)" % (escape(pkg.project.name), escape(pkg.project.workspace_path)))
                             continue  # Fail
                         # Check other packages in the same Gitlab project
                         for other in pkg.project.packages:

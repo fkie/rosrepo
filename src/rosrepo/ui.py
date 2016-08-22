@@ -203,7 +203,7 @@ def pick_dependency_resolution(package_name, pkg_list):
             msg("%3d. %s\n" % (i + 1, pkg_list[i].project.website), fd=fd)
         msg("%3d. %s\n\n" % (0, "Choose automatically"), fd=fd)
         try:
-            s = int(readline("--> ", fd_out=fd))
+            s = int(readline("--> ", fd=fd))
             if s == 0:
                 return None
             result = pkg_list[s - 1]
