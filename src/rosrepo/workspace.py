@@ -170,8 +170,8 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
                 result[manifest.name] = []
             result[manifest.name].append(Package(manifest=manifest, workspace_path=path))
             discovered_paths[path] = {"t": cur_ts, "m": manifest}
-        except InvalidPackage:
-            pass
+        except InvalidPackage as e:
+            fatal(str(e))
     if subdir is not None:
         for path, entry in iteritems(cached_paths):
             if not path_has_prefix(path, subdir):
