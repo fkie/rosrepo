@@ -126,7 +126,7 @@ _rosrepo_complete()
     ####
     if [ "$cmd" = "config" ]
     then
-    COMPREPLY=($(compgen -W "$common_opts --set-gitlab-url --unset-gitlab-url --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --env-cache --no-env-cache" -- "$arg"))
+    COMPREPLY=($(compgen -W "$common_opts --set-gitlab-url --unset-gitlab-url --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token --no-store-credentials --store-credentials --remove-credentials -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --env-cache --no-env-cache" -- "$arg"))
         return 0
     fi
     ####
@@ -225,7 +225,7 @@ _rosrepo_complete()
                     fi
                     if [ "$cmd2" == "remote" ]
                     then
-                        COMPREPLY+=($(compgen -W "--protocol --move-host" -- "$arg"))
+                        COMPREPLY+=($(compgen -W "-p --protocol --move-host" -- "$arg"))
                     fi
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
