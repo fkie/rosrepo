@@ -170,8 +170,9 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
                 result[manifest.name] = []
             result[manifest.name].append(Package(manifest=manifest, workspace_path=path))
             discovered_paths[path] = {"t": cur_ts, "m": manifest}
-        except InvalidPackage:
-            pass
+        except InvalidPackage as e:
+            msg(str(e) + "\n")
+            fatal("invalid package in workspace")
     if subdir is not None:
         for path, entry in iteritems(cached_paths):
             if not path_has_prefix(path, subdir):
@@ -191,7 +192,7 @@ def get_workspace_location(override):
         msg("catkin workspace detected in @{cf}%s@|\n\n" % escape(wsdir))
         if wstype == -1:
             msg(
-                "I found a catkin workspace, but %s(error_msg)\n\n"
+                "I found a catkin workspace, but %(error_msg)s\n\n"
                 "You can delete any corrupted settings and reinitialize the "
                 "workspace for rosrepo with the command\n\n"
                 "    @!rosrepo init --reset %(path)s@|\n\n"
@@ -373,8 +374,8 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                         msg("       @{rf}(deprecated)@|\n")
                 msg(
                     "\n"
-                    "Please remove one of the versions or place a @{cf}CATKIN_IGNORE@| file "
-                    "in its path to disable it.\n\n"
+                    "Please remove all but one of the versions or place a @{cf}CATKIN_IGNORE@| file "
+                    "in their path to disable them.\n\n"
                 )
                 fatal("workspace has conflicting packages\n")
     if flags & WSFL_REMOTE_PROJECTS:
