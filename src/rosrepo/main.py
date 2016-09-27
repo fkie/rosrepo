@@ -65,7 +65,7 @@ def prepare_arguments(parser):
     g.add_argument("--gitlab-login", metavar="LABEL", help="acquire private token for the Gitlab server named LABEL")
     g.add_argument("--gitlab-logout", metavar="LABEL", help="delete private token for the Gitlab server named LABEL")
     g.add_argument("--private-token", metavar="TOKEN", help="set private token for Gitlab server access explicitly (can be used with --set-gitlab-url and --gitlab-login)")
-    g.add_argument("--set-crawl-depth", metavar="DEPTH", type=int, help="set the tree depth limit for the Gitlab project crawler (default: 1)")
+    g.add_argument("--set-gitlab-crawl-depth", metavar="DEPTH", type=int, help="set the tree depth limit for the Gitlab project crawler (default: 1)")
     g.add_argument("--force-gitlab-update", action="store_true", help="search Gitlab servers for available packages")
     g = p.add_argument_group("credential storage options")
     m = g.add_mutually_exclusive_group(required=False)

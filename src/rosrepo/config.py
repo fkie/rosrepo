@@ -65,6 +65,10 @@ class Config(object):
         write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
 
     def _migrate(self, old_version):
+        if old_version <= Version("3.0.25"):
+            if "crawl_depth" in self._data:
+                self._data["gitlab_crawl_depth"] = self._data["crawl_depth"]
+                del self._data["crawl_depth"]
         self._data["version"] = __version__
         self.write()
 
