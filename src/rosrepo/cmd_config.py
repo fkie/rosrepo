@@ -239,16 +239,16 @@ def run(args):
     if args.no_env_cache:
         config["use_env_cache"] = False
 
-    config.set_default("crawl_depth", 1)
-    if args.set_crawl_depth is not None:
+    config.set_default("gitlab_crawl_depth", 1)
+    if args.set_gitlab_crawl_depth is not None:
         if args.offline:
             fatal("cannot reset crawl depth in offline mode")
-        config["crawl_depth"] = args.set_crawl_depth
+        config["gitlab_crawl_depth"] = args.set_gitlab_crawl_depth
 
     config.write()
     update_default_git_ignore()
 
-    if args.set_crawl_depth is not None or args.force_gitlab_update:
+    if args.set_gitlab_crawl_depth is not None or args.force_gitlab_update:
         if args.offline:
             fatal("cannot update Gitlab package list in offline mode")
         cache = Cache(wsdir)

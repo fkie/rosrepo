@@ -264,7 +264,7 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_upd
             if config.get("store_credentials", True):
                 gitlab_cfg["private_token"] = private_token
                 config.write()
-        gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", 1), force_update=force_update, verbose=verbose)
+        gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", config.get("gitlab_crawl_depth", 1)), force_update=force_update, verbose=verbose)
     return gitlab_projects
 
 

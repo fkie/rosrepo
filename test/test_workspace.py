@@ -369,12 +369,12 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("compiler"), None)
         #######################
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--set-crawl-depth", "2")
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--set-gitlab-crawl-depth", "2")
         self.assertEqual(exitcode, 0)
-        self.assertEqual(self.get_config_value("crawl_depth"), 2)
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--set-crawl-depth", "1")
+        self.assertEqual(self.get_config_value("gitlab_crawl_depth"), 2)
+        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--set-gitlab-crawl-depth", "1")
         self.assertEqual(exitcode, 0)
-        self.assertEqual(self.get_config_value("crawl_depth"), 1)
+        self.assertEqual(self.get_config_value("gitlab_crawl_depth"), 1)
         #######################
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--set-gitlab-url", "Test", "http://localhost", "--store-credentials")
         self.assertEqual(exitcode, 0)
