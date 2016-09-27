@@ -20,6 +20,7 @@
 # limitations under the License.
 #
 import os
+from distutils.version import LooseVersion as Version
 from .util import call_process, PIPE, iteritems
 try:
     from itertools import imap as map
@@ -94,6 +95,23 @@ class Git(object):
 
     def __getattr__(self, name):
         return GitCommand(["git", "-C", self._wsdir, name.replace("_", "-")])
+
+
+_git_version = None
+
+
+def _get_git_version():
+    global _git_version
+    if _git_version is not None:
+        return _git_version
+    try:
+        stdout = GitCommand(["git", "--version"])().strip()
+        if stdout.startswith("git version "):
+            stdout = stdout[12:]
+        _git_version = Version(stdout)
+    except GitError:
+        _git_version = Version("0.0.0")
+    return _git_version
 
 
 class GitObject(object):
@@ -299,11 +317,13 @@ class Remote(ReferenceCollection):
         return self._name
 
     def __bool__(self):
-        try:
-            self.repo.git.remote.get_url(self._name)
-            return True
-        except GitError:
-            return False
+        if _get_git_version() >= Version("2.7"):
+            try:
+                self.repo.git.remote.get_url(self._name)
+                return True
+            except GitError:
+                return False
+        return self.repo.git.ls_remote(self._name, get_url=True).strip() != self._name
 
     def __nonzero__(self):
         return self.__bool__()
@@ -319,7 +339,9 @@ class Remote(ReferenceCollection):
 
     @property
     def url(self):
-        return self.repo.git.remote.get_url(self._name).strip()
+        if _get_git_version() >= Version("2.7"):
+            return self.repo.git.remote.get_url(self._name).strip()
+        return self.repo.git.ls_remote(self._name, get_url=True).strip()
 
     @url.setter
     def url(self, value):
@@ -327,7 +349,12 @@ class Remote(ReferenceCollection):
 
     @property
     def push_url(self):
-        return self.repo.git.remote.get_url(self._name, push=True).strip()
+        if _get_git_version() >= Version("2.7"):
+            return self.repo.git.remote.get_url(self._name, push=True).strip()
+        try:
+            return self.repo.git.config("remote.%s.pushurl" % self._name, get=True).strip()
+        except GitError:
+            return self.url
 
     @push_url.setter
     def push_url(self, value):
@@ -469,7 +496,11 @@ class BranchReference(Reference):
         self.repo.git.checkout(self._name, *args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        self.repo.git.branch(self._name, delete=True, *args, **kwargs)
+        if kwargs.get("force", False):
+            del kwargs["force"]
+            self.repo.git.branch(self._name, D=True, *args, **kwargs)
+        else:
+            self.repo.git.branch(self._name, delete=True, *args, **kwargs)
 
 
 class SymbolicReference(Reference):
