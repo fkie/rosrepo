@@ -13,8 +13,9 @@ Standards-Version: 3.9.5
 Package: python-rosrepo
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends},
-    git,
+    git (>= 1:1.7.5),
     python-catkin-pkg,
+    python-catkin-tools,
     python-dateutil,
     python-requests,
     python-rosdep,
@@ -32,8 +33,9 @@ Package: python3-rosrepo
 Architecture: all
 Conflicts: python-rosrepo
 Depends: ${python3:Depends}, ${misc:Depends},
-    git,
+    git (>= 1:1.7.5),
     python3-catkin-pkg,
+    python3-catkin-tools,
     python3-dateutil,
     python3-requests,
     python3-rosdep,
