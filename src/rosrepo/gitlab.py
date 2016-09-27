@@ -125,7 +125,7 @@ def acquire_gitlab_private_token(label, url, credentials_callback=get_credential
 _updated_urls = set()
 
 
-def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, verbose=True):
+def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, force_update=False, verbose=True):
     server_name = urlsplit(url)[1]
     cache_update = False
     if cache is not None:
@@ -162,7 +162,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                         workspace_path=None,
                         server_path=yaml_p["path_with_namespace"]
                     )
-                    if cached_p is not None and cached_p.last_modified == p.last_modified:
+                    if not force_update and cached_p is not None and cached_p.last_modified == p.last_modified:
                         p.packages = cached_p.packages
                         for prj in p.packages:
                             prj.project = p
@@ -186,6 +186,8 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                             filename = os.path.join(path, PACKAGE_MANIFEST_FILENAME)
                             try:
                                 manifest = parse_package_string(xml_data, filename)
+                                if verbose:
+                                    msg("- @{yf}%s@|\n" % manifest.name, indent=10)
                             except InvalidPackage as e:
                                 warning("invalid package manifest '%s': %s\n" % (filename, str(e)))
                                 manifest = None
@@ -249,7 +251,7 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     return result, foreign
 
 
-def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, verbose=True):
+def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_update=False, verbose=True):
     if "gitlab_servers" not in config:
         return []
     gitlab_projects = []
@@ -262,7 +264,7 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, verbose=T
             if config.get("store_credentials", True):
                 gitlab_cfg["private_token"] = private_token
                 config.write()
-        gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", 1), verbose=verbose)
+        gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", 1), force_update=force_update, verbose=verbose)
     return gitlab_projects
 
 

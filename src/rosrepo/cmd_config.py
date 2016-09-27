@@ -27,7 +27,8 @@ try:
 except ImportError:
     from urllib.parse import urljoin
 from .workspace import find_ros_root, get_workspace_location
-from .gitlab import acquire_gitlab_private_token
+from .gitlab import acquire_gitlab_private_token, get_gitlab_projects
+from .cache import Cache
 from .config import Config
 from .ui import TableView, msg, warning, fatal, escape
 from .common import DEFAULT_CMAKE_ARGS, update_default_git_ignore, get_c_compiler, get_cxx_compiler
@@ -238,8 +239,20 @@ def run(args):
     if args.no_env_cache:
         config["use_env_cache"] = False
 
+    config.set_default("crawl_depth", 1)
+    if args.set_crawl_depth is not None:
+        if args.offline:
+            fatal("cannot reset crawl depth in offline mode")
+        config["crawl_depth"] = args.set_crawl_depth
+
     config.write()
     update_default_git_ignore()
+
+    if args.set_crawl_depth is not None or args.force_gitlab_update:
+        if args.offline:
+            fatal("cannot update Gitlab package list in offline mode")
+        cache = Cache(wsdir)
+        get_gitlab_projects(wsdir, config, cache, force_update=True, verbose=True)
 
     ros_rootdir = find_ros_root(config.get("ros_root"))
     if ros_rootdir is None:
