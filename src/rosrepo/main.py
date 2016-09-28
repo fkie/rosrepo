@@ -47,7 +47,7 @@ def prepare_arguments(parser):
     p = cmds.add_parser("init", help="initialize workspace")
     p.add_argument("-r", "--ros-root", help="override ROS installation path (default: autodetect)")
     p.add_argument("--reset", action="store_true", help="reset workspace and delete all metadata")
-    p.add_argument("path", nargs="?", default=".", help="path to the new catkin workspace")
+    p.add_argument("path", metavar="PATH", nargs="?", default=".", help="path to the new catkin workspace")
     from .cmd_init import run as init_func
     p.set_defaults(func=init_func)
 
@@ -107,6 +107,7 @@ def prepare_arguments(parser):
     g.add_argument("-C", "--conflicts-only", action="store_true", help="list only package which cannot be resolved as dependency")
     g.add_argument("-W", "--workspace-only", action="store_true", help="list only packages which are in the workspace")
     g.add_argument("-D", "--dependees", action="store_true", help="also list dependees for default and pinned set")
+    p.add_argument("filter", metavar="FILTER", default=[], nargs="*", help="name filter (with unix shell globs allowed)")
     from .cmd_list import run as list_func
     p.set_defaults(func=list_func)
 
