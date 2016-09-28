@@ -22,6 +22,7 @@
 #
 import os
 import sys
+import fnmatch
 from .config import Config
 from .cache import Cache
 from .resolver import find_dependees
@@ -53,7 +54,11 @@ def run(args):
         in_default_set = name in config["default_build"]
         in_dependee_set = name in default_depends or name in pinned_depends
         in_conflict_set = name in conflicts
-        show = True
+        show = len(args.filter) == 0
+        for flt in args.filter:
+            if fnmatch.fnmatch(name, flt):
+                show = True
+                break
         if args.workspace_only and not in_workspace:
             show = False
         if args.built_only and not has_been_built:
@@ -64,7 +69,7 @@ def run(args):
             show = False
         if args.conflicts_only and not in_conflict_set:
             show = False
-        if not args.all and not args.workspace_only and not has_been_built and not in_default_set and not in_pinned_set and not in_dependee_set:
+        if not args.all and not args.workspace_only and not args.filter and not has_been_built and not in_default_set and not in_pinned_set and not in_dependee_set:
             show = False
         if args.invert:
             show = not show
