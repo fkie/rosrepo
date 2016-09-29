@@ -126,7 +126,7 @@ _rosrepo_complete()
     ####
     if [ "$cmd" = "config" ]
     then
-    COMPREPLY=($(compgen -W "$common_opts --set-gitlab-crawl-depth --set-gitlab-url --unset-gitlab-url --force-gitlab-update --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token --no-store-credentials --store-credentials --remove-credentials -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --env-cache --no-env-cache" -- "$arg"))
+    COMPREPLY=($(compgen -W "$common_opts --protocol --set-gitlab-crawl-depth --set-gitlab-url --unset-gitlab-url --force-gitlab-update --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token --no-store-credentials --store-credentials --remove-credentials -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --env-cache --no-env-cache" -- "$arg"))
         return 0
     fi
     ####
@@ -192,7 +192,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                   COMPREPLY=($(compgen -W "-m --modified --with-depends" -- "$arg"))
+                   COMPREPLY=($(compgen -W "-a --all --with-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi

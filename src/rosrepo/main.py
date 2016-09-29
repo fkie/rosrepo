@@ -67,6 +67,7 @@ def prepare_arguments(parser):
     g.add_argument("--private-token", metavar="TOKEN", help="set private token for Gitlab server access explicitly (can be used with --set-gitlab-url and --gitlab-login)")
     g.add_argument("--set-gitlab-crawl-depth", metavar="DEPTH", type=int, help="set the tree depth limit for the Gitlab project crawler (default: 1)")
     g.add_argument("--force-gitlab-update", action="store_true", help="search Gitlab servers for available packages")
+    g.add_argument("--protocol", help="set default protocol for accessing Git repositories")
     g = p.add_argument_group("credential storage options")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--no-store-credentials", action="store_true", help="do not store private tokens in config")
@@ -123,7 +124,7 @@ def prepare_arguments(parser):
     # build
     p = cmds.add_parser("build", help="build packages in workspace")
     add_common_options(p)
-    p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    p.add_argument("-p", "--protocol", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
     g = p.add_argument_group("build options")
     g.add_argument("-c", "--clean", action="store_true", help="clean workspace")
     g.add_argument("-v", "--verbose", action="store_true", help="verbose build log")
@@ -156,7 +157,7 @@ def prepare_arguments(parser):
     # git clone
     q = git_cmds.add_parser("clone", help="clone packages from Gitlab repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
-    q.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL for remote access (default: ssh)")
+    q.add_argument("-p", "--protocol", help="use PROTOCOL for remote access")
     q.add_argument("-m", "--ignore-missing-depends", action="store_true", help="clone packages even if dependencies are missing")
     m = q.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="clone EVERYTHING. It's your bandwidth and disk space after all.")
@@ -164,7 +165,7 @@ def prepare_arguments(parser):
     # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
-    q.add_argument("-m", "--modified", action="store_true", help="only show packages which are not up-to-date")
+    q.add_argument("-a", "--all", action="store_true", help="show packages even if they are up-to-date")
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
     # git push
@@ -218,7 +219,7 @@ def prepare_arguments(parser):
     p = cmds.add_parser("include", help="add packages to default set or pinned set")
     add_common_options(p)
     p.add_argument("-l", "--list", action="store_true", help="list packages but do not change anything")
-    p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    p.add_argument("-p", "--protocol", help="use PROTOCOL to clone missing packages from Gitlab")
     p.add_argument("--replace", action="store_true", help="replace the whole set (instead of adding to it)")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-P", "--pinned", action="store_true", help="add packages to pinned set")
@@ -232,7 +233,7 @@ def prepare_arguments(parser):
     p = cmds.add_parser("exclude", help="remove packages from default set or pinned set")
     add_common_options(p)
     p.add_argument("-l", "--list", action="store_true", help="list packages but do not change anything")
-    p.add_argument("-p", "--protocol", default="ssh", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    p.add_argument("-p", "--protocol", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-P", "--pinned", action="store_true", help="remove packages from pinned set")
     m.add_argument("-S", "--default", action="store_true", help="remove packages from default set")
