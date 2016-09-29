@@ -192,7 +192,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                   COMPREPLY=($(compgen -W "-m --modified --with-depends" -- "$arg"))
+                   COMPREPLY=($(compgen -W "-a --all --with-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi

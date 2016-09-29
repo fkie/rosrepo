@@ -418,6 +418,8 @@ def run(args):
             show_conflicts(conflicts)
         else:
             packages = set(args.packages)
+        if args.git_cmd == "status":
+            args.all = True
         paths = []
         for name in packages:
             paths += [p.workspace_path for p in ws_state.ws_packages[name]]
@@ -428,7 +430,7 @@ def run(args):
         projects = ws_state.ws_projects
         other_git = ws_state.other_git
     if args.git_cmd == "status":
-        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=not args.modified, cache=cache)
+        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
     if args.git_cmd == "pull":
         pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
     if args.git_cmd == "push":

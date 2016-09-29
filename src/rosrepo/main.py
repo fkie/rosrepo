@@ -164,7 +164,7 @@ def prepare_arguments(parser):
     # git status
     q = git_cmds.add_parser("status", help="show status of Git repositories")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
-    q.add_argument("-m", "--modified", action="store_true", help="only show packages which are not up-to-date")
+    q.add_argument("-a", "--all", action="store_true", help="show packages even if they are up-to-date")
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
     # git push
