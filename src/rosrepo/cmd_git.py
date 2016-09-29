@@ -403,7 +403,7 @@ def run(args):
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies\n")
-        if not clone_packages(srcdir, depends, ws_state, protocol=args.protocol, offline_mode=args.offline, dry_run=args.dry_run):
+        if not clone_packages(srcdir, depends, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
         missing = resolve_system_depends(system_depends, missing_only=True)
         show_missing_system_depends(missing)

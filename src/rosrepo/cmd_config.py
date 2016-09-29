@@ -245,6 +245,10 @@ def run(args):
             fatal("cannot reset crawl depth in offline mode")
         config["gitlab_crawl_depth"] = args.set_gitlab_crawl_depth
 
+    config.set_default("git_default_transport", "ssh")
+    if args.protocol:
+        config["git_default_transport"] = args.protocol.lower()
+
     config.write()
     update_default_git_ignore()
 
