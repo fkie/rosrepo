@@ -23,6 +23,7 @@
 import os
 import sys
 import re
+import concurrent.futures
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages
 from .config import Config
 from .cache import Cache
@@ -192,37 +193,45 @@ def has_package_path(obj, paths):
 
 
 def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, dry_run=False, action="update", fetch_remote=True):
-    for project in projects:
+
+    def fetch_project(project):
         repo = Repo(os.path.join(srcdir, project.workspace_path))
-        try:
-            master_remote = get_origin(repo, project)
-            if master_remote is not None:
-                master_remote_branch = master_remote[project.master_branch]
-                master_branch = next((b for b in repo.heads if b.tracking_branch == master_remote_branch), None)
-            else:
-                master_branch = None
-            tracking_branch = repo.head.reference.tracking_branch
-            tracking_remote = tracking_branch.remote if tracking_branch is not None else None
-            if fetch_remote and master_remote is not None:
-                msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
-                master_remote.fetch(simulate=dry_run, console=True)
-            if fetch_remote and tracking_remote is not None and master_remote != tracking_remote:
-                msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
-                tracking_remote.fetch(simulate=dry_run, console=True)
-            update_op(repo, master_branch, tracking_branch)
-        except Exception as e:
-            error("cannot %s '%s': %s\n" % (action, escape(project.workspace_path), escape(str(e))))
-    for path in other_git:
+        master_remote = get_origin(repo, project)
+        if master_remote is not None:
+            master_remote_branch = master_remote[project.master_branch]
+            master_branch = next((b for b in repo.heads if b.tracking_branch == master_remote_branch), None)
+        else:
+            master_branch = None
+        tracking_branch = repo.head.reference.tracking_branch
+        tracking_remote = tracking_branch.remote if tracking_branch is not None else None
+        if fetch_remote and master_remote is not None:
+            msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
+            master_remote.fetch(simulate=dry_run, console=True)
+        if fetch_remote and tracking_remote is not None and master_remote != tracking_remote:
+            msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
+            tracking_remote.fetch(simulate=dry_run, console=True)
+        return repo, master_branch, tracking_branch
+
+    def fetch_other_git(path):
         repo = Repo(os.path.join(srcdir, path))
-        try:
-            tracking_branch = repo.head.reference.tracking_branch
-            if fetch_remote and tracking_branch is not None:
-                tracking_remote = tracking_branch.remote
-                msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
-                tracking_remote.fetch(simulate=dry_run, console=True)
-            update_op(repo, None, tracking_branch)
-        except Exception as e:
-            error("cannot %s '%s': %s\n" % (action, escape(path), escape(str(e))))
+        tracking_branch = repo.head.reference.tracking_branch
+        if fetch_remote and tracking_branch is not None:
+            tracking_remote = tracking_branch.remote
+            msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
+            tracking_remote.fetch(simulate=dry_run, console=True)
+        return repo, None, tracking_branch
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_path = {}
+        future_to_path.update({executor.submit(fetch_project, project): project.workspace_path for project in projects})
+        future_to_path.update({executor.submit(fetch_other_git, path): path for path in other_git})
+        for future in concurrent.futures.as_completed(future_to_path):
+            path = future_to_path[future]
+            try:
+                repo, master_branch, tracking_branch = future.result()
+                update_op(repo, master_branch, tracking_branch)
+            except Exception as e:
+                error("cannot %s '%s': %s\n" % (action, escape(path), escape(str(e))))
     show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
 
 
