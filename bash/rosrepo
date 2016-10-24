@@ -215,9 +215,13 @@ _rosrepo_complete()
                 if [ "${arg:0:1}" = "-" ]
                 then
                     COMPREPLY=($(compgen -W "--dry-run --with-depends" -- "$arg"))
+                    if [ "$cmd2" == "push" ]
+                    then
+                        COMPREPLY+=($(compgen -W "-j --jobs" -- "$arg"))
+                    fi
                     if [ "$cmd2" == "pull" ]
                     then
-                        COMPREPLY+=($(compgen -W "-M --merge -L --update-local" -- "$arg"))
+                        COMPREPLY+=($(compgen -W "-j --jobs -M --merge -L --update-local" -- "$arg"))
                     fi
                     if [ "$cmd2" == "merge" ]
                     then
