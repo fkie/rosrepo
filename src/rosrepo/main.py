@@ -172,11 +172,13 @@ def prepare_arguments(parser):
     q = git_cmds.add_parser("push", help="push commits to upstream repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also push dependent packages")
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to push")
     # git pull
     q = git_cmds.add_parser("pull", help="pull commits from upstream repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also pull dependent packages")
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     q.add_argument("-L", "--update-local", action="store_true", help="also act on local branches (which are not tracking)")
     q.add_argument("-M", "--merge", action="store_true", help="merge changes if branches have diverged")
     q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")

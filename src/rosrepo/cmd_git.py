@@ -192,7 +192,7 @@ def has_package_path(obj, paths):
     return False
 
 
-def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, dry_run=False, action="update", fetch_remote=True):
+def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, jobs, dry_run=False, action="update", fetch_remote=True):
 
     def fetch_project(project):
         repo = Repo(os.path.join(srcdir, project.workspace_path))
@@ -221,7 +221,7 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
             tracking_remote.fetch(simulate=dry_run, console=True)
         return repo, None, tracking_branch
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
         future_to_path = {}
         future_to_path.update({executor.submit(fetch_project, project): project.workspace_path for project in projects})
         future_to_path.update({executor.submit(fetch_other_git, path): path for path in other_git})
@@ -235,7 +235,7 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
     show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
 
 
-def pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=False, merge=False, dry_run=False):
+def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_local=False, merge=False, dry_run=False):
     def do_pull(repo, master_branch, tracking_branch):
         if repo.merge_head:
             raise GitError("unfinished merge detected")
@@ -260,10 +260,10 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=
                 msg(stdout, indent_first=2, indent_next=10)
                 repo.git.merge(master_branch, ff_only=True, on_fail="conflicts", simulate=dry_run, console=True)
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run, action="pull")
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run, action="pull", jobs=jobs)
 
 
-def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
+def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, dry_run=False):
     def do_push(repo, master_branch, tracking_branch):
         if repo.merge_head:
             raise GitError("unfinished merge detected")
@@ -276,7 +276,7 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False
             msg(stdout, indent_first=2, indent_next=10)
             repo.git.push(master_branch.tracking_branch.remote, "%s:%s" % (master_branch, master_branch.tracking_branch.branch_name), simulate=dry_run, console=True)
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, action="push")
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, action="push", jobs=jobs)
 
 
 def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
@@ -291,7 +291,7 @@ def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=Fal
             else:
                 call_process(invoke)
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_commit, dry_run=dry_run, fetch_remote=False, action="commit")
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_commit, dry_run=dry_run, fetch_remote=False, action="commit", jobs=1)
 
 
 def robust_merge(repo, *args, **kwargs):
@@ -342,7 +342,7 @@ def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
                 robust_merge(repo, active_branch, m="Merge changes from %s into %s" % (active_branch, master_branch), on_fail="conflicts", simulate=args.dry_run)
     if (args.from_master or args.to_master) and not args.packages:
         fatal("you must explicitly list packages for merge operations")
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_merge, dry_run=args.dry_run, action="merge", fetch_remote=not args.abort and not args.resolve)
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_merge, dry_run=args.dry_run, action="merge", fetch_remote=not args.abort and not args.resolve, jobs=1)
 
 
 def compute_git_subdir(srcdir, name):
@@ -441,9 +441,9 @@ def run(args):
     if args.git_cmd == "status":
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
     if args.git_cmd == "pull":
-        pull_projects(srcdir, packages, projects, other_git, ws_state, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
+        pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
     if args.git_cmd == "push":
-        push_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+        push_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, dry_run=args.dry_run)
     if args.git_cmd == "merge":
         merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     if args.git_cmd == "commit":
