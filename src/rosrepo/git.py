@@ -623,12 +623,18 @@ class Repo(object):
         except GitError:
             return True
 
-    def is_dirty(self):
-        stdout = self.git.status(porcelain=True).strip()
+    def is_dirty(self, pathspec=None):
+        stdout = self.git.status("--", pathspec, porcelain=True).strip() if pathspec is not None else self.git.status(porcelain=True).strip()
         return stdout != ""
 
-    def conflicts(self):
-        stdout = self.git.diff(name_only=True, diff_filter="U").strip()
+    def uncommitted(self, pathspec=None):
+        stdout = self.git.status("--", pathspec, porcelain=True).strip() if pathspec is not None else self.git.status(porcelain=True).strip()
+        if stdout == "":
+            return []
+        return [s[2:].strip() for s in stdout.split("\n")]
+
+    def conflicts(self, pathspec=None):
+        stdout = self.git.diff("--", pathspec, name_only=True, diff_filter="U").strip() if pathspec is not None else self.git.diff(name_only=True, diff_filter="U").strip()
         if stdout == "":
             return []
         return [s.strip() for s in stdout.split("\n")]
