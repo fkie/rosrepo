@@ -72,48 +72,54 @@ def get_origin(repo, project):
 
 
 def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=True, cache=None):
-    def create_status(repo, master_branch, master_remote_branch, tracking_branch):
+    def create_upstream_status(repo, master_branch, master_remote_branch, tracking_branch):
+        status = []
+        if not repo.detached_head() and not repo.merge_head:
+            if tracking_branch is not None:
+                if master_remote_branch is not None:
+                    if tracking_branch.remote != master_remote_branch.remote:
+                        status.append("@!@{rf}remote '%s'" % tracking_branch.remote)
+                if need_push(repo.head.reference):
+                    status.append("@!@{yf}needs push")
+                elif need_pull(repo.head.reference):
+                    status.append("@!@{cf}needs pull")
+                elif not is_up_to_date(repo.head.reference):
+                    status.append("@!@{yf}needs pull -M")
+            else:
+                status.append("@!branch '%s'" % repo.head.reference)
+                if master_branch is None:
+                    status.append("@!@{rf}no remote")
+                if is_up_to_date(master_branch) or need_push(master_branch):
+                    if need_pull(repo.head, master_branch):
+                        status.append("@!@{cf}needs pull -L")
+                    else:
+                        if not master_branch.is_ancestor(repo.head):
+                            status.append("@!@{yf}needs merge --from-master")
+                        if not is_up_to_date(repo.head, master_branch):
+                            status.append("@!@{yf}needs merge --to-master")
+            if master_branch is not None and master_remote_branch is not None and tracking_branch != master_remote_branch:
+                if need_push(master_branch):
+                    status.append("@!@{yf}%s needs push" % master_branch)
+                elif need_pull(master_branch):
+                    status.append("@!@{cf}%s needs pull" % master_branch)
+                elif not is_up_to_date(master_branch):
+                    status.append("@!@{yf}%s needs merge" % master_branch)
+        return status
+
+    def create_local_status(repo, upstream_status, workspace_path=None):
         status = []
         if repo.detached_head():
             status.append("@!@{rf}detached HEAD")
             return status
         if repo.merge_head:
-            if repo.conflicts():
+            if repo.conflicts(workspace_path):
                 status.append("@!@{rf}merge conflicts")
             else:
                 status.append("@!@{yf}merged, needs commit")
             return status
-        if repo.is_dirty():
+        if repo.is_dirty(workspace_path):
             status.append("@!@{yf}needs commit")
-        if tracking_branch is not None:
-            if master_remote_branch is not None:
-                if tracking_branch.remote != master_remote_branch.remote:
-                    status.append("@!@{rf}remote '%s'" % tracking_branch.remote)
-            if need_push(repo.head.reference):
-                status.append("@!@{yf}needs push")
-            elif need_pull(repo.head.reference):
-                status.append("@!@{cf}needs pull")
-            elif not is_up_to_date(repo.head.reference):
-                status.append("@!@{yf}needs pull -M")
-        else:
-            status.append("@!branch '%s'" % repo.head.reference)
-            if master_branch is None:
-                status.append("@!@{rf}no remote")
-            if is_up_to_date(master_branch) or need_push(master_branch):
-                if need_pull(repo.head, master_branch):
-                    status.append("@!@{cf}needs pull -L")
-                else:
-                    if not master_branch.is_ancestor(repo.head):
-                        status.append("@!@{yf}needs merge --from-master")
-                    if not is_up_to_date(repo.head, master_branch):
-                        status.append("@!@{yf}needs merge --to-master")
-        if master_branch is not None and master_remote_branch is not None and tracking_branch != master_remote_branch:
-            if need_push(master_branch):
-                status.append("@!@{yf}%s needs push" % master_branch)
-            elif need_pull(master_branch):
-                status.append("@!@{cf}%s needs pull" % master_branch)
-            elif not is_up_to_date(master_branch):
-                status.append("@!@{yf}%s needs merge" % master_branch)
+        status += upstream_status
         if not status:
             if not show_up_to_date:
                 return None
@@ -141,32 +147,33 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
             tracking_branch = None
         ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
         found_packages |= set(ws_packages.keys())
-        status = create_status(repo, master_branch, master_remote_branch, tracking_branch)
-        if status is not None:
-            for name, pkg_list in iteritems(ws_packages):
-                if name not in packages:
-                    continue
-                path_list = []
-                for pkg in pkg_list:
+        upstream_status = create_upstream_status(repo, master_branch, master_remote_branch, tracking_branch)
+        for name, pkg_list in iteritems(ws_packages):
+            if name not in packages:
+                continue
+            for pkg in pkg_list:
+                status = create_local_status(repo, upstream_status, os.path.relpath(pkg.workspace_path, project.workspace_path))
+                if status is not None:
                     head, tail = os.path.split(pkg.workspace_path)
-                    path_list.append(escape(head + "/" if tail == name else pkg.workspace_path))
-                table.add_row(escape(name), path_list, status)
+                    path = escape(head + "/" if tail == name else pkg.workspace_path)
+                    table.add_row(escape(name), path, status)
 
     for path in other_git:
         repo = Repo(os.path.join(srcdir, path))
         tracking_branch = repo.head.reference.tracking_branch
         ws_packages = find_catkin_packages(srcdir, path, cache=cache)
         found_packages |= set(ws_packages.keys())
-        status = create_status(repo, None, None, tracking_branch)
-        if status is not None:
-            for name, pkg_list in iteritems(ws_packages):
-                if name not in packages:
-                    continue
-                path_list = []
-                for pkg in pkg_list:
+        upstream_status = create_upstream_status(repo, None, None, tracking_branch)
+        for name, pkg_list in iteritems(ws_packages):
+            if name not in packages:
+                continue
+            for pkg in pkg_list:
+                status = create_local_status(repo, upstream_status, os.path.relpath(pkg.workspace_path, path))
+                if status is not None:
                     head, tail = os.path.split(pkg.workspace_path)
-                    path_list.append(head + "/" if tail == name else pkg.workspace_path)
-                table.add_row(name, path_list, status)
+                    path = escape(head + "/" if tail == name else pkg.workspace_path)
+                    table.add_row(escape(name), path, status)
+
     missing = set(packages) - found_packages
     for name in missing:
         path_list = []
