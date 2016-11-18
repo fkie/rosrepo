@@ -82,7 +82,7 @@ class GitCommand(object):
     def _clean_env(self):
         result = {}
         for key in os.environ.keys():
-            if key.startswith("GIT_") or key == "PATH" or key == "HOME":
+            if key.startswith("GIT_") or key.startswith("SSH_") or key == "PATH" or key == "HOME":
                 result[key] = os.environ[key]
         return result
 
