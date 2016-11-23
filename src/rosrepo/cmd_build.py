@@ -37,11 +37,14 @@ def run(args):
     cache = Cache(wsdir)
     ros_rootdir = find_ros_root(config.get("ros_root", None))
     if ros_rootdir is None:
-        fatal("cannot detect ROS distribution. Have your sourced your setup.bash?\n")
+        fatal("cannot detect ROS distribution. Have you sourced your setup.bash?\n")
 
     config.set_default("default_build", [])
     config.set_default("pinned_build", [])
+    config.set_default("last_build", [])
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
+    if args.last:
+        args.packages = config["last_build"]
     if args.all:
         args.packages = ws_state.ws_packages.keys()
     if args.set_default:
@@ -76,6 +79,7 @@ def run(args):
         else:
             msg("@{cf}The following pinned packages will be built@|:\n")
         msg(", ".join(sorted(list(pinned_set - build_set))) + "\n\n", indent=4)
+    config["last_build"] = list(build_set)
     build_set |= pinned_set
     if not build_set:
         fatal("no packages to build\n")
@@ -88,11 +92,11 @@ def run(args):
 
     depend_set = set(build_packages.keys()) - build_set
     if depend_set:
-        msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
+        msg("@{cf}The following additional packages are needed to satisfy dependencies@|:\n")
         msg(", ".join(sorted(depend_set)) + "\n\n", indent=4)
 
     if system_depends:
-        msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
+        msg("@{cf}The following system packages are needed to satisfy dependencies@|:\n")
         msg(", ".join(sorted(system_depends)) + "\n\n", indent=4)
     missing = resolve_system_depends(system_depends, missing_only=True)
     show_missing_system_depends(missing)
