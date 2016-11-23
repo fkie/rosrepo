@@ -171,10 +171,10 @@ _rosrepo_complete()
         [ "$cmd" = "include" ] && rosrepo_cmd+=("-v")
         if [ "${arg:0:1}" = "-" ]
         then
-            COMPREPLY=($(compgen -W "-p --protocol -P --pinned -S --default -a --all" -- "$arg"))
+            COMPREPLY=($(compgen -W "-p --protocol -P --pinned -S --default -a --all --last" -- "$arg"))
             [ "$cmd" = "include" ] && COMPREPLY+=($(compgen -W "--replace" -- "$arg"))
         else
-            [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 -o "${has_opt["--last"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
         fi
         return 0
     fi
