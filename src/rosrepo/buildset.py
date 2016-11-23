@@ -38,6 +38,8 @@ def run(args):
     config.set_default("pinned_build", [])
     set_name = "pinned_build" if args.pinned else "default_build"
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
+    if args.last:
+        args.packages = config.get("last_build", [])
     if args.all:
         args.packages = ws_state.ws_packages.keys()
         if args.command == "exclude":
@@ -69,13 +71,13 @@ def run(args):
 
         extra_depends = set(depends.keys()) - set(config["pinned_build"]) - set(config["default_build"])
         if extra_depends:
-            msg("@{cf}The following additional packages are needed to satisfy all dependencies@|:\n")
+            msg("@{cf}The following additional packages are needed to satisfy dependencies@|:\n")
             msg(escape(", ".join(sorted(extra_depends)) + "\n\n"), indent=4)
 
         clone_packages(os.path.join(wsdir, "src"), depends, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
 
         if system_depends:
-            msg("@{cf}The following system packages are needed to satisfy all dependencies@|:\n")
+            msg("@{cf}The following system packages are needed to satisfy dependencies@|:\n")
             msg(", ".join(sorted(system_depends)) + "\n\n", indent=4)
         missing = resolve_system_depends(system_depends, missing_only=True)
         show_missing_system_depends(missing)

@@ -146,6 +146,7 @@ def prepare_arguments(parser):
     m.add_argument("--set-pinned", action="store_true", help="use selected packages as new pinned build set, i.e. build them always")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="build all packages in the workspace")
+    m.add_argument("-l", "--last", action="store_true", help="build the same packages as the last time")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
     from .cmd_build import run as build_func
     p.set_defaults(func=build_func)
@@ -228,7 +229,8 @@ def prepare_arguments(parser):
     m.add_argument("-S", "--default", action="store_true", help="add packages to default set")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="select all packages in the workspace")
-    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
+    m.add_argument("--last", action="store_true", help="select packages from the last build")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to include")
     p.set_defaults(func=buildset_func)
 
     # exclude
@@ -241,6 +243,7 @@ def prepare_arguments(parser):
     m.add_argument("-S", "--default", action="store_true", help="remove packages from default set")
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="select all packages")
+    m.add_argument("--last", action="store_true", help="select packages from the last build")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
     p.set_defaults(func=buildset_func)
 
