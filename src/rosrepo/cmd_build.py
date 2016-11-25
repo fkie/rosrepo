@@ -110,9 +110,10 @@ def run(args):
     assert not conflicts
 
     if args.clean:
-        invoke = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
+        invoke = ["catkin", "clean", "--workspace", wsdir, "--yes"]
         if args.dry_run:
             invoke += ["--dry-run"]
+        invoke += build_packages.keys()
         call_process(invoke)
 
     catkin_lint = find_program("catkin_lint")
