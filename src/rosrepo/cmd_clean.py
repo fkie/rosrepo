@@ -26,8 +26,8 @@ from .util import call_process
 
 def run(args):
     wsdir = get_workspace_location(args.workspace)
-    catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
+    catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--yes"]
     if args.dry_run:
         catkin_clean.append("--dry-run")
-    catkin_clean += args.packages
+    catkin_clean += args.packages or ["--all"]
     return call_process(catkin_clean)
