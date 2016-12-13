@@ -20,12 +20,19 @@
 # limitations under the License.
 #
 #
-from .workspace import get_workspace_location
+from .workspace import get_workspace_location, get_workspace_state, resolve_this
+from .config import Config
+from .cache import Cache
 from .util import call_process
 
 
 def run(args):
     wsdir = get_workspace_location(args.workspace)
+    if args.this:
+        config = Config(wsdir)
+        cache = Cache(wsdir)
+        ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
+        args.packages = resolve_this(wsdir, ws_state)
     catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--yes"]
     if args.dry_run:
         catkin_clean.append("--dry-run")

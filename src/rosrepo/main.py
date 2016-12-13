@@ -147,6 +147,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="build all packages in the workspace")
     m.add_argument("-l", "--last", action="store_true", help="build the same packages as the last time")
+    m.add_argument("--this", action="store_true", help="build package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
     from .cmd_build import run as build_func
     p.set_defaults(func=build_func)
@@ -168,13 +169,17 @@ def prepare_arguments(parser):
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("-a", "--all", action="store_true", help="show packages even if they are up-to-date")
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="show status of package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
     # git push
     q = git_cmds.add_parser("push", help="push commits to upstream repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also push dependent packages")
     q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to push")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="push package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to push")
     # git pull
     q = git_cmds.add_parser("pull", help="pull commits from upstream repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
@@ -182,7 +187,9 @@ def prepare_arguments(parser):
     q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     q.add_argument("-L", "--update-local", action="store_true", help="also act on local branches (which are not tracking)")
     q.add_argument("-M", "--merge", action="store_true", help="merge changes if branches have diverged")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="pull package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to pull")
     # git merge
     q = git_cmds.add_parser("merge", help="merge local branches with upstream")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
@@ -194,26 +201,34 @@ def prepare_arguments(parser):
     m.add_argument("--sync", action="store_true", help="sync all changes from active branch and master, updating both")
     m.add_argument("--resolve", action="store_true", help="resolve merge conflicts with git-mergetool")
     m.add_argument("--abort", action="store_true", help="abort an unfinished merge")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to merge")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="merge package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to merge")
     # git commit
     q = git_cmds.add_parser("commit", help="commit local changes for a package")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages in selection")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to commit")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="commit package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to commit")
     # git remote
     q = git_cmds.add_parser("remote", help="change upstream settings for Git projects")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages")
     q.add_argument("-p", "--protocol", help="switch protocol for remote URLs")
     q.add_argument("--move-host", metavar=("OLD_HOST", "NEW_HOST"), nargs=2, help="change host name for all remote URLs after a server move")
-    q.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="modify package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
     from .cmd_git import run as git_func
     p.set_defaults(func=git_func)
 
     # clean
     p = cmds.add_parser("clean", help="clean workspace")
     add_common_options(p)
-    p.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="clean package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
     from .cmd_clean import run as clean_func
     p.set_defaults(func=clean_func)
 
@@ -230,6 +245,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="select all packages in the workspace")
     m.add_argument("--last", action="store_true", help="select packages from the last build")
+    m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to include")
     p.set_defaults(func=buildset_func)
 
@@ -244,6 +260,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="select all packages")
     m.add_argument("--last", action="store_true", help="select packages from the last build")
+    m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
     p.set_defaults(func=buildset_func)
 

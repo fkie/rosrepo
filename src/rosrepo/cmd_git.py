@@ -24,7 +24,7 @@ import os
 import sys
 import re
 import concurrent.futures
-from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages
+from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages, resolve_this
 from .config import Config
 from .cache import Cache
 from .resolver import find_dependees, resolve_system_depends
@@ -425,6 +425,8 @@ def run(args):
         show_missing_system_depends(missing)
         return 0
 
+    if args.this:
+        args.packages = resolve_this(wsdir, ws_state)
     if args.packages:
         for p in args.packages:
             if p not in ws_state.ws_packages:
