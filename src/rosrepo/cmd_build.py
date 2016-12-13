@@ -21,7 +21,7 @@
 #
 #
 import os
-from .workspace import find_ros_root, get_workspace_location, get_workspace_state, WSFL_WS_PACKAGES
+from .workspace import find_ros_root, get_workspace_location, get_workspace_state, resolve_this, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages
 from .resolver import find_dependees, resolve_system_depends
 from .config import Config
@@ -45,6 +45,8 @@ def run(args):
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
     if args.last:
         args.packages = config["last_build"]
+    if args.this:
+        args.packages = resolve_this(wsdir, ws_state)
     if args.all:
         args.packages = ws_state.ws_packages.keys()
     if args.set_default:

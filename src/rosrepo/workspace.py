@@ -393,3 +393,15 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                         pkg.project = prj
                         break
     return ws_state
+
+
+def resolve_this(wsdir, ws_state):
+    result = set()
+    curdir = os.path.relpath(os.getcwd(), os.path.join(wsdir, "src"))
+    for name, pkg_list in iteritems(ws_state.ws_packages):
+        for pkg in pkg_list:
+            if path_has_prefix(curdir, pkg.workspace_path):
+                result.add(name)
+    if not result:
+        fatal("no package in this folder")
+    return result

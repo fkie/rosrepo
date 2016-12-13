@@ -21,7 +21,7 @@
 #
 #
 import os
-from .workspace import get_workspace_location, get_workspace_state
+from .workspace import get_workspace_location, get_workspace_state, resolve_this
 from .cache import Cache
 from .config import Config
 from .ui import msg, warning, fatal, escape, show_conflicts, show_missing_system_depends, reformat_paragraphs
@@ -40,6 +40,8 @@ def run(args):
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
     if args.last:
         args.packages = config.get("last_build", [])
+    if args.this:
+        args.packages = resolve_this(wsdir, ws_state)
     if args.all:
         args.packages = ws_state.ws_packages.keys()
         if args.command == "exclude":
