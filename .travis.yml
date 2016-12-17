@@ -4,7 +4,7 @@ python:
 - "2.7"
 - "3.3"
 install:
-- pip install codecov coverage catkin_pkg catkin_tools concurrent.futures dateutil requests rosdep yaml
+- pip install codecov coverage catkin_pkg catkin_tools futures dateutil requests rosdep yaml
 script:
 - nosetests --verbose --with-coverage --cover-erase --cover-package=rosrepo test
 after_success:
