@@ -3,6 +3,11 @@ sudo: false
 python:
 - "2.7"
 - "3.3"
+addons:
+  apt:
+    packages:
+    - bash
+    - git
 install:
 - pip install codecov coverage catkin_pkg catkin_tools futures python-dateutil requests rosdep pyyaml
 script:
