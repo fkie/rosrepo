@@ -53,7 +53,8 @@ class WorkspaceTest(unittest.TestCase):
         helper.create_package(self.wsdir, "incomplete", ["missing-system"])
         helper.create_package(self.wsdir, "ancient", [], deprecated=True)
         helper.create_package(self.wsdir, "ancient2", [], deprecated="Walking Dead")
-        os.environ = {"HOME": self.homedir, "XDG_CONFIG_HOME": os.path.join(self.homedir, ".config"), "PATH": "/usr/bin:/bin"}  # rosdep2 dies without PATH variable
+        os.environ["HOME"] = self.homedir
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.homedir, ".config")
 
     def tearDown(self):
         shutil.rmtree(self.wsdir, ignore_errors=True)
@@ -68,6 +69,7 @@ class WorkspaceTest(unittest.TestCase):
 
     def test_bash(self):
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
+        print(stdout)
         self.assertEqual(exitcode, 0)
         self.assertEqual(
             helper.run_rosrepo("bash", "-w", self.wsdir, "ROS_WORKSPACE", "ROS_PACKAGE_PATH", "PATH", "UNKNOWN"),
@@ -250,7 +252,7 @@ class WorkspaceTest(unittest.TestCase):
             self.assertIn("cannot detect ROS distribution", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--all")
         self.assertEqual(exitcode, 1)
-        self.assertIn("cannot resolve dependencies", stdout)        
+        self.assertIn("cannot resolve dependencies", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--set-default")
         self.assertEqual(exitcode, 1)
         self.assertIn("no packages given", stdout)
