@@ -69,7 +69,6 @@ class WorkspaceTest(unittest.TestCase):
 
     def test_bash(self):
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
-        print(stdout)
         self.assertEqual(exitcode, 0)
         self.assertEqual(
             helper.run_rosrepo("bash", "-w", self.wsdir, "ROS_WORKSPACE", "ROS_PACKAGE_PATH", "PATH", "UNKNOWN"),
@@ -336,10 +335,6 @@ class WorkspaceTest(unittest.TestCase):
             self.assertEqual(exitcode, 1)
             self.assertIn("cannot detect ROS distribution", stdout)
         #######################
-        os.chmod(self.homedir, 0)
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir)
-        self.assertEqual(exitcode, 0)
-        os.chmod(self.homedir, 0o755)
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "16")
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("job_limit"), 16)
