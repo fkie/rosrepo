@@ -25,6 +25,7 @@ import unittest
 import sys
 sys.stderr = sys.stdout
 import re
+import os
 
 try:
     from mock import patch
@@ -34,15 +35,16 @@ except ImportError:
 import rosrepo.resolver as resolver
 import test.helper as helper
 
-
 class ResolverTest(unittest.TestCase):
 
+    @unittest.skipUnless(os.path.isfile("/usr/bin/dpkg-query"), "requires dpkg")
     def test_apt_installed(self):
         self.assertEqual(
             resolver.apt_installed(["bash", "nonsense%%"]),
             set(["bash"])
         )
 
+    @unittest.skipUnless(os.path.isfile(os.path.join(os.path.expanduser("~"), ".ros", "rosdep", "sources.cache", "index")), "requires rosdep")
     def test_rosdep(self):
         with patch("rosrepo.resolver._rosdep_instance", None):
             rosdep = resolver.get_rosdep()
