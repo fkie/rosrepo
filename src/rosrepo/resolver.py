@@ -22,7 +22,7 @@
 #
 from .ui import pick_dependency_resolution, warning, escape
 from .util import is_deprecated_package, call_process, PIPE
-
+import re
 
 class Rosdep(object):
 
@@ -186,7 +186,8 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
 
 
 def apt_installed(packages):
-    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + list(packages), stdout=PIPE, stderr=PIPE)
+    valid_packages = [p for p in packages if re.match(r"^[A-Za-z0-9+._-]+$", p)]
+    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
     result = set()
     for line in stdout.split("\n"):
         if "ok installed" in line:

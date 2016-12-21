@@ -37,7 +37,6 @@ import test.helper as helper
 
 class ResolverTest(unittest.TestCase):
 
-    @unittest.expectedFailure
     def test_apt_installed(self):
         self.assertEqual(
             resolver.apt_installed(["bash", "nonsense%%"]),
