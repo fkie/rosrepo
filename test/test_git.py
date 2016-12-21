@@ -47,6 +47,8 @@ class GitTest(unittest.TestCase):
         self.upstream_gitdir = mkdtemp()
         self.upstream_git = git.Git(self.upstream_gitdir)
         self.upstream_git.init()
+        self.upstream_git.config("user.name", "Unit Tester")
+        self.upstream_git.config("user.email", "unittest@example.com")
         with open(os.path.join(self.upstream_gitdir, "hello.txt"), "w") as f:
             f.write("Hello, World!\n")
         self.upstream_git.add("hello.txt")
@@ -70,6 +72,8 @@ class GitTest(unittest.TestCase):
         self.gitdir = mkdtemp()
         self.git = git.Git(self.gitdir)
         self.git.clone(self.upstream_gitdir, ".")
+        self.git.config("user.name", "Unit Tester")
+        self.git.config("user.email", "unittest@example.com")
         self.git.branch("other", "origin/other", set_upstream=True)
 
     def tearDown(self):
@@ -120,7 +124,7 @@ class GitTest(unittest.TestCase):
         self.assertTrue(repo.heads.master.merge_base(repo.heads.other).is_ancestor(repo.heads.other))
         self.assertTrue(repo.heads.master)
         self.assertFalse(repo.heads.missing)
-        
+
         self.assertTrue(repo.heads.master in repo.heads)
         self.assertFalse(repo.head in repo.heads)
         self.assertTrue("master" in repo.heads)
@@ -204,7 +208,7 @@ class GitTest(unittest.TestCase):
         self.assertEqual(repr(repo.remotes.origin), "Remote(Repo(%r), %r)" % (self.gitdir, "origin"))
         self.assertEqual(repr(repo.heads), "Branches(Repo(%r))" % self.gitdir)
         self.assertEqual(repr(repo.heads.master), "BranchReference(Repo(%r), %r)" % (self.gitdir, "refs/heads/master"))
-        
+
         def simulate_git_fail(*args, **kwargs):
             return 128, "", "fail"
         with patch("rosrepo.git.call_process", simulate_git_fail):
