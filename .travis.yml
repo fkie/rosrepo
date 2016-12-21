@@ -4,7 +4,7 @@ python:
 - "2.7"
 - "3.3"
 before_install:
-- "dpkg-query -f '${Package}|${Status}\n' bash"
+- "dpkg-query -f '${Package}|${Status}\n' -W bash"
 install:
 - pip install codecov coverage catkin_pkg catkin_tools futures python-dateutil requests rosdep pyyaml
 script:
