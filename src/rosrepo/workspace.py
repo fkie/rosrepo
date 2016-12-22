@@ -43,7 +43,6 @@ class WorkspaceState(NamedTuple):
 def is_ros_root(path):
     return os.path.isdir(os.path.join(path, "bin")) \
         and os.path.isdir(os.path.join(path, "etc")) \
-        and os.path.isdir(os.path.join(path, "include")) \
         and os.path.isdir(os.path.join(path, "lib")) \
         and os.path.isdir(os.path.join(path, "share")) \
         and os.path.isfile(os.path.join(path, "env.sh")) \
