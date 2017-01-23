@@ -25,6 +25,7 @@ import unittest
 import sys
 sys.stderr = sys.stdout
 import re
+import os
 
 try:
     from mock import patch
@@ -33,7 +34,6 @@ except ImportError:
 
 import rosrepo.resolver as resolver
 import test.helper as helper
-
 
 class ResolverTest(unittest.TestCase):
 

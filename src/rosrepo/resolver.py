@@ -20,8 +20,9 @@
 # limitations under the License.
 #
 #
-from .ui import pick_dependency_resolution, warning, escape
+from .ui import pick_dependency_resolution, warning, error, escape
 from .util import is_deprecated_package, call_process, PIPE
+import re
 
 
 class Rosdep(object):
@@ -39,7 +40,8 @@ class Rosdep(object):
             self.installer_ctx = create_default_installer_context()
             _, self.installer_keys, self.default_key, \
                 self.os_name, self.os_version = get_default_installer(self.installer_ctx)
-        except ImportError:
+        except Exception as e:
+            error("failed to initialize rosdep: %s" % str(e))
             self.view = None
 
     def __contains__(self, name):
@@ -186,7 +188,8 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
 
 
 def apt_installed(packages):
-    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + list(packages), stdout=PIPE, stderr=PIPE)
+    valid_packages = [p for p in packages if re.match(r"^[A-Za-z0-9+._-]+$", p)]
+    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
     result = set()
     for line in stdout.split("\n"):
         if "ok installed" in line:
@@ -197,6 +200,9 @@ def apt_installed(packages):
 def resolve_system_depends(system_depends, missing_only=False):
     resolved = set()
     rosdep = get_rosdep()
+    if not rosdep.ok():
+        error("cannot resolve system dependencies without rosdep")
+        return resolved
     for dep in system_depends:
         installer, resolved_deps = rosdep.resolve(dep)
         for d in resolved_deps:

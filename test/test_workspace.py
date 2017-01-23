@@ -53,7 +53,11 @@ class WorkspaceTest(unittest.TestCase):
         helper.create_package(self.wsdir, "incomplete", ["missing-system"])
         helper.create_package(self.wsdir, "ancient", [], deprecated=True)
         helper.create_package(self.wsdir, "ancient2", [], deprecated="Walking Dead")
-        os.environ = {"HOME": self.homedir, "XDG_CONFIG_HOME": os.path.join(self.homedir, ".config"), "PATH": "/usr/bin:/bin"}  # rosdep2 dies without PATH variable
+        for blacklisted_key in ["ROS_WORKSPACE", "ROS_PACKAGE_PATH"]:
+            if blacklisted_key in os.environ:
+                del os.environ[blacklisted_key]
+        os.environ["HOME"] = self.homedir
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.homedir, ".config")
 
     def tearDown(self):
         shutil.rmtree(self.wsdir, ignore_errors=True)
@@ -250,7 +254,7 @@ class WorkspaceTest(unittest.TestCase):
             self.assertIn("cannot detect ROS distribution", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--all")
         self.assertEqual(exitcode, 1)
-        self.assertIn("cannot resolve dependencies", stdout)        
+        self.assertIn("cannot resolve dependencies", stdout)
         exitcode, stdout = helper.run_rosrepo("build", "-w", self.wsdir, "--set-default")
         self.assertEqual(exitcode, 1)
         self.assertIn("no packages given", stdout)
@@ -334,10 +338,6 @@ class WorkspaceTest(unittest.TestCase):
             self.assertEqual(exitcode, 1)
             self.assertIn("cannot detect ROS distribution", stdout)
         #######################
-        os.chmod(self.homedir, 0)
-        exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir)
-        self.assertEqual(exitcode, 0)
-        os.chmod(self.homedir, 0o755)
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "16")
         self.assertEqual(exitcode, 0)
         self.assertEqual(self.get_config_value("job_limit"), 16)
