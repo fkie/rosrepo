@@ -20,9 +20,10 @@
 # limitations under the License.
 #
 #
-from .ui import pick_dependency_resolution, warning, escape
+from .ui import pick_dependency_resolution, warning, error, escape
 from .util import is_deprecated_package, call_process, PIPE
 import re
+
 
 class Rosdep(object):
 
@@ -39,7 +40,8 @@ class Rosdep(object):
             self.installer_ctx = create_default_installer_context()
             _, self.installer_keys, self.default_key, \
                 self.os_name, self.os_version = get_default_installer(self.installer_ctx)
-        except ImportError:
+        except Exception as e:
+            error("failed to initialize rosdep: %s" % str(e))
             self.view = None
 
     def __contains__(self, name):
@@ -198,6 +200,9 @@ def apt_installed(packages):
 def resolve_system_depends(system_depends, missing_only=False):
     resolved = set()
     rosdep = get_rosdep()
+    if not rosdep.ok():
+        error("cannot resolve system dependencies without rosdep")
+        return resolved
     for dep in system_depends:
         installer, resolved_deps = rosdep.resolve(dep)
         for d in resolved_deps:
