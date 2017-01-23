@@ -20,7 +20,7 @@
 # limitations under the License.
 #
 #
-from setuptools import setup
+from setuptools import setup, __version__ as setuptools_version
 import os
 import sys
 
@@ -33,6 +33,20 @@ else:
 
 from rosrepo import __version__ as rosrepo_version
 
+install_requires = ["catkin_pkg", "catkin_tools", "python-dateutil", "requests", "rosdep", "pyyaml"]
+extras_require = {}
+# The following code is a somewhat barbaric attempt to get conditional
+# dependencies that works on setuptools versions before 18.0 as well:
+if int(setuptools_version.split(".", 1)[0]) < 18:
+    if sys.version_info[0] < 3:
+        install_requires.append("futures")
+    # Unfortunately, the fake conditional dependencies do not work with
+    # the caching mechanism of bdist_wheel, so if you want to create wheels,
+    # use at least setuptools version 18
+    assert "bdist_wheel" not in sys.argv
+else:
+    extras_require[":python_version<'3'"] = ["futures"]
+
 setup(
     name         = "rosrepo",
     description  = "Manage ROS workspaces with multiple Gitlab repositories",
@@ -44,7 +58,8 @@ setup(
     package_dir  = {"": "src"},
     data_files   = [("/etc/bash_completion.d", ["bash/rosrepo"])],
     version      = rosrepo_version,
-    requires     = ["catkin_pkg", "catkin_tools", "concurrent.futures", "dateutil", "requests", "rosdep2", "yaml"],
+    install_requires = install_requires,
+    extras_require = extras_require,
     test_suite   = "nose.collector",
     entry_points = {
         "console_scripts": ["rosrepo = rosrepo.main:main"]
