@@ -53,6 +53,9 @@ class WorkspaceTest(unittest.TestCase):
         helper.create_package(self.wsdir, "incomplete", ["missing-system"])
         helper.create_package(self.wsdir, "ancient", [], deprecated=True)
         helper.create_package(self.wsdir, "ancient2", [], deprecated="Walking Dead")
+        for blacklisted_key in ["ROS_WORKSPACE", "ROS_PACKAGE_PATH"]:
+            if blacklisted_key in os.environ:
+                del os.environ[blacklisted_key]
         os.environ["HOME"] = self.homedir
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.homedir, ".config")
 

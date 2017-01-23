@@ -103,4 +103,5 @@ class UtilTest(unittest.TestCase):
 
     def test_terminal_size(self):
         with patch("os.ctermid", lambda: os.devnull):
+            util._cached_terminal_size = None
             self.assertRaises(OSError, util.get_terminal_size)
