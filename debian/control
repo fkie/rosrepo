@@ -13,15 +13,7 @@ Standards-Version: 3.9.5
 Package: python-rosrepo
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends},
-    git (>= 1:1.7.5),
-    python-catkin-pkg,
-    python-catkin-tools,
-    python-concurrent.futures | python-futures,
-    python-dateutil,
-    python-requests,
-    python-rosdep,
-    python-setuptools,
-    python-yaml
+    git (>= 1:1.7.5)
 Recommends: git-cola, meld
 Conflicts: python3-rosrepo
 Description: Manage ROS workspaces with multiple Gitlab repositories
@@ -34,14 +26,7 @@ Package: python3-rosrepo
 Architecture: all
 Conflicts: python-rosrepo
 Depends: ${python3:Depends}, ${misc:Depends},
-    git (>= 1:1.7.5),
-    python3-catkin-pkg,
-    python3-catkin-tools,
-    python3-dateutil,
-    python3-requests,
-    python3-rosdep,
-    python3-setuptools,
-    python3-yaml
+    git (>= 1:1.7.5)
 Recommends: git-cola, meld
 Description: Manage ROS workspaces with multiple Gitlab repositories
  - More comfortable management of package builds and dependencies
