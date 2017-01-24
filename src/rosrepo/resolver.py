@@ -218,13 +218,17 @@ def resolve_system_depends(system_depends, missing_only=False):
             error("cannot resolve system dependencies without rosdep\n")
             _resolve_warn_once = True
         return resolved
+    from rosdep2.lookup import ResolutionError
     for dep in system_depends:
-        installer, resolved_deps = rosdep.resolve(dep)
-        for d in resolved_deps:
-            if installer == "apt":
-                resolved.add(d)
-            else:
-                warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+        try:
+            installer, resolved_deps = rosdep.resolve(dep)
+            for d in resolved_deps:
+                if installer == "apt":
+                    resolved.add(d)
+                else:
+                    warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+        except ResolutionError:
+            warning("cannot resolve system package: ignoring package '%s'\n" % dep)
     if missing_only:
         resolved -= apt_installed(resolved)
     return resolved
