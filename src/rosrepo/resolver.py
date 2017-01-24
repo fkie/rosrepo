@@ -196,7 +196,7 @@ def apt_installed(packages):
             if "ok installed" in line:
                 result.add(line.split("|", 1)[0])
     except OSError:
-        error("cannot invoke dpkg-query to find installed system packages")
+        error("cannot invoke dpkg-query to find installed system packages\n")
     return result
 
 
