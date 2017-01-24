@@ -189,11 +189,14 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
 
 def apt_installed(packages):
     valid_packages = [p for p in packages if re.match(r"^[A-Za-z0-9+._-]+$", p)]
-    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
     result = set()
-    for line in stdout.split("\n"):
-        if "ok installed" in line:
-            result.add(line.split("|", 1)[0])
+    try:
+        _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
+        for line in stdout.split("\n"):
+            if "ok installed" in line:
+                result.add(line.split("|", 1)[0])
+    except OSError:
+        error("cannot invoke dpkg-query to find installed system packages")
     return result
 
 
