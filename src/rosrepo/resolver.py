@@ -204,7 +204,7 @@ def resolve_system_depends(system_depends, missing_only=False):
     resolved = set()
     rosdep = get_rosdep()
     if not rosdep.ok():
-        error("cannot resolve system dependencies without rosdep")
+        error("cannot resolve system dependencies without rosdep\n")
         return resolved
     for dep in system_depends:
         installer, resolved_deps = rosdep.resolve(dep)
