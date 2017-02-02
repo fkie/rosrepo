@@ -187,29 +187,48 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
     return depends, system_depends, conflicts
 
 
+_dpkg_query_warn_once = False
+
+
 def apt_installed(packages):
+    global _dpkg_query_warn_once
     valid_packages = [p for p in packages if re.match(r"^[A-Za-z0-9+._-]+$", p)]
-    _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
     result = set()
-    for line in stdout.split("\n"):
-        if "ok installed" in line:
-            result.add(line.split("|", 1)[0])
+    try:
+        _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
+        for line in stdout.split("\n"):
+            if "ok installed" in line:
+                result.add(line.split("|", 1)[0])
+    except OSError:
+        if not _dpkg_query_warn_once:
+            error("cannot invoke dpkg-query to find installed system packages\n")
+            _dpkg_query_warn_once = True
     return result
 
 
+_resolve_warn_once = False
+
+
 def resolve_system_depends(system_depends, missing_only=False):
+    global _resolve_warn_once
     resolved = set()
     rosdep = get_rosdep()
     if not rosdep.ok():
-        error("cannot resolve system dependencies without rosdep")
+        if not _resolve_warn_once:
+            error("cannot resolve system dependencies without rosdep\n")
+            _resolve_warn_once = True
         return resolved
+    from rosdep2.lookup import ResolutionError
     for dep in system_depends:
-        installer, resolved_deps = rosdep.resolve(dep)
-        for d in resolved_deps:
-            if installer == "apt":
-                resolved.add(d)
-            else:
-                warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+        try:
+            installer, resolved_deps = rosdep.resolve(dep)
+            for d in resolved_deps:
+                if installer == "apt":
+                    resolved.add(d)
+                else:
+                    warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+        except ResolutionError:
+            warning("cannot resolve system package: ignoring package '%s'\n" % dep)
     if missing_only:
         resolved -= apt_installed(resolved)
     return resolved
