@@ -213,10 +213,10 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
         tracking_remote = tracking_branch.remote if tracking_branch is not None else None
         if fetch_remote and master_remote is not None:
             msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
-            master_remote.fetch(simulate=dry_run, console=True)
+            master_remote.fetch(prune=True, simulate=dry_run, console=True)
         if fetch_remote and tracking_remote is not None and master_remote != tracking_remote:
             msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
-            tracking_remote.fetch(simulate=dry_run, console=True)
+            tracking_remote.fetch(prune=True, simulate=dry_run, console=True)
         return repo, master_branch, tracking_branch
 
     def fetch_other_git(path):
