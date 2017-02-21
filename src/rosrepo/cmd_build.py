@@ -82,6 +82,7 @@ def run(args):
             msg("@{cf}The following pinned packages will be built@|:\n")
         msg(", ".join(sorted(list(pinned_set - build_set))) + "\n\n", indent=4)
     config["last_build"] = list(build_set)
+    clean_set = build_set.copy()
     build_set |= pinned_set
     if not build_set:
         fatal("no packages to build\n")
@@ -89,6 +90,8 @@ def run(args):
     show_conflicts(conflicts)
     if conflicts:
         fatal("cannot resolve dependencies\n")
+    clean_packages, _, _ = find_dependees(clean_set, ws_state, auto_resolve=True, ignore_missing=True)
+    clean_packages = set(clean_packages.keys()) & set(ws_state.ws_packages.keys())
     if not args.dry_run:
         config.write()
 
@@ -111,11 +114,15 @@ def run(args):
     show_conflicts(conflicts)
     assert not conflicts
 
-    if args.clean:
+    if args.clean_all:
+        invoke = ["catkin", "clean", "--workspace", wsdir, "--yes", "--all"]
+        if args.dry_run:
+            invoke += ["--dry-run"]
+    elif args.clean:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--yes"]
         if args.dry_run:
             invoke += ["--dry-run"]
-        invoke += build_packages.keys()
+        invoke += list(clean_packages)
         call_process(invoke)
 
     catkin_lint = find_program("catkin_lint")
