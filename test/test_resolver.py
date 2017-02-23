@@ -37,12 +37,6 @@ import test.helper as helper
 
 class ResolverTest(unittest.TestCase):
 
-    def test_apt_installed(self):
-        self.assertEqual(
-            resolver.apt_installed(["bash", "nonsense%%"]),
-            set(["bash"])
-        )
-
     def test_rosdep(self):
         with patch("rosrepo.resolver._rosdep_instance", None):
             rosdep = resolver.get_rosdep()

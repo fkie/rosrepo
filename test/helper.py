@@ -125,13 +125,24 @@ class FakeRosdep(object):
         return True
 
 
-def fake_apt_installed(packages):
-    return set([p for p in packages if "installed" in p])
-
-
 class FakeResponse(object):
     def __init__(self, _status_code):
         self.status_code = _status_code
+
+
+class FakeSystemPackageManager(object):
+
+    @property
+    def installer_cmd(self):
+        return "apt-get install"
+
+    @property
+    def installer(self):
+        return "apt"
+
+    @property
+    def installed_packages(self):
+        return set(["installed-system"])
 
 
 def fake_requests_get(*args, **kwargs):
@@ -139,7 +150,7 @@ def fake_requests_get(*args, **kwargs):
 
 
 @mock.patch("rosrepo.resolver._rosdep_instance", FakeRosdep())
-@mock.patch("rosrepo.resolver.apt_installed", fake_apt_installed)
+@mock.patch("rosrepo.resolver.system_package_manager", FakeSystemPackageManager())
 @mock.patch("rosrepo.cmd_build.call_process", no_call_process)
 @mock.patch("rosrepo.cmd_build.find_program", find_program)
 @mock.patch("requests.get", fake_requests_get)

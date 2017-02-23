@@ -23,6 +23,7 @@
 from .ui import pick_dependency_resolution, warning, error, escape
 from .util import is_deprecated_package, call_process, PIPE
 import re
+import platform
 
 
 class Rosdep(object):
@@ -179,7 +180,7 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
                     resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                     if not ignore_missing:
                         conflicts[name] = resolver_msgs
-        score -= 100 * len(system_depends - apt_installed(system_depends))  # Large penalty for uninstalled system dependency
+        score -= 100 * len(system_depends - system_package_manager.installed_packages)  # Large penalty for uninstalled system dependency
         return depends, system_depends, conflicts, score
     rosdep = get_rosdep()
     queue = [(None, None, name) for name in packages]
@@ -187,25 +188,50 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
     return depends, system_depends, conflicts
 
 
-_dpkg_query_warn_once = False
+class SystemPackageManager(object):
+
+    def __init__(self):
+        system = platform.system()
+        self._installed_packages = set()
+        if system == "Linux":
+            self._installer = "apt"
+            self._installer_cmd = "sudo apt-get install"
+            try:
+                _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"], stdout=PIPE, stderr=PIPE)
+                for line in stdout.split("\n"):
+                    if "ok installed" in line:
+                        pkg = line.split("|", 1)[0]
+                        self._installed_packages.add(pkg)
+            except OSError:
+                error("cannot invoke dpkg-query to find installed system packages")
+#        elif system == "Darwin":
+#            self._installer = "homebrew"
+#            self._installer_cmd = "brew install"
+#            try:
+#                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
+#                for pkg in stdout.split("\n"):
+#                    if pkg:
+#                        self._installed_packages.add(pkg)
+#            except OSError:
+#                error("cannot invoke brew to find installed system packages")
+        else:
+            self._installer = None
+            self._installer_cmd = None
+
+    @property
+    def installer(self):
+        return self._installer
+
+    @property
+    def installer_cmd(self):
+        return self._installer_cmd
+
+    @property
+    def installed_packages(self):
+        return self._installed_packages
 
 
-def apt_installed(packages):
-    global _dpkg_query_warn_once
-    valid_packages = [p for p in packages if re.match(r"^[A-Za-z0-9+._-]+$", p)]
-    result = set()
-    try:
-        _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"] + valid_packages, stdout=PIPE, stderr=PIPE)
-        for line in stdout.split("\n"):
-            if "ok installed" in line:
-                result.add(line.split("|", 1)[0])
-    except OSError:
-        if not _dpkg_query_warn_once:
-            error("cannot invoke dpkg-query to find installed system packages\n")
-            _dpkg_query_warn_once = True
-    return result
-
-
+system_package_manager = SystemPackageManager()
 _resolve_warn_once = False
 
 
@@ -218,17 +244,25 @@ def resolve_system_depends(system_depends, missing_only=False):
             error("cannot resolve system dependencies without rosdep\n")
             _resolve_warn_once = True
         return resolved
+    if system_package_manager.installer is None:
+        if not _resolve_warn_once:
+            error("cannot resolve system dependencies for this system\n")
+            _resolve_warn_once = True
+        return resolved
     from rosdep2.lookup import ResolutionError
     for dep in system_depends:
         try:
             installer, resolved_deps = rosdep.resolve(dep)
             for d in resolved_deps:
-                if installer == "apt":
-                    resolved.add(d)
+                if installer == system_package_manager.installer:
+                    if hasattr(d, "package"):
+                        resolved.add(d.package)
+                    else:
+                        resolved.add(d)
                 else:
                     warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
         except ResolutionError:
             warning("cannot resolve system package: ignoring package '%s'\n" % dep)
     if missing_only:
-        resolved -= apt_installed(resolved)
+        resolved -= system_package_manager.installed_packages
     return resolved
