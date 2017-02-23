@@ -250,7 +250,10 @@ def resolve_system_depends(system_depends, missing_only=False):
             installer, resolved_deps = rosdep.resolve(dep)
             for d in resolved_deps:
                 if installer == system_package_manager.installer:
-                    resolved.add(d)
+                    if hasattr(d, "package"):
+                        resolved.add(d.package)
+                    else:
+                        resolved.add(d)
                 else:
                     warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
         except ResolutionError:
