@@ -203,16 +203,16 @@ class SystemPackageManager(object):
                         self._installed_packages.add(pkg)
             except OSError:
                 error("cannot invoke dpkg-query to find installed system packages")
-#        elif system == "Darwin":
-#            self._installer = "homebrew"
-#            self._installer_cmd = "brew install"
-#            try:
-#                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
-#                for pkg in stdout.split("\n"):
-#                    if pkg:
-#                        self._installed_packages.add(pkg)
-#            except OSError:
-#                error("cannot invoke brew to find installed system packages")
+        elif system == "Darwin":
+            self._installer = "homebrew"
+            self._installer_cmd = "brew install"
+            try:
+                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
+                for pkg in stdout.split("\n"):
+                    if pkg:
+                        self._installed_packages.add(pkg)
+            except OSError:
+                error("cannot invoke brew to find installed system packages")
         else:
             self._installer = None
             self._installer_cmd = None
