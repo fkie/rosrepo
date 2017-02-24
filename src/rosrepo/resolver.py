@@ -22,7 +22,6 @@
 #
 from .ui import pick_dependency_resolution, warning, error, escape
 from .util import is_deprecated_package, call_process, PIPE
-import re
 import platform
 
 
@@ -235,7 +234,7 @@ system_package_manager = SystemPackageManager()
 _resolve_warn_once = False
 
 
-def resolve_system_depends(system_depends, missing_only=False):
+def resolve_system_depends(ws_state, system_depends, missing_only=False):
     global _resolve_warn_once
     resolved = set()
     rosdep = get_rosdep()
@@ -251,18 +250,19 @@ def resolve_system_depends(system_depends, missing_only=False):
         return resolved
     from rosdep2.lookup import ResolutionError
     for dep in system_depends:
-        try:
-            installer, resolved_deps = rosdep.resolve(dep)
-            for d in resolved_deps:
-                if installer == system_package_manager.installer:
-                    if hasattr(d, "package"):
-                        resolved.add(d.package)
+        if dep not in ws_state.ros_root_packages:  # This deals with ROS source installs
+            try:
+                installer, resolved_deps = rosdep.resolve(dep)
+                for d in resolved_deps:
+                    if installer == system_package_manager.installer:
+                        if hasattr(d, "package"):
+                            resolved.add(d.package)
+                        else:
+                            resolved.add(d)
                     else:
-                        resolved.add(d)
-                else:
-                    warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
-        except ResolutionError:
-            warning("cannot resolve system package: ignoring package '%s'\n" % dep)
+                        warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+            except ResolutionError:
+                warning("cannot resolve system package: ignoring package '%s'\n" % dep)
     if missing_only:
         resolved -= system_package_manager.installed_packages
     return resolved
