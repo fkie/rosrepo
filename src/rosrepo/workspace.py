@@ -37,7 +37,7 @@ class Package(NamedTuple):
 
 
 class WorkspaceState(NamedTuple):
-    __slots__ = ("ws_packages", "remote_packages", "ws_projects", "remote_projects", "other_git")
+    __slots__ = ("ws_packages", "remote_packages", "ros_root_packages", "ws_projects", "remote_projects", "other_git")
 
 
 def is_ros_root(path):
@@ -136,11 +136,11 @@ def find_workspace(override=None):
     return None
 
 
-def find_catkin_packages(srcdir, subdir=None, cache=None):
+def find_catkin_packages(srcdir, subdir=None, cache=None, cache_id="workspace_packages"):
     cached_paths = {}
     cache_update = False
     if cache is not None:
-        cached_paths = cache.get_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, cached_paths)
+        cached_paths = cache.get_object(cache_id, WORKSPACE_PACKAGE_CACHE_VERSION, cached_paths)
     package_paths = []
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
     for curdir, subdirs, files in os.walk(base_path, followlinks=True):
@@ -178,11 +178,12 @@ def find_catkin_packages(srcdir, subdir=None, cache=None):
                 discovered_paths[path] = entry
     if cache is not None:
         if cache_update or len(cached_paths) != len(discovered_paths):
-            cache.set_object("workspace_packages", WORKSPACE_PACKAGE_CACHE_VERSION, discovered_paths)
+            cache.set_object(cache_id, WORKSPACE_PACKAGE_CACHE_VERSION, discovered_paths)
     return result
 
 
 def get_workspace_location(override):
+    from . import __version__
     wsdir = find_workspace(override)
     if wsdir is not None:
         wstype, wsversion = detect_workspace_type(wsdir)
@@ -205,7 +206,6 @@ def get_workspace_location(override):
                 % {"path": escape(wsdir)}
             )
         if wstype == 4:
-            from . import __version__
             msg(
                 "This catkin workspace has been configured by a newer version of rosrepo, "
                 "please upgrade to version @{cf}%(new_version)s@| or newer.\n\n"
@@ -216,7 +216,6 @@ def get_workspace_location(override):
                 % {"path": escape(wsdir), "new_version": escape(wsversion), "old_version": __version__}
             )
         if wstype == 1 or wstype == 2:
-            from . import __version__
             msg(
                 "This catkin workspace has been configured by rosrepo @{cf}%(old_version)s@|, "
                 "but you are currently running version @{cf}%(new_version)s@|\n\n"
@@ -350,7 +349,8 @@ WSFL_WS_PACKAGES = 1
 WSFL_REMOTE_PACKAGES = 2
 WSFL_WS_PROJECTS = 4
 WSFL_REMOTE_PROJECTS = 8
-WSFL_ALL = 15
+WSFL_ROS_ROOT_PACKAGES = 16
+WSFL_ALL = 31
 
 
 def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verbose=True, ws_state=None, flags=WSFL_ALL):
@@ -377,6 +377,12 @@ def get_workspace_state(wsdir, config=None, cache=None, offline_mode=False, verb
                     "in their path to disable them.\n\n"
                 )
                 fatal("workspace has conflicting packages\n")
+    if flags & WSFL_ROS_ROOT_PACKAGES:
+        ros_rootdir = find_ros_root(config.get("ros_root", None))
+        if ros_rootdir is not None:
+            ws_state.ros_root_packages = find_catkin_packages(ros_rootdir, cache=cache, cache_id="ros_root_packages")
+        else:
+            ws_state.ros_root_packages = {}
     if flags & WSFL_REMOTE_PROJECTS:
         ws_state.remote_projects = get_gitlab_projects(wsdir, config, cache=cache, offline_mode=offline_mode, verbose=verbose)
     if flags & WSFL_WS_PROJECTS and ws_state.remote_projects is not None:

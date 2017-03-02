@@ -103,7 +103,7 @@ def run(args):
     if system_depends:
         msg("@{cf}The following system packages are needed to satisfy dependencies@|:\n")
         msg(", ".join(sorted(system_depends)) + "\n\n", indent=4)
-    missing = resolve_system_depends(system_depends, missing_only=True)
+    missing = resolve_system_depends(ws_state, system_depends, missing_only=True)
     show_missing_system_depends(missing)
     if missing and not args.ignore_missing_depends:
         fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)\n")

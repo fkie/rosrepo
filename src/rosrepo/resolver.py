@@ -21,8 +21,7 @@
 #
 #
 from .ui import pick_dependency_resolution, warning, error, escape
-from .util import is_deprecated_package, call_process, PIPE
-import re
+from .util import is_deprecated_package, call_process, PIPE, iteritems
 import platform
 
 
@@ -36,8 +35,8 @@ class Rosdep(object):
             from rosdep2.sources_list import SourcesListLoader
             from rosdep2 import get_default_installer, create_default_installer_context
             sources_loader = SourcesListLoader.create_default()
-            lookup = RosdepLookup.create_from_rospkg(sources_loader=sources_loader)
-            self.view = lookup.get_rosdep_view(DEFAULT_VIEW_KEY)
+            self.lookup = RosdepLookup.create_from_rospkg(sources_loader=sources_loader)
+            self.view = self.lookup.get_rosdep_view(DEFAULT_VIEW_KEY)
             self.installer_ctx = create_default_installer_context()
             _, self.installer_keys, self.default_key, \
                 self.os_name, self.os_version = get_default_installer(self.installer_ctx)
@@ -50,6 +49,14 @@ class Rosdep(object):
 
     def ok(self):
         return self.view is not None
+
+    def reverse_depends(self, dep):
+        result = self.lookup.get_resources_that_need(dep)
+        return set(result)
+
+    def depends(self, dep):
+        result = self.lookup.get_rosdeps(dep, implicit=False)
+        return set(result)
 
     def resolve(self, dep):
         d = self.view.lookup(dep)
@@ -74,7 +81,30 @@ def get_rosdep():
     return _rosdep_instance
 
 
-def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False):
+def find_dependers(packages, ws_state):
+    depends = set()
+    system_depends = set()
+    query_set = set(packages)
+    # rosdep = get_rosdep()
+    # for pkg in packages:
+    #     system_depends |= rosdep.reverse_depends(pkg)
+    for name, pkg_list in iteritems(ws_state.ws_packages):
+        for pkg in pkg_list:
+            manifest = pkg.manifest
+            pkg_depends = set([p.name for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends])
+            if query_set & pkg_depends:
+                depends.add(name)
+    for name, pkg_list in iteritems(ws_state.remote_packages):
+        for pkg in pkg_list:
+            manifest = pkg.manifest
+            pkg_depends = set([p.name for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends])
+            if query_set & pkg_depends:
+                depends.add(name)
+    system_depends -= depends
+    return depends, system_depends
+
+
+def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False, recursive=True):
     def try_resolve(queue, depends=None, system_depends=None, conflicts=None, score=None):
         if depends is None:
             depends = {}
@@ -100,7 +130,8 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False)
                     manifest = ws_state.ws_packages[name][0].manifest
                     if is_deprecated_package(manifest):
                         score -= 5  # Penalty for being deprecated
-                    queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
+                    if recursive or depender is None:
+                        queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
                 elif name in ws_state.remote_packages:
                     # Package is not in workspace, so we may have multiple sources
                     # to download it from. However, since each Gitlab project
@@ -204,16 +235,16 @@ class SystemPackageManager(object):
                         self._installed_packages.add(pkg)
             except OSError:
                 error("cannot invoke dpkg-query to find installed system packages")
-#        elif system == "Darwin":
-#            self._installer = "homebrew"
-#            self._installer_cmd = "brew install"
-#            try:
-#                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
-#                for pkg in stdout.split("\n"):
-#                    if pkg:
-#                        self._installed_packages.add(pkg)
-#            except OSError:
-#                error("cannot invoke brew to find installed system packages")
+        elif system == "Darwin":
+            self._installer = "homebrew"
+            self._installer_cmd = "brew install"
+            try:
+                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
+                for pkg in stdout.split("\n"):
+                    if pkg:
+                        self._installed_packages.add(pkg)
+            except OSError:
+                error("cannot invoke brew to find installed system packages")
         else:
             self._installer = None
             self._installer_cmd = None
@@ -235,7 +266,7 @@ system_package_manager = SystemPackageManager()
 _resolve_warn_once = False
 
 
-def resolve_system_depends(system_depends, missing_only=False):
+def resolve_system_depends(ws_state, system_depends, missing_only=False):
     global _resolve_warn_once
     resolved = set()
     rosdep = get_rosdep()
@@ -251,18 +282,19 @@ def resolve_system_depends(system_depends, missing_only=False):
         return resolved
     from rosdep2.lookup import ResolutionError
     for dep in system_depends:
-        try:
-            installer, resolved_deps = rosdep.resolve(dep)
-            for d in resolved_deps:
-                if installer == system_package_manager.installer:
-                    if hasattr(d, "package"):
-                        resolved.add(d.package)
+        if dep not in ws_state.ros_root_packages:  # This deals with ROS source installs
+            try:
+                installer, resolved_deps = rosdep.resolve(dep)
+                for d in resolved_deps:
+                    if installer == system_package_manager.installer:
+                        if hasattr(d, "package"):
+                            resolved.add(d.package)
+                        else:
+                            resolved.add(d)
                     else:
-                        resolved.add(d)
-                else:
-                    warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
-        except ResolutionError:
-            warning("cannot resolve system package: ignoring package '%s'\n" % dep)
+                        warning("unsupported installer '%s': ignoring package '%s'\n" % (installer, dep))
+            except ResolutionError:
+                warning("cannot resolve system package: ignoring package '%s'\n" % dep)
     if missing_only:
         resolved -= system_package_manager.installed_packages
     return resolved
