@@ -72,7 +72,7 @@ _rosrepo_complete()
     done
     if [ "$nargs" -eq 1 ]
     then
-        COMPREPLY=($(compgen -W "-h --help --version init config list git bash build include exclude clean" -- "$arg"))
+        COMPREPLY=($(compgen -W "-h --help --version init config depend list git bash build include exclude clean" -- "$arg"))
         return 0
     fi
     case "$prev" in
@@ -153,6 +153,19 @@ _rosrepo_complete()
     then
         rosrepo_cmd[1]="list"
         rosrepo_cmd+=("-B")
+        if [ "${arg:0:1}" = "-" ]
+        then
+            COMPREPLY=($(compgen -W "$common_opts --this" -- "$arg"))
+        else
+            COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+        fi
+        return 0
+    fi
+    ####
+    if [ "$cmd" = "depend" ]
+    then
+        rosrepo_cmd[1]="list"
+        rosrepo_cmd+=("-a")
         if [ "${arg:0:1}" = "-" ]
         then
             COMPREPLY=($(compgen -W "$common_opts --this" -- "$arg"))

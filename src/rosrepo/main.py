@@ -265,6 +265,14 @@ def prepare_arguments(parser):
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
     p.set_defaults(func=buildset_func)
 
+    # depend
+    p = cmds.add_parser("depend", help="show package dependencies")
+    add_common_options(p)
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="select packages in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
+    from .cmd_depend import run as depend_func
+    p.set_defaults(func=depend_func)
     return parser
 
 
