@@ -155,8 +155,8 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 status = create_local_status(repo, upstream_status, os.path.relpath(pkg.workspace_path, project.workspace_path))
                 if status is not None:
                     head, tail = os.path.split(pkg.workspace_path)
-                    path = escape(head + "/" if tail == name else pkg.workspace_path)
-                    table.add_row(escape(name), path, status)
+                    pkg_path = escape(head + "/" if tail == name else pkg.workspace_path)
+                    table.add_row(escape(name), pkg_path, status)
 
     for path in other_git:
         repo = Repo(os.path.join(srcdir, path))
@@ -171,8 +171,8 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 status = create_local_status(repo, upstream_status, os.path.relpath(pkg.workspace_path, path))
                 if status is not None:
                     head, tail = os.path.split(pkg.workspace_path)
-                    path = escape(head + "/" if tail == name else pkg.workspace_path)
-                    table.add_row(escape(name), path, status)
+                    pkg_path = escape(head + "/" if tail == name else pkg.workspace_path)
+                    table.add_row(escape(name), pkg_path, status)
 
     missing = set(packages) - found_packages
     for name in missing:
