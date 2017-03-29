@@ -40,6 +40,7 @@ class ConfigTest(unittest.TestCase):
         shutil.rmtree(self.wsdir, ignore_errors=True)
 
     def test_storage(self):
+        """Test configuration storage and retrieval"""
         cfg = Config(self.wsdir)
         cfg.set_default("default", "value")
         cfg["test"] = "value"
@@ -59,6 +60,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(new_cfg.get("unicode"), u"ÄÖÜ")
 
     def test_corrupted(self):
+        """Test handling of corrupted configuration files"""
         cfg_dir = os.path.join(self.wsdir, ".rosrepo")
         os.makedirs(cfg_dir)
         cfg_file = os.path.join(cfg_dir, "config")
@@ -88,6 +90,7 @@ class ConfigTest(unittest.TestCase):
         os.chmod(cfg_dir, 0o755)
 
     def test_version_mismatch(self):
+        """Test handling of configuration files from different rosrepo versions"""
         os.makedirs(os.path.join(self.wsdir, ".rosrepo"))
         cfg_file = os.path.join(self.wsdir, ".rosrepo", "config")
         with open(cfg_file, "w") as f:
@@ -103,6 +106,7 @@ class ConfigTest(unittest.TestCase):
         self.assertRaises(ConfigError, lambda: Config(self.wsdir))
 
     def test_read_only(self):
+        """Test if read-only configurations are actually immutable"""
         def helper1():
             cfg["test"] = "new_value"
         def helper2():

@@ -39,12 +39,14 @@ import test.helper as helper
 class TerminalColorTest(unittest.TestCase):
 
     def test_color_enable(self):
+        """Test global flag for terminal coloring"""
         tc.set_color(False)
         self.assertEqual(tc.fmt("@!Bold@|"), "Bold")
         tc.set_color(True)
         self.assertTrue(tc.fmt("@!Bold@|").startswith("\x1b"))
 
     def test_ansi_string(self):
+        """Test proper handling of ANSI annotated strings"""
         tc.set_color(True)
         self.assertEqual(ui.remove_ansi(tc.fmt("@!Bold@{yf}yellow@|")), "Boldyellow")
         self.assertEqual(len(ui.printed_len(tc.fmt("@!Bold@{yf}yellow@|"))), len("Boldyellow"))
@@ -56,6 +58,7 @@ class TerminalColorTest(unittest.TestCase):
         )
 
     def test_text_wrap(self):
+        """Test line wrapping for fixed terminal width"""
         tc.set_color(True)
         paragraph = """This is a @|@|@|@|@|@|@|paragraph with @!bold@| text, @{cf}cyan@| text, and @{yf}yellow@| text."""
         wrapped_text = ui.wrap_ansi_text(tc.fmt(paragraph), width=None)
@@ -92,6 +95,7 @@ class TerminalColorTest(unittest.TestCase):
         )
 
     def test_msg_without_terminal(self):
+        """Test fallback if rosrepo is run without proper terminal"""
         with patch("os.ctermid", lambda: os.devnull):
             stdin = helper.StringIO("Timo\n")
             stderr = helper.StringIO()
@@ -116,6 +120,7 @@ class TerminalColorTest(unittest.TestCase):
             self.assertIn("Hi Timo!", stderr)
 
     def test_reformat_paragraphs(self):
+        """Test reformatting paragraphs with embedded newlines"""
         self.assertEqual(
             ui.reformat_paragraphs("\n\n\nThis is a\nhard-wrapped paragraph.\n\nThis is a second paragraph in one line.\n\n    This is a hard-wrapped\n    paragraph with indentation.\n\r\n"),
             "This is a hard-wrapped paragraph.\n\nThis is a second paragraph in one line.\n\nThis is a hard-wrapped paragraph with indentation."

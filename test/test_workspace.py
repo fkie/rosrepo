@@ -71,6 +71,7 @@ class WorkspaceTest(unittest.TestCase):
         return cfg.get(key, default)
 
     def test_bash(self):
+        """Test proper behavior of 'rosrepo bash'"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         self.assertEqual(
@@ -84,6 +85,7 @@ class WorkspaceTest(unittest.TestCase):
         )
 
     def test_clean(self):
+        """Test proper behavior of 'rosrepo clean'"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         os.makedirs(os.path.join(self.wsdir, "build"))
@@ -95,6 +97,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertFalse(os.path.isdir(os.path.join(self.wsdir, "build")))
 
     def test_upgrade_from_version_1(self):
+        """Test if workspaces from rosrepo 1.x are migrated properly"""
         os.rename(os.path.join(self.wsdir, "src"), os.path.join(self.wsdir, "repos"))
         os.makedirs(os.path.join(self.wsdir, "src"))
         with open(os.path.join(self.wsdir, "src", "CMakeLists.txt"), "w"):
@@ -127,6 +130,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(self.get_config_value("pinned_build"), ["beta"])
 
     def test_upgrade_from_version_2(self):
+        """Test if workspaces from rosrepo 2.x are migrated properly"""
         with open(os.path.join(self.wsdir, ".catkin_workspace"), "w"):
             pass
         os.makedirs(os.path.join(self.wsdir, ".catkin_tools", "profiles", "rosrepo"))
@@ -149,7 +153,8 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(self.get_config_value("default_build"), ["alpha"])
         self.assertEqual(self.get_config_value("pinned_build"), ["beta"])
 
-    def test_different_config_version(self):
+    def test_upgrade_from_older_version_3(self):
+        """Test if workspaces from rosrepo 3.x are upgraded to latest version"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("include", "-w", self.wsdir, "alpha")
@@ -163,6 +168,11 @@ class WorkspaceTest(unittest.TestCase):
         )
         from rosrepo import __version__ as rosrepo_version
         self.assertEqual(self.get_config_value("version"), rosrepo_version)
+
+    def test_incompatible_new_version(self):
+        """Test if workspaces from future rosrepo versions are detected"""
+        exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
+        self.assertEqual(exitcode, 0)
         cfg = Config(self.wsdir)
         cfg["version"] = "999.0"
         cfg.write()
@@ -171,6 +181,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("newer version", stdout)
 
     def test_buildset(self):
+        """Test proper behavior of 'rosrepo include' and 'rosrepo exclude'"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("include", "-w", self.wsdir, "--dry-run", "alpha")
@@ -230,6 +241,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(self.get_config_value("pinned_build", []), [])
 
     def test_build(self):
+        """Test proper behavior of 'rosrepo build'"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("config", "-w", self.wsdir, "--job-limit", "1")
@@ -290,6 +302,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(exitcode, 0)
 
     def test_list(self):
+        """Test proper behavior of 'rosrepo list'"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         exitcode, stdout = helper.run_rosrepo("include", "-w", self.wsdir, "alpha")
@@ -331,6 +344,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("epsilon", stdout)
 
     def test_config(self):
+        """Test proper behavior of 'rosrepo config'"""
         exitcode, stdout = helper.run_rosrepo("init", "-r", self.ros_root_dir, self.wsdir)
         self.assertEqual(exitcode, 0)
         with patch("rosrepo.cmd_config.find_ros_root", lambda x: None):
@@ -509,6 +523,7 @@ class WorkspaceTest(unittest.TestCase):
         #######################
 
     def test_init_failures(self):
+        """Test proper behavior of 'rosrepo init'"""
         with patch("rosrepo.cmd_init.find_ros_root", lambda x: None):
             exitcode, stdout = helper.run_rosrepo("init", self.wsdir)
             self.assertEqual(exitcode, 1)

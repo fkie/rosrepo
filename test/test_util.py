@@ -38,6 +38,7 @@ class TestTuple(util.NamedTuple):
 
 class UtilTest(unittest.TestCase):
     def test_path_has_prefix(self):
+        """Test path_has_prefix() function"""
         self.assertTrue(util.path_has_prefix("abc", "abc"))
         self.assertTrue(util.path_has_prefix("/abc", "/abc"))
         self.assertFalse(util.path_has_prefix("abc", "/abc"))
@@ -50,6 +51,7 @@ class UtilTest(unittest.TestCase):
         self.assertFalse(util.path_has_prefix("abc/efg", "hij/klm"))
 
     def test_named_tuple(self):
+        """Test NamedTuple class"""
         t = TestTuple(1, 2)
         self.assertEqual(len(t), 2)
         self.assertEqual(t.first, 1)
@@ -67,6 +69,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(t.second, 6)
 
     def test_find_program(self):
+        """Test find_program() function"""
         with patch("os.path.isfile", lambda x : "exist" in x):
             with patch("os.access", lambda x, y: "bin" in x):
                 with patch("os.environ", {"PATH": os.pathsep.join(["/missing", "/existing/stuff", "/existing/bin"])}):
@@ -93,6 +96,7 @@ class UtilTest(unittest.TestCase):
                     )
     
     def test_call_process(self):
+        """Test call_process() function"""
         exitcode = util.call_process(["/bin/true"])
         self.assertEqual(exitcode, 0)
         exitcode = util.call_process(["/bin/false"])
@@ -102,6 +106,7 @@ class UtilTest(unittest.TestCase):
         self.assertIn("stderr", stderr)
 
     def test_terminal_size(self):
+        """Test get_terminal_size() function"""
         with patch("os.ctermid", lambda: os.devnull):
             util._cached_terminal_size = None
             self.assertRaises(OSError, util.get_terminal_size)

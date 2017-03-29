@@ -38,6 +38,7 @@ import test.helper as helper
 class ResolverTest(unittest.TestCase):
 
     def test_rosdep(self):
+        """Test package resolution with rosdep"""
         with patch("rosrepo.resolver._rosdep_instance", None):
             rosdep = resolver.get_rosdep()
             if rosdep.ok():

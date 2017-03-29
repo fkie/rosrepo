@@ -49,6 +49,7 @@ class CacheTest(unittest.TestCase):
         shutil.rmtree(self.wsdir, ignore_errors=True)
 
     def test_storage(self):
+        """Test cache storage and retrieval"""
         cache = Cache(self.wsdir)
         cache.set_object("test", 1, "Hello, World")
         self.assertEqual(cache.get_object("test", 1), "Hello, World")
@@ -63,6 +64,7 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(new_cache.get_object("test", 1), None)
 
     def test_version_change(self):
+        """Test cache object versioning"""
         cache = Cache(self.wsdir)
         cache.set_object("test", 1, "data")
         self.assertEqual(cache.get_object("test", 1), "data")
@@ -73,6 +75,7 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(new_cache.get_object("test", 1), "data")
 
     def test_access_denied(self):
+        """Test handling of unreadable/unwriteable cache files"""
         cache = Cache(self.wsdir)
         cache.set_object("test", 1, "data")
         os.chmod(os.path.join(self.wsdir, ".rosrepo", "cache"), 0)
@@ -85,6 +88,7 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(new_cache.get_object("test", 1), "data")
 
     def test_corrupted(self):
+        """Test handling of corrupted cache data"""
         os.makedirs(os.path.join(self.wsdir, ".rosrepo", "cache"))
         with open(os.path.join(self.wsdir, ".rosrepo", "cache", "broken1"), "w") as f:
             f.write("GARBAGE")
