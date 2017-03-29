@@ -81,6 +81,7 @@ class GitTest(unittest.TestCase):
         shutil.rmtree(self.upstream_gitdir, ignore_errors=True)
 
     def test_read_access(self):
+        """Test Python Git API (read only)"""
         repo = git.Repo(self.gitdir)
         upstream_repo = git.Repo(self.upstream_gitdir)
         invalid_repo = git.Repo("invalid")
@@ -216,6 +217,7 @@ class GitTest(unittest.TestCase):
             self.assertRaises(git.GitError, repo.git.reset, on_fail="myfail")
 
     def test_write_access(self):
+        """Test Python Git API (write access)"""
         def del_helper(arg):
             del arg
         repo = git.Repo(self.gitdir)
