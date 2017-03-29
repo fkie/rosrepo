@@ -118,6 +118,7 @@ def run(args):
         invoke = ["catkin", "clean", "--workspace", wsdir, "--yes", "--all"]
         if args.dry_run:
             invoke += ["--dry-run"]
+        call_process(invoke)
     elif args.clean:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--yes"]
         if args.dry_run:
