@@ -63,10 +63,10 @@ def slice_ansi_text(text, chunk_size, fill=" ", pad=True):
 
 
 def pad_ansi_text(text, width, truncate=True, fill=" "):
-    l = printed_len(text)
-    length = len(l)
+    L = printed_len(text)
+    length = len(L)
     if width < length:
-        return text[:l[width]] if truncate else text
+        return text[:L[width]] if truncate else text
     return text + fill[0] * (width - length)
 
 
@@ -88,25 +88,25 @@ def wrap_ansi_text(text, width, indent=0, indent_first=None, indent_next=None, s
         if indent_first > 0:
             line.append(" " * (indent_first - 1))
         for word in chunk.split(" "):
-            l = len(remove_ansi(word))
-            if l != 0 or not skip_blank:
-                if l != 0:
+            L = len(remove_ansi(word))
+            if L != 0 or not skip_blank:
+                if L != 0:
                     skip_blank = False
                     empty_paragraph = False
-                if count + l <= width - sl:
+                if count + L <= width - sl:
                     line.append(word)
-                    count += l + 1
+                    count += L + 1
                 else:
                     result.append(" ".join(line))
                     line = []
                     count = indent_next
                     if indent_next > 0:
                         line.append(" " * (indent_next - 1))
-                    if l == 0:
+                    if L == 0:
                         skip_blank = True
                     else:
                         line.append(word)
-                        count += l + 1
+                        count += L + 1
         result.append("" if skip_blank or empty_paragraph else " ".join(line))
     return (suffix + "\n").join(result)
 
