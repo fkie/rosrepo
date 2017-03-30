@@ -24,8 +24,19 @@ import requests
 import sys
 import os
 import yaml
+try:
+    from pygit2 import Repository
+
+    def access_repo(srcdir):
+        return Repository(os.path.join(srcdir, ".git"))
+
+except ImportError:
+    from .git import Repo
+
+    def access_repo(srcdir):
+        return Repo(srcdir)
+
 from dateutil.parser import parse as date_parse
-from .git import Repo
 try:
     from urllib import quote as urlquote
 except ImportError:
@@ -244,7 +255,7 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     foreign = []
     for curdir, subdirs, _ in os.walk(base_path, followlinks=True):
         if ".git" in subdirs:
-            repo = Repo(curdir)
+            repo = access_repo(curdir)
             repo_urls = set()
             for r in repo.remotes:
                 repo_urls.add(r.url)
