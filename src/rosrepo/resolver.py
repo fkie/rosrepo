@@ -32,10 +32,8 @@ class Rosdep(object):
         try:
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
-            from rosdep2.sources_list import SourcesListLoader
             from rosdep2 import get_default_installer, create_default_installer_context
-            sources_loader = SourcesListLoader.create_default()
-            self.lookup = RosdepLookup.create_from_rospkg(sources_loader=sources_loader)
+            self.lookup = RosdepLookup.create_from_rospkg()
             self.view = self.lookup.get_rosdep_view(DEFAULT_VIEW_KEY)
             self.installer_ctx = create_default_installer_context()
             _, self.installer_keys, self.default_key, \
@@ -192,19 +190,31 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                         depends.update(best_depends)
                         system_depends |= best_sysdep
                         score -= 10  # Small penalty for required download
-                    elif name in rosdep:
+                    elif name in ws_state.ros_root_packages:
+                        system_depends.add(name)
+                        best_score = -1  # small penalty for relying on system package
+                    elif name in get_rosdep():
                         system_depends.add(name)
                         best_score = -1  # small penalty for relying on system package
                     else:
                         resolver_msgs.append("is not installable from a configured Gitlab server due to problems with " + ", ".join("@{cf}%s@|" % s for s in sorted(local_conflicts.keys())))
                         resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                         conflicts[name] = resolver_msgs
-                elif name in rosdep and depender is None:
-                    resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                    resolver_msgs.append("is not available from a configured Gitlab server")
-                    conflicts[name] = resolver_msgs
-                elif name in rosdep:
-                    system_depends.add(name)
+                elif name in ws_state.ros_root_packages:
+                    if depender is not None:
+                        system_depends.add(name)
+                    else:
+                        resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
+                        resolver_msgs.append("is not available from a configured Gitlab server")
+                        resolver_msgs.append("is installed in @{cf}$ROS_ROOT@| and cannot be built")
+                        conflicts[name] = resolver_msgs
+                elif name in get_rosdep():
+                    if depender is not None:
+                        system_depends.add(name)
+                    else:
+                        resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
+                        resolver_msgs.append("is not available from a configured Gitlab server")
+                        conflicts[name] = resolver_msgs
                 else:
                     resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
                     resolver_msgs.append("is not available from a configured Gitlab server")
@@ -213,7 +223,6 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                         conflicts[name] = resolver_msgs
         score -= 100 * len(system_depends - system_package_manager.installed_packages)  # Large penalty for uninstalled system dependency
         return depends, system_depends, conflicts, score
-    rosdep = get_rosdep()
     queue = [(None, None, name) for name in packages]
     depends, system_depends, conflicts, _ = try_resolve(queue)
     return depends, system_depends, conflicts
@@ -269,20 +278,20 @@ _resolve_warn_once = False
 def resolve_system_depends(ws_state, system_depends, missing_only=False):
     global _resolve_warn_once
     resolved = set()
-    rosdep = get_rosdep()
-    if not rosdep.ok():
-        if not _resolve_warn_once:
-            error("cannot resolve system dependencies without rosdep\n")
-            _resolve_warn_once = True
-        return resolved
     if system_package_manager.installer is None:
         if not _resolve_warn_once:
             error("cannot resolve system dependencies for this system\n")
             _resolve_warn_once = True
-        return resolved
-    from rosdep2.lookup import ResolutionError
+        return set()
     for dep in system_depends:
         if dep not in ws_state.ros_root_packages:  # This deals with ROS source installs
+            rosdep = get_rosdep()
+            if not rosdep.ok():
+                if not _resolve_warn_once:
+                    error("cannot resolve system dependencies without rosdep\n")
+                    _resolve_warn_once = True
+                return set()
+            from rosdep2.lookup import ResolutionError
             try:
                 installer, resolved_deps = rosdep.resolve(dep)
                 for d in resolved_deps:
