@@ -150,6 +150,8 @@ def run(args):
 
     if (args.env_cache or config.get("use_env_cache", True)) and not args.no_env_cache:
         catkin_build += ["--env-cache"]
+    else:
+        catkin_build += ["--no-env-cache"]
 
     if args.jobs:
         catkin_build += ["-j", str(args.jobs), "-p", str(args.jobs)]
@@ -171,7 +173,7 @@ def run(args):
                 if not pkg.manifest.is_metapackage() and hasattr(pkg, "workspace_path") and pkg.workspace_path is not None:
                     pkgdir = os.path.join(wsdir, "src", pkg.workspace_path)
                     p_time = max(getmtime(os.path.join(pkgdir, "CMakeLists.txt")), getmtime(os.path.join(pkgdir, "package.xml")))
-                    e_time = min(getmtime(os.path.join(pkgdir, ".project")), getmtime(os.path.join(pkgdir, ".cproject")), getmtime(os.path.join(pkgdir, ".settings", "language.settings.xml")))
+                    e_time = getmtime(os.path.join(pkgdir, ".project"))
                     if e_time < p_time or args.rosclipse:
                         msg("@{cf}Updating rosclipse project files@|: %s\n" % name)
                         if not args.dry_run:
