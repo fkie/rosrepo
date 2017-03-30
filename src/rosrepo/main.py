@@ -148,6 +148,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("-a", "--all", action="store_true", help="build all packages in the workspace")
     m.add_argument("-l", "--last", action="store_true", help="build the same packages as the last time")
+    g.add_argument("--rebuild", action="store_true", help="rebuild all built packages in the workspace")
     m.add_argument("--this", action="store_true", help="build package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
     from .cmd_build import run as build_func

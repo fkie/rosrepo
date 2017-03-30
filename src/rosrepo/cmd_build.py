@@ -49,6 +49,8 @@ def run(args):
         args.packages = resolve_this(wsdir, ws_state)
     if args.all:
         args.packages = ws_state.ws_packages.keys()
+    if args.rebuild:
+        args.packages = [pkg for pkg in ws_state.ws_packages.keys() if os.path.isfile(os.path.join(wsdir, "build", pkg, "Makefile"))]
     if args.set_default:
         if args.packages:
             msg("@{cf}Replacing default build set with@|:\n")
