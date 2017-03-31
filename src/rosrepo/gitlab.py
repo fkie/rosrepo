@@ -36,6 +36,11 @@ except ImportError:
     def access_repo(srcdir):
         return Repo(srcdir)
 
+try:
+    from scandir import walk as os_walk
+except ImportError:
+    from os import walk as os_walk
+
 from dateutil.parser import parse as date_parse
 try:
     from urllib import quote as urlquote
@@ -253,7 +258,7 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
     result = []
     foreign = []
-    for curdir, subdirs, _ in os.walk(base_path, followlinks=True):
+    for curdir, subdirs, _ in os_walk(base_path, followlinks=True):
         if ".git" in subdirs:
             repo = access_repo(curdir)
             repo_urls = set()
