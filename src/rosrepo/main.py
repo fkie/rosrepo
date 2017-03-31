@@ -283,32 +283,32 @@ def run_rosrepo(args):  # pragma: no cover
     try:
         if hasattr(args, "func"):
             if args.func == CMD_BASH:
-                import cmd_bash
-                return cmd_bash.run(args)
+                import rosrepo.cmd_bash
+                return rosrepo.cmd_bash.run(args)
             if args.func == CMD_BUILD:
-                import cmd_build
-                return cmd_build.run(args)
+                import rosrepo.cmd_build
+                return rosrepo.cmd_build.run(args)
             if args.func == CMD_BUILDSET:
-                import buildset
-                return buildset.run(args)
+                import rosrepo.buildset
+                return rosrepo.buildset.run(args)
             if args.func == CMD_CLEAN:
-                import cmd_clean
-                return cmd_clean.run(args)
+                import rosrepo.cmd_clean
+                return rosrepo.cmd_clean.run(args)
             if args.func == CMD_CONFIG:
-                import cmd_config
-                return cmd_config.run(args)
+                import rosrepo.cmd_config
+                return rosrepo.cmd_config.run(args)
             if args.func == CMD_DEPEND:
-                import cmd_depend
-                return cmd_depend.run(args)
+                import rosrepo.cmd_depend
+                return rosrepo.cmd_depend.run(args)
             if args.func == CMD_GIT:
-                import cmd_git
-                return cmd_git.run(args)
+                import rosrepo.cmd_git
+                return rosrepo.cmd_git.run(args)
             if args.func == CMD_INIT:
-                import cmd_init
-                return cmd_init.run(args)
+                import rosrepo.cmd_init
+                return rosrepo.cmd_init.run(args)
             if args.func == CMD_LIST:
-                import cmd_list
-                return cmd_list.run(args)
+                import rosrepo.cmd_list
+                return rosrepo.cmd_list.run(args)
         error("no command\n")
     except UserError as e:
         error("%s\n" % str(e))
