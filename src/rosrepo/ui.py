@@ -221,12 +221,12 @@ def show_conflicts(conflicts):
 
 def show_missing_system_depends(missing):
     if missing:
-        from .resolver import system_package_manager
+        from .resolver import get_system_package_manager
         msg(
             "You need to install additional resources on this computer to satisfy all dependencies. "
             "Please run the following command:\n\n"
         )
-        msg("@!" + system_package_manager.installer_cmd + " " + " ".join(sorted(list(missing))), indent_first=4, indent_next=len(system_package_manager.installer_cmd) + 5, suffix=" \\")
+        msg("@!" + get_system_package_manager().installer_cmd + " " + " ".join(sorted(list(missing))), indent_first=4, indent_next=len(get_system_package_manager().installer_cmd) + 5, suffix=" \\")
         msg("\n\n")
 
 

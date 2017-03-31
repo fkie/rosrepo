@@ -221,7 +221,7 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                     resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                     if not ignore_missing:
                         conflicts[name] = resolver_msgs
-        score -= 100 * len(system_depends - system_package_manager.installed_packages)  # Large penalty for uninstalled system dependency
+        score -= 100 * len(system_depends - get_system_package_manager().installed_packages)  # Large penalty for uninstalled system dependency
         return depends, system_depends, conflicts, score
     queue = [(None, None, name) for name in packages]
     depends, system_depends, conflicts, _ = try_resolve(queue)
@@ -271,14 +271,23 @@ class SystemPackageManager(object):
         return self._installed_packages
 
 
-system_package_manager = SystemPackageManager()
+_system_package_manager = None
+
+
+def get_system_package_manager():
+    global _system_package_manager
+    if _system_package_manager is None:
+        _system_package_manager = SystemPackageManager()
+    return _system_package_manager
+
+
 _resolve_warn_once = False
 
 
 def resolve_system_depends(ws_state, system_depends, missing_only=False):
     global _resolve_warn_once
     resolved = set()
-    if system_package_manager.installer is None:
+    if get_system_package_manager().installer is None:
         if not _resolve_warn_once:
             error("cannot resolve system dependencies for this system\n")
             _resolve_warn_once = True
@@ -295,7 +304,7 @@ def resolve_system_depends(ws_state, system_depends, missing_only=False):
             try:
                 installer, resolved_deps = rosdep.resolve(dep)
                 for d in resolved_deps:
-                    if installer == system_package_manager.installer:
+                    if installer == get_system_package_manager().installer:
                         if hasattr(d, "package"):
                             resolved.add(d.package)
                         else:
@@ -305,5 +314,5 @@ def resolve_system_depends(ws_state, system_depends, missing_only=False):
             except ResolutionError:
                 warning("cannot resolve system package: ignoring package '%s'\n" % dep)
     if missing_only:
-        resolved -= system_package_manager.installed_packages
+        resolved -= get_system_package_manager().installed_packages
     return resolved
