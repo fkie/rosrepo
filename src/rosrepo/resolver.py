@@ -23,12 +23,14 @@
 from .ui import pick_dependency_resolution, warning, error, escape
 from .util import is_deprecated_package, call_process, PIPE, iteritems
 import platform
+import gc
 
 
 class Rosdep(object):
 
     def __init__(self):
         self.cached_installers = {}
+        gc.disable()
         try:
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
@@ -41,6 +43,7 @@ class Rosdep(object):
         except Exception as e:
             error("failed to initialize rosdep: %s" % str(e))
             self.view = None
+        gc.enable()
 
     def __contains__(self, name):
         return self.view is not None and name in self.view.keys()
