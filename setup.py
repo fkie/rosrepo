@@ -33,7 +33,7 @@ else:
 
 from rosrepo import __version__ as rosrepo_version
 
-install_requires = ["catkin_pkg", "catkin_tools", "python-dateutil", "requests", "rosdep", "scandir", "pyyaml"]
+install_requires = ["catkin_pkg", "catkin_tools", "python-dateutil", "pygit2", "requests", "rosdep", "scandir", "pyyaml"]
 extras_require = {}
 ## The following code is a somewhat barbaric attempt to get conditional
 ## dependencies that works on setuptools versions before 18.0 as well:
