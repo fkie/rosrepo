@@ -24,7 +24,7 @@ from .util import UserError
 from yaml import YAMLError
 from pickle import PickleError
 from .ui import error
-from .git import GitError
+from pygit2 import GitError
 
 
 CMD_INIT = 1
@@ -202,6 +202,7 @@ def prepare_arguments(parser):
     q = git_cmds.add_parser("merge", help="merge local branches with upstream")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages in merge selection")
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     g = q.add_argument_group("possible merge types")
     m = g.add_mutually_exclusive_group(required=True)
     m.add_argument("--from-master", action="store_true", help="merge changes from master into active branch, leaving master unchanged")

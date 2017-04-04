@@ -24,17 +24,7 @@ import requests
 import sys
 import os
 import yaml
-try:
-    from pygit2 import Repository
-
-    def access_repo(srcdir):
-        return Repository(os.path.join(srcdir, ".git"))
-
-except ImportError:
-    from .git import Repo
-
-    def access_repo(srcdir):
-        return Repo(srcdir)
+from pygit2 import Repository
 
 try:
     from scandir import walk as os_walk
@@ -263,7 +253,7 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     foreign = []
     for curdir, subdirs, _ in os_walk(base_path, followlinks=True):
         if ".git" in subdirs:
-            repo = access_repo(curdir)
+            repo = Repository(os.path.join(curdir, ".git"))
             repo_urls = set()
             for r in repo.remotes:
                 repo_urls.add(r.url)
