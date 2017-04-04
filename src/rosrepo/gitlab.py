@@ -158,10 +158,13 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
             with requests.Session() as s:
                 s.headers.update({"PRIVATE-TOKEN": private_token})
                 r = s.get(urljoin(url, "api/v3/projects/?per_page=1&page=1&order_by=last_activity_at&sort=desc"), timeout=timeout)
+                r.raise_for_status()
                 try:
                     global_last_modified = r.json()[0]["last_activity_at"]
                 except (KeyError, IndexError):
                     global_last_modified = 0
+                except Exception:
+                    raise IOError("unexpected reply from server: %s" % r.content)
                 if force_update or global_last_modified != server_cache.last_modified:
                     msg("@{cf}Updating@|: %s\n" % url)
                     cache_update = True
