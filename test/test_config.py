@@ -27,6 +27,7 @@ sys.stderr = sys.stdout
 import os
 import shutil
 from tempfile import mkdtemp
+from distutils.version import StrictVersion
 
 from rosrepo.config import Config, ConfigError
 from rosrepo import __version__ as rosrepo_version
@@ -101,8 +102,21 @@ class ConfigTest(unittest.TestCase):
             f.write("version: 3.0.0a0")
         cfg = Config(self.wsdir)
         self.assertEqual(cfg.get("version"), rosrepo_version)
+        # revisions may change without affecting config compatibility
+        v = StrictVersion(rosrepo_version)
+        v.version = tuple([v.version[0], v.version[1], v.version[2] + 1])
         with open(cfg_file, "w") as f:
-            f.write('version: "999.0"')
+            f.write('version: "%s"' % str(v))
+        cfg = Config(self.wsdir)
+        self.assertEqual(cfg.get("version"), str(v))
+        # major or minor version number change means incompatible configurations
+        v.version = tuple([v.version[0], v.version[1] + 1, 0])
+        with open(cfg_file, "w") as f:
+            f.write('version: "%s"' % str(v))
+        self.assertRaises(ConfigError, lambda: Config(self.wsdir))
+        v.version = tuple([v.version[0] + 1, 0, 0])
+        with open(cfg_file, "w") as f:
+            f.write('version: "%s"' % str(v))
         self.assertRaises(ConfigError, lambda: Config(self.wsdir))
 
     def test_read_only(self):

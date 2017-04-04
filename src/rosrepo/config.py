@@ -53,7 +53,7 @@ class Config(object):
                 raise ConfigError("invalid configuration version number")
             if stored < current and not read_only:
                 self._migrate(stored)
-            if stored > current and not read_only:
+            if stored.version[:2] > current.version[:2] and not read_only:
                 raise ConfigError("workspace was configured by newer version of rosrepo")
         else:
             self._data = {"version": __version__}

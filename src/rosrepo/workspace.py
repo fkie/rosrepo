@@ -93,10 +93,10 @@ def detect_workspace_type(path):
     if isfile(join(path, ".rosrepo", "config")):
         try:
             from . import __version__
-            cfg = Config(path, True)
+            cfg = Config(path, read_only=True)
             this_version = Version(__version__)
             ws_version = Version(cfg["version"])
-            if this_version < ws_version:
+            if this_version.version[:2] < ws_version.version[:2]:
                 return 4, cfg["version"]
             return 3, cfg["version"]
         except ConfigError as e:
