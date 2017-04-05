@@ -167,6 +167,7 @@ def prepare_arguments(parser):
     # git clone
     q = git_cmds.add_parser("clone", help="clone packages from Gitlab repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     q.add_argument("-p", "--protocol", help="use PROTOCOL for remote access")
     q.add_argument("-m", "--ignore-missing-depends", action="store_true", help="clone packages even if dependencies are missing")
     m = q.add_mutually_exclusive_group(required=False)
