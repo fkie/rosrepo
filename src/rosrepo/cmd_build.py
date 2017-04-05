@@ -134,6 +134,7 @@ def run(args):
         if args.offline:
             catkin_lint += ["--offline"]
         catkin_lint += reduce(lambda x, y: x + y, (["--pkg", pkg] for pkg in build_packages.keys()))
+        msg("@{cf}Running catkin_lint@|\n")
         ret = call_process(catkin_lint)
         if ret != 0 and not args.dry_run:
             fatal("catkin_lint reported errors\n")

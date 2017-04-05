@@ -167,6 +167,7 @@ def prepare_arguments(parser):
     # git clone
     q = git_cmds.add_parser("clone", help="clone packages from Gitlab repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     q.add_argument("-p", "--protocol", help="use PROTOCOL for remote access")
     q.add_argument("-m", "--ignore-missing-depends", action="store_true", help="clone packages even if dependencies are missing")
     m = q.add_mutually_exclusive_group(required=False)
@@ -236,6 +237,7 @@ def prepare_arguments(parser):
     add_common_options(p)
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="clean package in the current working directory")
+    m.add_argument("--vanished", action="store_true", help="clean build artifacts for packages which are no longer in the workspace")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
     p.set_defaults(func=CMD_CLEAN)
 

@@ -23,7 +23,13 @@
 from .workspace import get_workspace_location, get_workspace_state, resolve_this
 from .config import Config
 from .cache import Cache
+from .ui import msg
 from .util import call_process
+import os
+try:
+    from os import scandir
+except ImportError:
+    from scandir import scandir
 
 
 def run(args):
@@ -33,6 +39,18 @@ def run(args):
         cache = Cache(wsdir)
         ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
         args.packages = resolve_this(wsdir, ws_state)
+    elif args.vanished:
+        config = Config(wsdir)
+        cache = Cache(wsdir)
+        ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
+        args.packages = []
+        for d in scandir(os.path.join(wsdir, "build")):
+            if d.is_dir() and d.name not in ws_state.ws_packages and not d.name == "catkin_tools_prebuild":
+                args.packages.append(d.name)
+        if not args.packages:
+            msg("Nothing to clean\n")
+            return 0
+
     catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--yes"]
     if args.dry_run:
         catkin_clean.append("--dry-run")

@@ -543,7 +543,20 @@ def compute_git_subdir(srcdir, name):
     return result
 
 
-def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=False, dry_run=False):
+def clone_worker(git_remote_callback, protocol, dry_run, part):
+    project, path = part[0], part[1]
+    msg("@{cf}Cloning@|: %s\n" % escape(project.url[protocol]))
+    try:
+        if not dry_run:
+            clone_repository(project.url[protocol], path, callbacks=git_remote_callback)
+    except GitError as e:
+        return project, str(e)
+    return project, ""
+
+
+def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_mode=False, dry_run=False):
+    global credential_lock
+    global credential_dict
     need_cloning = [(n, p) for n, p in iteritems(packages) if n not in ws_state.ws_packages and p.project not in ws_state.ws_projects]
     if not need_cloning:
         return False
@@ -551,14 +564,42 @@ def clone_packages(srcdir, packages, ws_state, protocol="ssh", offline_mode=Fals
     msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent=4)
     if offline_mode:
         fatal("cannot clone projects in offline mode\n")
-    projects = list(set(p.project for _, p in need_cloning))
-    for project in projects:
-        git_subdir = compute_git_subdir(srcdir, project.server_path)
-        if protocol not in project.url:
-            fatal("unsupported procotol type: %s\n" % protocol)
-        msg("@{cf}Cloning@|: %s\n" % escape(project.url[protocol]))
-        if not dry_run:
-            clone_repository(project.url[protocol], git_subdir)
+    git_remote_callback = GitRemoteCallback()
+    manager = multiprocessing.Manager()
+    L = manager.Lock()
+    d = manager.dict()
+    pool = multiprocessing.Pool(processes=jobs, initializer=fetch_worker_init, initargs=(L, d))
+    workload = [(p.project, os.path.join(srcdir, compute_git_subdir(srcdir, p.project.server_path))) for _, p in need_cloning]
+    try:
+        result_obj = pool.map_async(partial(clone_worker, git_remote_callback, protocol, dry_run), workload)
+        pool.close()
+        result = result_obj.get(900)
+    except multiprocessing.TimeoutError:
+        pool.terminate()
+        fatal("git network connection timed out")
+    except KeyboardInterrupt:
+        pool.terminate()
+        raise
+    except Exception:
+        pool.terminate()
+        raise
+    finally:
+        pool.join()
+    errors = 0
+    success = 0
+    for r in result:
+        project, e = r
+        if e:
+            error("failed to clone '%s': %s\n" % (project.name, e))
+            errors += 1
+        else:
+            success += 1
+    if errors > 0:
+        fatal("cloning failed")
+    if success == 1:
+        msg("Successfully cloned one repository\n")
+    elif success > 1:
+        msg("Successfully cloned %d repositories\n" % success)
     return True
 
 
@@ -601,7 +642,7 @@ def run(args):
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies\n")
-        if not clone_packages(srcdir, depends, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
+        if not clone_packages(srcdir, depends, ws_state, jobs=args.jobs, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
         missing = resolve_system_depends(ws_state, system_depends, missing_only=True)
         show_missing_system_depends(missing)
