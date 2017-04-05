@@ -56,7 +56,7 @@ setup(
     keywords     = ["catkin", "ROS", "Git"],
     packages     = ["rosrepo"],
     package_dir  = {"": "src"},
-    data_files   = [("/etc/bash_completion.d", ["bash/rosrepo"])],
+    data_files   = [("share/bash-completion/completions", ["bash/rosrepo"])],
     version      = rosrepo_version,
     install_requires = install_requires,
     extras_require = extras_require,
