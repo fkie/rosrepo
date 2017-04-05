@@ -24,6 +24,7 @@ import os
 import sys
 import re
 import multiprocessing
+import signal
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages, resolve_this
 from .config import Config
 from .cache import Cache
@@ -104,13 +105,6 @@ def has_pending_merge(repo):
 
 def is_ancestor(repo, maybe_ancestor, branch):
     return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
-
-
-def mp_init(L, d):
-    global credential_lock
-    global credential_dict
-    credential_lock = L
-    credential_dict = d
 
 
 class GitRemoteCallback(RemoteCallbacks):
@@ -352,6 +346,14 @@ def fetch_worker(srcdir, git_remote_callback, fetch_remote, dry_run, part):
     return project, path, result
 
 
+def fetch_worker_init(L, d):
+    global credential_lock
+    global credential_dict
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    credential_lock = L
+    credential_dict = d
+
+
 def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, jobs, dry_run=False, action="update", fetch_remote=True):
     if (pygit2_features & GIT_FEATURE_HTTPS) == 0:
         warning("your libgit2 has no built-in HTTPS support\n")
@@ -361,11 +363,23 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
     manager = multiprocessing.Manager()
     L = manager.Lock()
     d = manager.dict()
-    pool = multiprocessing.Pool(processes=jobs, initializer=mp_init, initargs=(L, d))
+    pool = multiprocessing.Pool(processes=jobs, initializer=fetch_worker_init, initargs=(L, d))
     workload = [(project, project.workspace_path) for project in projects] + [(None, path) for path in other_git]
-    result = pool.map(partial(fetch_worker, srcdir, git_remote_callback, fetch_remote, dry_run), workload)
-    pool.close()
-    pool.join()
+    try:
+        result_obj = pool.map_async(partial(fetch_worker, srcdir, git_remote_callback, fetch_remote, dry_run), workload)
+        pool.close()
+        result = result_obj.get(900)
+    except multiprocessing.TimeoutError:
+        pool.terminate()
+        fatal("git network connection timed out")
+    except KeyboardInterrupt:
+        pool.terminate()
+        raise
+    except Exception:
+        pool.terminate()
+        raise
+    finally:
+        pool.join()
     for r in result:
         project, path, e = r
         try:
