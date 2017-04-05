@@ -24,8 +24,14 @@ import requests
 import sys
 import os
 import yaml
+from pygit2 import Repository
+
+try:
+    from scandir import walk as os_walk
+except ImportError:
+    from os import walk as os_walk
+
 from dateutil.parser import parse as date_parse
-from .git import Repo
 try:
     from urllib import quote as urlquote
 except ImportError:
@@ -142,10 +148,13 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
             with requests.Session() as s:
                 s.headers.update({"PRIVATE-TOKEN": private_token})
                 r = s.get(urljoin(url, "api/v3/projects/?per_page=1&page=1&order_by=last_activity_at&sort=desc"), timeout=timeout)
+                r.raise_for_status()
                 try:
                     global_last_modified = r.json()[0]["last_activity_at"]
                 except (KeyError, IndexError):
                     global_last_modified = 0
+                except Exception:
+                    raise IOError("unexpected reply from server: %s" % r.content)
                 if force_update or global_last_modified != server_cache.last_modified:
                     msg("@{cf}Updating@|: %s\n" % url)
                     cache_update = True
@@ -242,9 +251,11 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
     result = []
     foreign = []
-    for curdir, subdirs, _ in os.walk(base_path, followlinks=True):
-        if ".git" in subdirs:
-            repo = Repo(curdir)
+    for curdir, subdirs, files in os_walk(base_path, followlinks=True):
+        if "CATKIN_IGNORE" in files:
+            del subdirs[:]
+        elif ".git" in subdirs:
+            repo = Repository(os.path.join(curdir, ".git"))
             repo_urls = set()
             for r in repo.remotes:
                 repo_urls.add(r.url)

@@ -24,7 +24,18 @@ from .util import UserError
 from yaml import YAMLError
 from pickle import PickleError
 from .ui import error
-from .git import GitError
+from pygit2 import GitError
+
+
+CMD_INIT = 1
+CMD_CONFIG = 2
+CMD_LIST = 3
+CMD_BASH = 4
+CMD_BUILD = 5
+CMD_GIT = 6
+CMD_CLEAN = 7
+CMD_BUILDSET = 8
+CMD_DEPEND = 9
 
 
 def add_common_options(parser):
@@ -48,8 +59,7 @@ def prepare_arguments(parser):
     p.add_argument("-r", "--ros-root", help="override ROS installation path (default: autodetect)")
     p.add_argument("--reset", action="store_true", help="reset workspace and delete all metadata")
     p.add_argument("path", metavar="PATH", nargs="?", default=".", help="path to the new catkin workspace")
-    from .cmd_init import run as init_func
-    p.set_defaults(func=init_func)
+    p.set_defaults(func=CMD_INIT)
 
     # config
     p = cmds.add_parser("config", help="configuration settings")
@@ -92,8 +102,7 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--env-cache", action="store_true", help="cache build environment settings to build workspace faster")
     m.add_argument("--no-env-cache", action="store_true", help="do not cache build environment settings")
-    from .cmd_config import run as config_func
-    p.set_defaults(func=config_func)
+    p.set_defaults(func=CMD_CONFIG)
 
     # list
     p = cmds.add_parser("list", help="list packages in workspace")
@@ -109,8 +118,7 @@ def prepare_arguments(parser):
     g.add_argument("-W", "--workspace-only", action="store_true", help="list only packages which are in the workspace")
     g.add_argument("-D", "--dependees", action="store_true", help="also list dependees for default and pinned set")
     p.add_argument("filter", metavar="FILTER", default=[], nargs="*", help="name filter (with unix shell globs allowed)")
-    from .cmd_list import run as list_func
-    p.set_defaults(func=list_func)
+    p.set_defaults(func=CMD_LIST)
 
     # bash
     p = cmds.add_parser("bash", help="internal command")
@@ -118,8 +126,7 @@ def prepare_arguments(parser):
     p.add_argument("-t", "--terse", action="store_true", help="only print the value itself")
     p.add_argument("-e", "--export", action="store_true", help="prepend variable definition with export keyword")
     p.add_argument("var", nargs="*", help="environment variable is to be queried")
-    from .cmd_bash import run as bash_func
-    p.set_defaults(func=bash_func)
+    p.set_defaults(func=CMD_BASH)
 
     # build
     p = cmds.add_parser("build", help="build packages in workspace")
@@ -151,8 +158,7 @@ def prepare_arguments(parser):
     g.add_argument("--rebuild", action="store_true", help="rebuild all built packages in the workspace")
     m.add_argument("--this", action="store_true", help="build package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to build")
-    from .cmd_build import run as build_func
-    p.set_defaults(func=build_func)
+    p.set_defaults(func=CMD_BUILD)
 
     # git
     p = cmds.add_parser("git", help="manage Git repositories")
@@ -196,6 +202,7 @@ def prepare_arguments(parser):
     q = git_cmds.add_parser("merge", help="merge local branches with upstream")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     q.add_argument("--with-depends", action="store_true", help="also include dependent packages in merge selection")
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     g = q.add_argument_group("possible merge types")
     m = g.add_mutually_exclusive_group(required=True)
     m.add_argument("--from-master", action="store_true", help="merge changes from master into active branch, leaving master unchanged")
@@ -222,8 +229,7 @@ def prepare_arguments(parser):
     m = q.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="modify package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
-    from .cmd_git import run as git_func
-    p.set_defaults(func=git_func)
+    p.set_defaults(func=CMD_GIT)
 
     # clean
     p = cmds.add_parser("clean", help="clean workspace")
@@ -231,11 +237,9 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="clean package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
-    from .cmd_clean import run as clean_func
-    p.set_defaults(func=clean_func)
+    p.set_defaults(func=CMD_CLEAN)
 
     # include
-    from .buildset import run as buildset_func
     p = cmds.add_parser("include", help="add packages to default set or pinned set")
     add_common_options(p)
     p.add_argument("-l", "--list", action="store_true", help="list packages but do not change anything")
@@ -249,7 +253,7 @@ def prepare_arguments(parser):
     m.add_argument("--last", action="store_true", help="select packages from the last build")
     m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to include")
-    p.set_defaults(func=buildset_func)
+    p.set_defaults(func=CMD_BUILDSET)
 
     # exclude
     p = cmds.add_parser("exclude", help="remove packages from default set or pinned set")
@@ -264,7 +268,7 @@ def prepare_arguments(parser):
     m.add_argument("--last", action="store_true", help="select packages from the last build")
     m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
-    p.set_defaults(func=buildset_func)
+    p.set_defaults(func=CMD_BUILDSET)
 
     # depend
     p = cmds.add_parser("depend", help="show package dependencies")
@@ -272,17 +276,41 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
-    from .cmd_depend import run as depend_func
-    p.set_defaults(func=depend_func)
+    p.set_defaults(func=CMD_DEPEND)
     return parser
 
 
 def run_rosrepo(args):  # pragma: no cover
     try:
         if hasattr(args, "func"):
-            return args.func(args)
-        else:
-            error("no command\n")
+            if args.func == CMD_BASH:
+                import rosrepo.cmd_bash
+                return rosrepo.cmd_bash.run(args)
+            if args.func == CMD_BUILD:
+                import rosrepo.cmd_build
+                return rosrepo.cmd_build.run(args)
+            if args.func == CMD_BUILDSET:
+                import rosrepo.buildset
+                return rosrepo.buildset.run(args)
+            if args.func == CMD_CLEAN:
+                import rosrepo.cmd_clean
+                return rosrepo.cmd_clean.run(args)
+            if args.func == CMD_CONFIG:
+                import rosrepo.cmd_config
+                return rosrepo.cmd_config.run(args)
+            if args.func == CMD_DEPEND:
+                import rosrepo.cmd_depend
+                return rosrepo.cmd_depend.run(args)
+            if args.func == CMD_GIT:
+                import rosrepo.cmd_git
+                return rosrepo.cmd_git.run(args)
+            if args.func == CMD_INIT:
+                import rosrepo.cmd_init
+                return rosrepo.cmd_init.run(args)
+            if args.func == CMD_LIST:
+                import rosrepo.cmd_list
+                return rosrepo.cmd_list.run(args)
+        error("no command\n")
     except UserError as e:
         error("%s\n" % str(e))
     except YAMLError as e:

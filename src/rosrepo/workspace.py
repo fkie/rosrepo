@@ -27,6 +27,10 @@ from .cache import Cache
 from .gitlab import get_gitlab_projects, find_catkin_packages_from_gitlab_projects, find_cloned_gitlab_projects
 from .util import path_has_prefix, iteritems, NamedTuple, is_deprecated_package
 from .ui import msg, warning, fatal, escape
+try:
+    from scandir import walk as os_walk
+except ImportError:
+    from os import walk as os_walk
 
 
 WORKSPACE_PACKAGE_CACHE_VERSION = 1
@@ -89,10 +93,10 @@ def detect_workspace_type(path):
     if isfile(join(path, ".rosrepo", "config")):
         try:
             from . import __version__
-            cfg = Config(path, True)
+            cfg = Config(path, read_only=True)
             this_version = Version(__version__)
             ws_version = Version(cfg["version"])
-            if this_version < ws_version:
+            if this_version.version[:2] < ws_version.version[:2]:
                 return 4, cfg["version"]
             return 3, cfg["version"]
         except ConfigError as e:
@@ -143,7 +147,7 @@ def find_catkin_packages(srcdir, subdir=None, cache=None, cache_id="workspace_pa
         cached_paths = cache.get_object(cache_id, WORKSPACE_PACKAGE_CACHE_VERSION, cached_paths)
     package_paths = []
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
-    for curdir, subdirs, files in os.walk(base_path, followlinks=True):
+    for curdir, subdirs, files in os_walk(base_path, followlinks=True):
         if "CATKIN_IGNORE" in files:
             del subdirs[:]
             continue

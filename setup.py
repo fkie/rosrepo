@@ -33,19 +33,19 @@ else:
 
 from rosrepo import __version__ as rosrepo_version
 
-install_requires = ["catkin_pkg", "catkin_tools", "python-dateutil", "requests", "rosdep", "pyyaml"]
+install_requires = ["catkin_pkg", "catkin_tools", "python-dateutil", "pygit2", "requests", "rosdep", "scandir", "pyyaml"]
 extras_require = {}
-# The following code is a somewhat barbaric attempt to get conditional
-# dependencies that works on setuptools versions before 18.0 as well:
-if int(setuptools_version.split(".", 1)[0]) < 18:
-    if sys.version_info[0] < 3:
-        install_requires.append("futures")
-    # Unfortunately, the fake conditional dependencies do not work with
-    # the caching mechanism of bdist_wheel, so if you want to create wheels,
-    # use at least setuptools version 18
-    assert "bdist_wheel" not in sys.argv
-else:
-    extras_require[":python_version<'3'"] = ["futures"]
+## The following code is a somewhat barbaric attempt to get conditional
+## dependencies that works on setuptools versions before 18.0 as well:
+#if int(setuptools_version.split(".", 1)[0]) < 18:
+#    if sys.version_info[0] < 3:
+#        install_requires.append("futures")
+#    # Unfortunately, the fake conditional dependencies do not work with
+#    # the caching mechanism of bdist_wheel, so if you want to create wheels,
+#    # use at least setuptools version 18
+#    assert "bdist_wheel" not in sys.argv
+#else:
+#    extras_require[":python_version<'3'"] = ["futures"]
 
 setup(
     name         = "rosrepo",
@@ -56,7 +56,7 @@ setup(
     keywords     = ["catkin", "ROS", "Git"],
     packages     = ["rosrepo"],
     package_dir  = {"": "src"},
-    data_files   = [("/etc/bash_completion.d", ["bash/rosrepo"])],
+    data_files   = [("share/bash-completion/completions", ["bash/rosrepo"])],
     version      = rosrepo_version,
     install_requires = install_requires,
     extras_require = extras_require,

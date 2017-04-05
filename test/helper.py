@@ -150,7 +150,7 @@ def fake_requests_get(*args, **kwargs):
 
 
 @mock.patch("rosrepo.resolver._rosdep_instance", FakeRosdep())
-@mock.patch("rosrepo.resolver.system_package_manager", FakeSystemPackageManager())
+@mock.patch("rosrepo.resolver._system_package_manager", FakeSystemPackageManager())
 @mock.patch("rosrepo.cmd_build.call_process", no_call_process)
 @mock.patch("rosrepo.cmd_build.find_program", find_program)
 @mock.patch("requests.get", fake_requests_get)
