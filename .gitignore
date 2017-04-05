@@ -7,3 +7,4 @@ __pycache__/
 .coverage
 *.egg-info/
 build/
+/debian/extra/rosrepo.1
