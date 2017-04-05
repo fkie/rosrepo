@@ -5,10 +5,12 @@ Maintainer: Timo Röhling <timo.roehling@fkie.fraunhofer.de>
 Build-Depends: debhelper (>= 9), help2man, dh-python,
         python-all, python-setuptools, python-nose,
         python3-all, python3-setuptools, python3-nose,
-        python-mock,
-        python-catkin-pkg, python-catkin-tools, python-dateutil,
-        python-pygit2, python-requests, python-rosdep, python-scandir,
-        python-yaml, git (>= 1:1.7.5)
+        python-mock, python3-mock,
+        python-catkin-tools, git (>= 1:1.7.5),
+        python-catkin-pkg-modules, python-dateutil,
+        python-pygit2, python-requests, python-scandir, python-yaml,
+        python3-catkin-pkg-modules, python3-dateutil,
+        python3-pygit2, python3-requests, python3-scandir, python3-yaml
 Homepage: https://gitlab.fkie.fraunhofer.de/timo.roehling/rosrepo
 X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.2

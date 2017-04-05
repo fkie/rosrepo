@@ -1,5 +1,4 @@
-catkin_pkg python3-catkin-pkg
-catkin_tools python3-catkin-tools
+catkin_pkg python3-catkin-pkg-modules
+catkin_tools python-catkin-tools | python3-catkin-tools
 rosdep python3-rosdep
-scandir python3-scandir
 
