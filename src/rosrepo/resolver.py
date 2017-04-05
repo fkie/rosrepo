@@ -26,6 +26,11 @@ import platform
 import gc
 
 
+class DummyRospkg(object):
+    def list(self):
+        return []
+
+
 class Rosdep(object):
 
     def __init__(self):
@@ -35,7 +40,7 @@ class Rosdep(object):
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
             from rosdep2 import get_default_installer, create_default_installer_context
-            self.lookup = RosdepLookup.create_from_rospkg()
+            self.lookup = RosdepLookup.create_from_rospkg(rospack=DummyRospkg(), rosstack=DummyRospkg())
             self.view = self.lookup.get_rosdep_view(DEFAULT_VIEW_KEY)
             self.installer_ctx = create_default_installer_context()
             _, self.installer_keys, self.default_key, \
