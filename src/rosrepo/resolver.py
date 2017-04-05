@@ -229,7 +229,6 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                     resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                     if not ignore_missing:
                         conflicts[name] = resolver_msgs
-        score -= 100 * len(system_depends - get_system_package_manager().installed_packages)  # Large penalty for uninstalled system dependency
         return depends, system_depends, conflicts, score
     queue = [(None, None, name) for name in packages]
     depends, system_depends, conflicts, _ = try_resolve(queue)
@@ -239,6 +238,23 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
 class SystemPackageManager(object):
 
     def __init__(self):
+        self._installed_packages = None
+
+    @property
+    def installer(self):
+        return self._installer
+
+    @property
+    def installer_cmd(self):
+        return self._installer_cmd
+
+    @property
+    def installed_packages(self):
+        if self._installed_packages is None:
+            self._populate_installed_packages()
+        return self._installed_packages
+
+    def _populate_installed_packages(self):
         system = platform.system()
         self._installed_packages = set()
         if system == "Linux":
@@ -265,18 +281,6 @@ class SystemPackageManager(object):
         else:
             self._installer = None
             self._installer_cmd = None
-
-    @property
-    def installer(self):
-        return self._installer
-
-    @property
-    def installer_cmd(self):
-        return self._installer_cmd
-
-    @property
-    def installed_packages(self):
-        return self._installed_packages
 
 
 _system_package_manager = None
