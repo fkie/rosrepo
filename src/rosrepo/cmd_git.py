@@ -34,7 +34,9 @@ from pygit2 import clone_repository, Repository, \
                 RemoteCallbacks, KeypairFromAgent, UserPass, \
                 GIT_CREDTYPE_SSH_KEY, GIT_CREDTYPE_USERPASS_PLAINTEXT, \
                 GIT_STATUS_CURRENT, GIT_STATUS_IGNORED, GIT_BRANCH_LOCAL, \
-                GIT_BRANCH_REMOTE, GitError
+                GIT_BRANCH_REMOTE, GitError, \
+                features as pygit2_features, GIT_FEATURE_HTTPS, GIT_FEATURE_SSH
+
 from functools import partial
 try:
     from urlparse import urlsplit
@@ -351,7 +353,10 @@ def fetch_worker(srcdir, git_remote_callback, fetch_remote, dry_run, part):
 
 
 def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, jobs, dry_run=False, action="update", fetch_remote=True):
-
+    if (pygit2_features & GIT_FEATURE_HTTPS) == 0:
+        warning("your libgit2 has no built-in HTTPS support\n")
+    if (pygit2_features & GIT_FEATURE_SSH) == 0:
+        warning("your libgit2 has no built-in SSH support\n")
     git_remote_callback = GitRemoteCallback()
     manager = multiprocessing.Manager()
     L = manager.Lock()
