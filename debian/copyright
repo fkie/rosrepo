@@ -3,12 +3,8 @@ Upstream-Name: rosrepo
 Source: https://github.com/fkie/rosrepo
 
 Files: *
-Copyright: 2016 Fraunhofer FKIE
-License: Apache-2.0
-
-
-Files: src/rosrepo/terminal_color.py
 Copyright: 2014 Open Source Robotics Foundation, Inc.
-Copyright: 2016 Fraunhofer FKIE
+           2016 Fraunhofer FKIE
 License: Apache-2.0
+ See /usr/share/common-licenses/Apache-2.0 for the full license text.
 

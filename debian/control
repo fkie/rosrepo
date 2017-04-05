@@ -1,14 +1,18 @@
 Source: rosrepo
-Section: devel
+Section: python
 Priority: extra
 Maintainer: Timo Röhling <timo.roehling@fkie.fraunhofer.de>
 Build-Depends: debhelper (>= 9), dh-python,
         python-all, python-setuptools, python-nose,
-        python3-all, python3-setuptools, python3-nose
-Homepage: https://srv-gitlab.fkie.fraunhofer.de/timo.roehling/rosrepo
+        python3-all, python3-setuptools, python3-nose,
+        python-mock,
+        python-catkin-pkg, python-catkin-tools, python-dateutil,
+        python-pygit2, python-requests, python-rosdep, python-scandir,
+        python-yaml, git (>= 1:1.7.5)
+Homepage: https://gitlab.fkie.fraunhofer.de/timo.roehling/rosrepo
 X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.2
-Standards-Version: 3.9.5
+Standards-Version: 3.9.7
 
 Package: python-rosrepo
 Architecture: all
@@ -17,10 +21,12 @@ Depends: ${python:Depends}, ${misc:Depends},
 Recommends: git-cola, meld
 Conflicts: python3-rosrepo
 Description: Manage ROS workspaces with multiple Gitlab repositories
- - More comfortable management of package builds and dependencies
- - Mark packages as pinned so they will always be built
- - Clone, push, and pull from Gitlab repositories
- - Automatically clone Gitlab projects to satisfy package dependencies
+ rosrepo is the standard tool for ROS workspace management in Fraunhofer
+ FKIE with a number of nice features:
+  - More comfortable management of package builds and dependencies
+  - Mark packages as pinned so they will always be built
+  - Clone, push, and pull from Gitlab repositories
+  - Automatically clone Gitlab projects to satisfy package dependencies
 
 Package: python3-rosrepo
 Architecture: all
@@ -29,8 +35,10 @@ Depends: ${python3:Depends}, ${misc:Depends},
     git (>= 1:1.7.5)
 Recommends: git-cola, meld
 Description: Manage ROS workspaces with multiple Gitlab repositories
- - More comfortable management of package builds and dependencies
- - Mark packages as pinned so they will always be built
- - Clone, push, and pull from Gitlab repositories
- - Automatically clone Gitlab projects to satisfy package dependencies
+ rosrepo is the standard tool for ROS workspace management in Fraunhofer
+ FKIE with a number of nice features:
+  - More comfortable management of package builds and dependencies
+  - Mark packages as pinned so they will always be built
+  - Clone, push, and pull from Gitlab repositories
+  - Automatically clone Gitlab projects to satisfy package dependencies
 
