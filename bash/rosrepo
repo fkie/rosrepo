@@ -238,7 +238,7 @@ _rosrepo_complete()
                     fi
                     if [ "$cmd2" == "merge" ]
                     then
-                        COMPREPLY+=($(compgen -W "--from-master --to-master --sync --abort --resolve" -- "$arg"))
+                        COMPREPLY+=($(compgen -W "-j --jobs --from-master --to-master --sync --abort --resolve" -- "$arg"))
                     fi
                     if [ "$cmd2" == "remote" ]
                     then
