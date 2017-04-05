@@ -251,8 +251,10 @@ def find_cloned_gitlab_projects(projects, srcdir, subdir=None):
     base_path = srcdir if subdir is None else os.path.join(srcdir, subdir)
     result = []
     foreign = []
-    for curdir, subdirs, _ in os_walk(base_path, followlinks=True):
-        if ".git" in subdirs:
+    for curdir, subdirs, files in os_walk(base_path, followlinks=True):
+        if "CATKIN_IGNORE" in files:
+            del subdirs[:]
+        elif ".git" in subdirs:
             repo = Repository(os.path.join(curdir, ".git"))
             repo_urls = set()
             for r in repo.remotes:
