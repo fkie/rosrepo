@@ -303,7 +303,11 @@ def resolve_system_depends(ws_state, system_depends, missing_only=False):
                     error("cannot resolve system dependencies without rosdep\n")
                     _resolve_warn_once = True
                 return set()
-            from rosdep2.lookup import ResolutionError
+            try:
+                from rosdep2.lookup import ResolutionError
+            except ImportError:
+                class ResolutionError(Exception):
+                    pass
             try:
                 installer, resolved_deps = rosdep.resolve(dep)
                 for d in resolved_deps:
