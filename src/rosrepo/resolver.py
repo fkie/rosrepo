@@ -238,7 +238,17 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
 class SystemPackageManager(object):
 
     def __init__(self):
+        self._system = platform.system()
         self._installed_packages = None
+        if self._system == "Linux":
+            self._installer = "apt"
+            self._installer_cmd = "sudo apt-get install"
+        elif self._system == "Darwin":
+            self._installer = "homebrew"
+            self._installer_cmd = "brew install"
+        else:
+            self._installer = None
+            self._installer_cmd = None
 
     @property
     def installer(self):
@@ -255,11 +265,8 @@ class SystemPackageManager(object):
         return self._installed_packages
 
     def _populate_installed_packages(self):
-        system = platform.system()
         self._installed_packages = set()
-        if system == "Linux":
-            self._installer = "apt"
-            self._installer_cmd = "sudo apt-get install"
+        if self._system == "Linux":
             try:
                 _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"], stdout=PIPE, stderr=PIPE)
                 for line in stdout.split("\n"):
@@ -268,9 +275,7 @@ class SystemPackageManager(object):
                         self._installed_packages.add(pkg)
             except OSError:
                 error("cannot invoke dpkg-query to find installed system packages")
-        elif system == "Darwin":
-            self._installer = "homebrew"
-            self._installer_cmd = "brew install"
+        elif self._system == "Darwin":
             try:
                 _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
                 for pkg in stdout.split("\n"):
@@ -278,9 +283,6 @@ class SystemPackageManager(object):
                         self._installed_packages.add(pkg)
             except OSError:
                 error("cannot invoke brew to find installed system packages")
-        else:
-            self._installer = None
-            self._installer_cmd = None
 
 
 _system_package_manager = None
