@@ -1,3 +1,9 @@
+rosrepo (3.0.48-2) xenial; urgency=medium
+
+  * Remove old config file
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 06 Apr 2017 11:11:11 +0200
+
 rosrepo (3.0.48-1) xenial; urgency=medium
 
   * New release
