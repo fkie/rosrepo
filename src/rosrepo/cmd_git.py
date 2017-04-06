@@ -91,7 +91,7 @@ def get_origin(repo, project):
 
 
 def get_remote_branch_name(branch):
-    _, name = branch.split("/", 1)
+    _, name = branch.shorthand.split("/", 1)
     return name
 
 
