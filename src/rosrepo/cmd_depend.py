@@ -44,14 +44,20 @@ def run(args):
             rdepends, system_rdepends = find_dependers([pkg], ws_state)
             depends, system_depends, conflicts = find_dependees([pkg], ws_state, auto_resolve=True)
             dependers = []
-            for dep in sorted(rdepends):
-                dependers.append("@{yf}%s@|" % escape(dep))
+            for dep in sorted(list(rdepends)):
+                if dep in ws_state.ws_packages:
+                    dependers.append("@{gf}%s@|" % escape(dep))
+                else:
+                    dependers.append("@{yf}%s@|" % escape(dep))
             for dep in sorted(list(system_rdepends)):
                 dependers.append(escape(dep))
             dependees = []
             for dep in sorted(depends.keys()):
                 if dep != pkg:
-                    dependees.append("@{yf}%s@|" % escape(dep))
+                    if dep in ws_state.ws_packages:
+                        dependees.append("@{gf}%s@|" % escape(dep))
+                    else:
+                        dependees.append("@{yf}%s@|" % escape(dep))
             for dep in sorted(system_depends):
                 if dep != pkg:
                     dependees.append(escape(dep))
