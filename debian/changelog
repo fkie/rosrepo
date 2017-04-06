@@ -1,3 +1,9 @@
+rosrepo (3.0.48-1) xenial; urgency=medium
+
+  * New release
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Thu, 06 Apr 2017 10:55:22 +0200
+
 rosrepo (3.0.47-2) xenial; urgency=medium
 
   * Override pybuild dependencies
