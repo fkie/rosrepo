@@ -21,6 +21,7 @@
 #
 #
 import os
+import multiprocessing
 from .workspace import find_ros_root, get_workspace_location, get_workspace_state, resolve_this, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages
 from .resolver import find_dependees, resolve_system_depends
@@ -155,9 +156,13 @@ def run(args):
         catkin_build += ["--no-env-cache"]
 
     if args.jobs:
+        jobs = int(args.jobs)
         catkin_build += ["-j", str(args.jobs), "-p", str(args.jobs)]
     elif "job_limit" in config:
+        jobs = int(config["job_limit"])
         catkin_build += ["-j", str(config["job_limit"]), "-p", str(config["job_limit"])]
+    else:
+        jobs = None
 
     catkin_build += build_packages.keys()
 
@@ -170,16 +175,30 @@ def run(args):
     if rosclipse is not None and (args.rosclipse or config.get("use_rosclipse", True)) and not args.no_rosclipse:
         eclipse_ok, _, _ = call_process([rosclipse, "-d"], stdout=PIPE, stderr=PIPE)
         if eclipse_ok == 0:
+            workload = []
             for name, pkg in iteritems(build_packages):
                 if not pkg.manifest.is_metapackage() and hasattr(pkg, "workspace_path") and pkg.workspace_path is not None:
                     pkgdir = os.path.join(wsdir, "src", pkg.workspace_path)
                     p_time = max(getmtime(os.path.join(pkgdir, "CMakeLists.txt")), getmtime(os.path.join(pkgdir, "package.xml")))
                     e_time = getmtime(os.path.join(pkgdir, ".project"))
                     if e_time < p_time or args.rosclipse:
-                        msg("@{cf}Updating rosclipse project files@|: %s\n" % name)
-                        if not args.dry_run:
-                            call_process([rosclipse, name])
-
+                        workload.append((rosclipse, name, args.dry_run))
+            if workload:
+                pool = multiprocessing.Pool(processes=jobs)
+                try:
+                    pool.map_async(update_rosclipse, workload)
+                    pool.close()
+                except multiprocessing.TimeoutError:
+                    pool.terminate()
+                    fatal("timeout")
+                except KeyboardInterrupt:
+                    pool.terminate()
+                    raise
+                except Exception:
+                    pool.terminate()
+                    raise
+                finally:
+                    pool.join()
     if not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
         warning("%s is not in PATH\n" % os.path.join(wsdir, "devel", "bin"))
         msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
@@ -191,3 +210,10 @@ def run(args):
                     warning("%s is not in ROS_PACKAGE_PATH\n" % pkgdir)
                     msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
     return ret
+
+
+def update_rosclipse(part):
+    rosclipse, name, dry_run = part[0], part[1], part[2]
+    msg("@{cf}Updating rosclipse project files@|: %s\n" % name)
+    if not dry_run:
+        call_process([rosclipse, name])
