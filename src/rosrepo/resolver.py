@@ -26,6 +26,11 @@ import platform
 import gc
 
 
+class DummyRospkg(object):
+    def list(self):
+        return []
+
+
 class Rosdep(object):
 
     def __init__(self):
@@ -35,7 +40,7 @@ class Rosdep(object):
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
             from rosdep2 import get_default_installer, create_default_installer_context
-            self.lookup = RosdepLookup.create_from_rospkg()
+            self.lookup = RosdepLookup.create_from_rospkg(rospack=DummyRospkg(), rosstack=DummyRospkg())
             self.view = self.lookup.get_rosdep_view(DEFAULT_VIEW_KEY)
             self.installer_ctx = create_default_installer_context()
             _, self.installer_keys, self.default_key, \
@@ -224,7 +229,6 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                     resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
                     if not ignore_missing:
                         conflicts[name] = resolver_msgs
-        score -= 100 * len(system_depends - get_system_package_manager().installed_packages)  # Large penalty for uninstalled system dependency
         return depends, system_depends, conflicts, score
     queue = [(None, None, name) for name in packages]
     depends, system_depends, conflicts, _ = try_resolve(queue)
@@ -234,29 +238,14 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
 class SystemPackageManager(object):
 
     def __init__(self):
-        system = platform.system()
-        self._installed_packages = set()
-        if system == "Linux":
+        self._system = platform.system()
+        self._installed_packages = None
+        if self._system == "Linux":
             self._installer = "apt"
             self._installer_cmd = "sudo apt-get install"
-            try:
-                _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"], stdout=PIPE, stderr=PIPE)
-                for line in stdout.split("\n"):
-                    if "ok installed" in line:
-                        pkg = line.split("|", 1)[0]
-                        self._installed_packages.add(pkg)
-            except OSError:
-                error("cannot invoke dpkg-query to find installed system packages")
-        elif system == "Darwin":
+        elif self._system == "Darwin":
             self._installer = "homebrew"
             self._installer_cmd = "brew install"
-            try:
-                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
-                for pkg in stdout.split("\n"):
-                    if pkg:
-                        self._installed_packages.add(pkg)
-            except OSError:
-                error("cannot invoke brew to find installed system packages")
         else:
             self._installer = None
             self._installer_cmd = None
@@ -271,7 +260,29 @@ class SystemPackageManager(object):
 
     @property
     def installed_packages(self):
+        if self._installed_packages is None:
+            self._populate_installed_packages()
         return self._installed_packages
+
+    def _populate_installed_packages(self):
+        self._installed_packages = set()
+        if self._system == "Linux":
+            try:
+                _, stdout, _ = call_process(["dpkg-query", "-f", "${Package}|${Status}\\n", "-W"], stdout=PIPE, stderr=PIPE)
+                for line in stdout.split("\n"):
+                    if "ok installed" in line:
+                        pkg = line.split("|", 1)[0]
+                        self._installed_packages.add(pkg)
+            except OSError:
+                error("cannot invoke dpkg-query to find installed system packages")
+        elif self._system == "Darwin":
+            try:
+                _, stdout, _ = call_process(["brew", "list"], stdout=PIPE, stderr=PIPE)
+                for pkg in stdout.split("\n"):
+                    if pkg:
+                        self._installed_packages.add(pkg)
+            except OSError:
+                error("cannot invoke brew to find installed system packages")
 
 
 _system_package_manager = None
