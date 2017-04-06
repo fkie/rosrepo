@@ -31,6 +31,31 @@ from .util import isatty, get_terminal_size, UserError
 from .terminal_color import fmt as color_fmt
 
 
+def enable_unicode_graphics():
+    global RARROW, LARROW, FF_LARROW, FF_RARROW, _use_unicode_graphics
+    RARROW = "━▶"
+    LARROW = "◀━"
+    FF_LARROW = "◀◀"
+    FF_RARROW = "▶▶"
+    _use_unicode_graphics = True
+
+
+def disable_unicode_graphics():
+    global RARROW, LARROW, FF_LARROW, FF_RARROW, _use_unicode_graphics
+    RARROW = "->"
+    LARROW = "<-"
+    FF_LARROW = "<<"
+    FF_RARROW = ">>"
+    _use_unicode_graphics = False
+
+
+try:
+    u"─━▶◀┷┯┼".encode(sys.stdout.encoding)
+    enable_unicode_graphics()
+except (UnicodeEncodeError, TypeError, AttributeError):
+    disable_unicode_graphics()
+
+
 _ansi_escape = re.compile(r"\x1b[^m]*m")
 
 
@@ -257,6 +282,7 @@ class TableView(object):
         self.rows.sort(key=lambda x: x[column_index])
 
     def write(self, fd=None, use_color=None):
+        global _use_unicode_graphics
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
         try:
@@ -281,13 +307,26 @@ class TableView(object):
                         actual_width -= 1
                         break
         if self.columns:
-            fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
-            sep = color_fmt("@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n", use_color=use_color)
-            fd.write(sep)
+            if _use_unicode_graphics:
+                fmt = color_fmt(" " + " @{pf}│@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
+            else:
+                fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
+            if _use_unicode_graphics:
+                fd.write(color_fmt("@{pf}━" + "━┯━".join(["━" * w for w in width]) + "━\n", use_color=use_color))
+                sep = color_fmt("@{pf}─" + "─┼─".join(["─" * w for w in width]) + "─\n", use_color=use_color)
+                end = color_fmt("@{pf}━" + "━┷━".join(["━" * w for w in width]) + "━\n", use_color=use_color)
+            else:
+                sep = color_fmt("@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n", use_color=use_color)
+                end = sep
+                fd.write(sep)
             fd.write(fmt % tuple(pad_ansi_text(color_fmt("@!%s" % c, use_color=use_color), w) for c, w in zip(self.columns, width)))
         else:
             fmt = " %s   %s\n"
-            sep = color_fmt("@{pf}" + ("-" * actual_width) + "@|\n", use_color=use_color)
+            if _use_unicode_graphics:
+                sep = color_fmt("@{pf}" + ("─" * actual_width) + "@|\n", use_color=use_color)
+            else:
+                sep = color_fmt("@{pf}" + ("-" * actual_width) + "@|\n", use_color=use_color)
+            end = sep
         fd.write(sep)
         for row in self.rows:
             if row is None:
@@ -297,4 +336,4 @@ class TableView(object):
                 chunks = (slice_ansi_text(color_fmt(r, use_color=use_color), w) for r, w in zip(line, width))
                 for chunk in zip_longest(*chunks):
                     fd.write(fmt % tuple(r if r is not None else " " * w for r, w in zip(chunk, width)))
-        fd.write(sep)
+        fd.write(end)
