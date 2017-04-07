@@ -229,10 +229,13 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
             for pkg in pkg_list:
                 is_dirty = False
                 local_path = os.path.relpath(pkg.workspace_path, project.workspace_path)
-                for fpath in dirty_files:
-                    if path_has_prefix(fpath, local_path):
-                        is_dirty = True
-                        break
+                if dirty_files and local_path == ".":
+                    is_dirty = True
+                else:
+                    for fpath in dirty_files:
+                        if path_has_prefix(fpath, local_path) or local_path == ".":
+                            is_dirty = True
+                            break
                 status = create_local_status(repo, upstream_status, is_dirty)
                 if status is not None:
                     head, tail = os.path.split(pkg.workspace_path)
