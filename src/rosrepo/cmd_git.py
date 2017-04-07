@@ -29,7 +29,9 @@ from .workspace import get_workspace_location, get_workspace_state, find_catkin_
 from .config import Config
 from .cache import Cache
 from .resolver import find_dependees, resolve_system_depends
-from .ui import TableView, msg, warning, error, fatal, escape, show_conflicts, show_missing_system_depends
+from .ui import TableView, msg, warning, error, fatal, escape, \
+                show_conflicts, show_missing_system_depends, \
+                LARROW, RARROW, FF_LARROW, FF_RARROW
 from .util import iteritems, path_has_prefix, call_process, PIPE
 from pygit2 import clone_repository, Repository, \
                 RemoteCallbacks, KeypairFromAgent, UserPass, \
@@ -400,14 +402,14 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_
             raise Exception("unfinished merge detected")
         if tracking_branch is not None:
             if need_pull(repo, head_branch, tracking_branch):
-                msg("@{cf}Fast-Forwarding@|: %s (%s <<< %s)\n" % (escape(path), escape(head_branch.shorthand), escape(tracking_branch.shorthand)))
+                msg("@{cf}Fast-Forwarding@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), FF_LARROW, escape(tracking_branch.shorthand)))
                 if not dry_run:
                     exitcode = call_process(["git", "-C", os.path.join(srcdir, path), "merge", "--ff-only", tracking_branch.shorthand])
                     if exitcode != 0:
                         raise Exception("fast-forward merge of %s failed" % tracking_branch.shorthand)
                 head_branch = get_head_branch(repo)
             elif head_branch.target != tracking_branch.target and merge:
-                msg("@{cf}Merging@|: %s\n" % escape(path))
+                msg("@{cf}Merging@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), LARROW, escape(tracking_branch.shorthand)))
                 if not dry_run:
                     robust_merge(repo, os.path.join(srcdir, path), tracking_branch, "Merge changes from %s into %s" % (tracking_branch.shorthand, head_branch.shorthand))
                 head_branch = get_head_branch(repo)
@@ -415,7 +417,7 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_
             if head_branch.name != master_branch.name and need_pull(repo, master_branch):
                 master_branch.set_target(master_branch.upstream.target)
             if update_local and (is_up_to_date(repo, master_branch) or need_push(repo, master_branch)) and need_pull(repo, head_branch, master_branch):
-                msg("@{cf}Fast-Forwarding@|: %s (%s <<< %s)\n" % (escape(path), escape(head_branch.shorthand), escape(master_branch.shorthand)))
+                msg("@{cf}Fast-Forwarding@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), FF_LARROW, escape(master_branch.shorthand)))
                 exitcode = call_process(["git", "-C", os.path.join(srcdir, path), "merge", "--ff-only", master_branch.shorthand])
                 if exitcode != 0:
                     raise Exception("fast-forward merge of %s failed" % master_branch.shorthand)
@@ -428,13 +430,13 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, dry_run
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
         if tracking_branch is not None and need_push(repo, head_branch, tracking_branch):
-            msg("@{cf}Pushing@|: %s (%s |=> %s)\n" % (escape(path), escape(head_branch.shorthand), escape(tracking_branch.shorthand)))
+            msg("@{cf}Pushing@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), RARROW, escape(tracking_branch.shorthand)))
             if not dry_run:
                 exitcode = call_process(["git", "-C", os.path.join(srcdir, path), "push", tracking_branch.remote_name, "%s:%s" % (head_branch.shorthand, get_remote_branch_name(tracking_branch))])
                 if exitcode != 0:
                     raise Exception("push to %s failed" % tracking_branch.shorthand)
         if master_branch is not None and repo.head.name != master_branch.name and need_push(repo, master_branch):
-            msg("@{cf}Pushing@|: %s (%s |=> %s)\n" % (escape(path), escape(head_branch.shorthand), escape(master_branch.shorthand)))
+            msg("@{cf}Pushing@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), RARROW, escape(master_branch.shorthand)))
             if not dry_run:
                 exitcode = call_process(["git", "-C", os.path.join(srcdir, path), "push", master_branch.remote_name, "%s:%s" % (head_branch.shorthand, get_remote_branch_name(master_branch))])
                 if exitcode != 0:
@@ -497,7 +499,7 @@ def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
         if master_branch.target != master_branch.upstream.target and not need_push(repo, master_branch):
             raise Exception("will not merge with outdated master branch")
         if (args.from_master or args.sync) and not is_ancestor(repo, master_branch, head_branch):
-            msg("@{cf}Merging@|: %s (%s <=| %s)\n" % (escape(path), escape(head_branch.shorthand), escape(master_branch.shorthand)))
+            msg("@{cf}Merging@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), LARROW, escape(master_branch.shorthand)))
             if not args.dry_run:
                 robust_merge(repo, os.path.join(srcdir, path), master_branch, "Merge changes from %s into %s" % (master_branch.shorthand, head_branch.shorthand))
         if (args.to_master or args.sync) and not is_ancestor(repo, head_branch, master_branch):
@@ -510,14 +512,14 @@ def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
                 if exitcode != 0:
                     raise Exception("failed to switch to '%s' branch" % master_branch.shorthand)
             if is_ancestor(repo, master_branch, head_branch):
-                msg("@{cf}Fast-Forwarding@|: %s (%s >>> %s)\n" % (escape(path), escape(head_branch.shorthand), escape(master_branch.shorthand)))
+                msg("@{cf}Fast-Forwarding@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), FF_RARROW, escape(master_branch.shorthand)))
                 if not args.dry_run:
                     exitcode = call_process(git_cmd + ["merge", "--ff-only", active_branch])
                     if exitcode != 0:
                         call_process(git_cmd + ["checkout", active_branch])
                         raise Exception("fast-forward merge of %s failed" % tracking_branch.shorthand)
             else:
-                msg("@{cf}Merging@|: %s (%s |=> %s)\n" % (escape(path), escape(head_branch.shorthand), escape(master_branch.shorthand)))
+                msg("@{cf}Merging@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), RARROW, escape(master_branch.shorthand)))
                 if not args.dry_run:
                     try:
                         robust_merge(repo, os.path.join(srcdir, path), head_branch, "Merge changes from %s into %s" % (active_branch, master_branch.shorthand))
@@ -569,7 +571,8 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
     L = manager.Lock()
     d = manager.dict()
     pool = multiprocessing.Pool(processes=jobs, initializer=fetch_worker_init, initargs=(L, d))
-    workload = [(p.project, os.path.join(srcdir, compute_git_subdir(srcdir, p.project.server_path))) for _, p in need_cloning]
+    projects = set([p.project for _, p in need_cloning])
+    workload = [(p, os.path.join(srcdir, compute_git_subdir(srcdir, p.server_path))) for p in projects]
     try:
         result_obj = pool.map_async(partial(clone_worker, git_remote_callback, protocol, dry_run), workload)
         pool.close()
@@ -612,7 +615,7 @@ def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
                 old_url = remote.url
                 new_url = re.sub("([/@])%s([/:])" % old_host.replace(".", "\\."), "\\1%s\\2" % new_host, old_url)
                 if old_url != new_url:
-                    msg("@{cf}Updating@|: %s @!=>@| %s\n" % (old_url, new_url), indent_next=10)
+                    msg("@{cf}Updating@|: %s %s %s\n" % (old_url, RARROW, new_url), indent_next=10)
                     if not args.dry_run:
                         remote.url = new_url
     if args.protocol:
@@ -622,7 +625,7 @@ def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
             old_url = master_remote.url
             new_url = project.url.get(args.protocol, old_url)
             if old_url != new_url:
-                msg("@{cf}Updating@|: %s @!=>@| %s\n" % (old_url, new_url), indent_next=10)
+                msg("@{cf}Updating@|: %s %s %s\n" % (old_url, RARROW, new_url), indent_next=10)
                 if not args.dry_run:
                     repo.remotes.set_url(master_remote.name, new_url)
 
