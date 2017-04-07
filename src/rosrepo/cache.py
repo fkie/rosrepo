@@ -47,7 +47,7 @@ class Cache(object):
         try:
             with open(os.path.join(self.cache_dir, name), "rb") as f:
                 cache_file = pickle.loads(zlib.decompress(f.read()))
-        except (zlib.error, OSError, IOError, pickle.PickleError):
+        except Exception:
             return default
         if not isinstance(cache_file, CacheFile):
             return default
