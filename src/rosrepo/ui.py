@@ -335,5 +335,5 @@ class TableView(object):
             for line in zip_longest(*row, fillvalue=""):
                 chunks = (slice_ansi_text(color_fmt(r, use_color=use_color), w) for r, w in zip(line, width))
                 for chunk in zip_longest(*chunks):
-                    fd.write(fmt % tuple(r if r is not None else " " * w for r, w in zip(chunk, width)))
+                    fd.write(fmt % tuple(str(r) if r is not None else " " * w for r, w in zip(chunk, width)))
         fd.write(end)
