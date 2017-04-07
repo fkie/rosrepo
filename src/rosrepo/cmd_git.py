@@ -571,7 +571,8 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
     L = manager.Lock()
     d = manager.dict()
     pool = multiprocessing.Pool(processes=jobs, initializer=fetch_worker_init, initargs=(L, d))
-    workload = [(p.project, os.path.join(srcdir, compute_git_subdir(srcdir, p.project.server_path))) for _, p in need_cloning]
+    projects = set([p.project for _, p in need_cloning])
+    workload = [(p, os.path.join(srcdir, compute_git_subdir(srcdir, p.server_path))) for p in projects]
     try:
         result_obj = pool.map_async(partial(clone_worker, git_remote_callback, protocol, dry_run), workload)
         pool.close()
