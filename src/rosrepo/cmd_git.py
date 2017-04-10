@@ -257,7 +257,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 is_dirty = False
                 local_path = os.path.relpath(pkg.workspace_path, path)
                 for fpath in dirty_files:
-                    if path_has_prefix(fpath, local_path):
+                    if path_has_prefix(fpath, local_path) or local_path == ".":
                         is_dirty = True
                         break
                 status = create_local_status(repo, upstream_status, is_dirty)
