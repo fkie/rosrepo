@@ -24,6 +24,8 @@ import os
 import fcntl
 import termios
 import struct
+import multiprocessing
+import signal
 from tempfile import mkstemp
 from subprocess import Popen, PIPE
 
@@ -160,3 +162,31 @@ def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None
     else:
         p.wait()
     return p.returncode
+
+
+def create_multiprocess_manager():
+    return multiprocessing.Manager()
+
+
+def _worker_init(worker_init, worker_init_args):
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if worker_init is not None:
+        worker_init(*worker_init_args)
+
+
+def run_multiprocess_workers(worker, workload, worker_init=None, worker_init_args=(), jobs=None, timeout=None):
+    if not workload:
+        return []
+    if timeout is None:
+        timeout = 999999999  # Workaround for KeyboardInterrupt
+    pool = multiprocessing.Pool(processes=jobs, initializer=_worker_init, initargs=(worker_init, worker_init_args))
+    try:
+        result_obj = pool.map_async(worker, workload)
+        pool.close()
+        result = result_obj.get(timeout=timeout)
+        return result
+    except:
+        pool.terminate()
+        raise
+    finally:
+        pool.join()

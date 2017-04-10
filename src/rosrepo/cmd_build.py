@@ -21,14 +21,14 @@
 #
 #
 import os
-import multiprocessing
 from .workspace import find_ros_root, get_workspace_location, get_workspace_state, resolve_this, WSFL_WS_PACKAGES
 from .cmd_git import clone_packages
 from .resolver import find_dependees, resolve_system_depends
 from .config import Config
 from .cache import Cache
 from .ui import msg, warning, fatal, show_conflicts, show_missing_system_depends
-from .util import call_process, find_program, iteritems, getmtime, PIPE, env_path_list_contains
+from .util import call_process, find_program, iteritems, getmtime, PIPE, env_path_list_contains, \
+                run_multiprocess_workers
 from functools import reduce
 
 
@@ -183,22 +183,7 @@ def run(args):
                     e_time = getmtime(os.path.join(pkgdir, ".project"))
                     if e_time < p_time or args.rosclipse:
                         workload.append((rosclipse, name, args.dry_run))
-            if workload:
-                pool = multiprocessing.Pool(processes=jobs)
-                try:
-                    pool.map_async(update_rosclipse, workload)
-                    pool.close()
-                except multiprocessing.TimeoutError:
-                    pool.terminate()
-                    fatal("timeout")
-                except KeyboardInterrupt:
-                    pool.terminate()
-                    raise
-                except Exception:
-                    pool.terminate()
-                    raise
-                finally:
-                    pool.join()
+            run_multiprocess_workers(update_rosclipse, workload, jobs=jobs)
     if not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
         warning("%s is not in PATH\n" % os.path.join(wsdir, "devel", "bin"))
         msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
