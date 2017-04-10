@@ -28,7 +28,7 @@ except ImportError:
     import unittest.mock as mock
 import sys
 try:
-    from StringIO import StringIO
+    from cStringIO import StringIO
 except ImportError:
     from io import StringIO
 
@@ -96,9 +96,9 @@ def call_process(*args, **kwargs):
 failing_programs = []
 
 
-def no_call_process(args, **kwargs):
+def no_call_process(*args, **kwargs):
     global failing_programs
-    exitcode = 1 if args[0] in failing_programs else 0
+    exitcode = 1 if args[0][0] in failing_programs else 0
     return (exitcode, "", "") if kwargs.get("stdin") == PIPE or kwargs.get("stdout") == PIPE or kwargs.get("stderr") == PIPE else exitcode
 
 
@@ -155,14 +155,14 @@ def fake_requests_get(*args, **kwargs):
 @mock.patch("rosrepo.cmd_build.find_program", find_program)
 @mock.patch("requests.get", fake_requests_get)
 @mock.patch("rosrepo.cmd_config.acquire_gitlab_private_token", fake_acquire_user_token)
-@mock.patch("rosrepo.cmd_config.call_process", call_process)
-@mock.patch("rosrepo.cmd_clean.call_process", call_process)
 @mock.patch("rosrepo.util._cached_terminal_size", (80,24))
+@mock.patch("rosrepo.util.call_process", call_process)
 def run_rosrepo(*argv):
     parser = prepare_arguments(argparse.ArgumentParser())
     args = parser.parse_args(argv)
     stdout = StringIO()
-    with mock.patch("sys.stdout", stdout):
-        with mock.patch("sys.stderr", stdout):
-            returncode =  run_rosrepo_impl(args)
+    with mock.patch("rosrepo.cmd_config.call_process", call_process if "init" in argv[0] else no_call_process):
+        with mock.patch("sys.stdout", stdout):
+            with mock.patch("sys.stderr", stdout):
+                returncode =  run_rosrepo_impl(args)
     return returncode, stdout.getvalue()

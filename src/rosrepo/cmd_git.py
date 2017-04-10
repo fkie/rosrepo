@@ -23,8 +23,6 @@
 import os
 import sys
 import re
-import multiprocessing
-import signal
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages, resolve_this
 from .config import Config
 from .cache import Cache
@@ -32,7 +30,8 @@ from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, \
                 show_conflicts, show_missing_system_depends, \
                 LARROW, RARROW, FF_LARROW, FF_RARROW
-from .util import iteritems, path_has_prefix, call_process, PIPE
+from .util import iteritems, path_has_prefix, call_process, PIPE, \
+                create_multiprocess_manager, run_multiprocess_workers
 from pygit2 import clone_repository, Repository, \
                 RemoteCallbacks, KeypairFromAgent, UserPass, \
                 GIT_CREDTYPE_SSH_KEY, GIT_CREDTYPE_USERPASS_PLAINTEXT, \
@@ -257,7 +256,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 is_dirty = False
                 local_path = os.path.relpath(pkg.workspace_path, path)
                 for fpath in dirty_files:
-                    if path_has_prefix(fpath, local_path):
+                    if path_has_prefix(fpath, local_path) or local_path == ".":
                         is_dirty = True
                         break
                 status = create_local_status(repo, upstream_status, is_dirty)
@@ -354,7 +353,6 @@ def fetch_worker(srcdir, git_remote_callback, fetch_remote, dry_run, part):
 def fetch_worker_init(L, d):
     global credential_lock
     global credential_dict
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
     credential_lock = L
     credential_dict = d
 
@@ -365,26 +363,11 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
     if (pygit2_features & GIT_FEATURE_SSH) == 0:
         warning("your libgit2 has no built-in SSH support\n")
     git_remote_callback = GitRemoteCallback()
-    manager = multiprocessing.Manager()
+    manager = create_multiprocess_manager()
     L = manager.Lock()
     d = manager.dict()
-    pool = multiprocessing.Pool(processes=jobs, initializer=fetch_worker_init, initargs=(L, d))
     workload = [(project, project.workspace_path) for project in projects] + [(None, path) for path in other_git]
-    try:
-        result_obj = pool.map_async(partial(fetch_worker, srcdir, git_remote_callback, fetch_remote, dry_run), workload)
-        pool.close()
-        result = result_obj.get(900)
-    except multiprocessing.TimeoutError:
-        pool.terminate()
-        fatal("git network connection timed out")
-    except KeyboardInterrupt:
-        pool.terminate()
-        raise
-    except Exception:
-        pool.terminate()
-        raise
-    finally:
-        pool.join()
+    result = run_multiprocess_workers(partial(fetch_worker, srcdir, git_remote_callback, fetch_remote, dry_run), workload, worker_init=fetch_worker_init, worker_init_args=(L, d), jobs=jobs, timeout=900)
     for r in result:
         project, path, e = r
         try:
@@ -570,27 +553,12 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
     if offline_mode:
         fatal("cannot clone projects in offline mode\n")
     git_remote_callback = GitRemoteCallback()
-    manager = multiprocessing.Manager()
+    manager = create_multiprocess_manager()
     L = manager.Lock()
     d = manager.dict()
-    pool = multiprocessing.Pool(processes=jobs, initializer=fetch_worker_init, initargs=(L, d))
     projects = set([p.project for _, p in need_cloning])
     workload = [(p, os.path.join(srcdir, compute_git_subdir(srcdir, p.server_path))) for p in projects]
-    try:
-        result_obj = pool.map_async(partial(clone_worker, git_remote_callback, protocol, dry_run), workload)
-        pool.close()
-        result = result_obj.get(900)
-    except multiprocessing.TimeoutError:
-        pool.terminate()
-        fatal("git network connection timed out")
-    except KeyboardInterrupt:
-        pool.terminate()
-        raise
-    except Exception:
-        pool.terminate()
-        raise
-    finally:
-        pool.join()
+    result = run_multiprocess_workers(partial(clone_worker, git_remote_callback, protocol, dry_run), workload, worker_init=fetch_worker_init, worker_init_args=(L, d), jobs=jobs, timeout=900)
     errors = 0
     success = 0
     for r in result:

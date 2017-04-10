@@ -21,13 +21,37 @@
 #
 #
 import os
-from .workspace import get_workspace_location, get_workspace_state, resolve_this
+from shutil import rmtree
+from .workspace import get_workspace_location, get_workspace_state, resolve_this, WSFL_WS_PACKAGES
 from .cache import Cache
 from .config import Config
 from .ui import msg, warning, fatal, escape, show_conflicts, show_missing_system_depends, reformat_paragraphs
 from .resolver import find_dependees, resolve_system_depends
 from .util import iteritems, is_deprecated_package, deprecated_package_info
-from .cmd_git import clone_packages
+from .cmd_git import clone_packages, get_origin, is_ancestor
+from pygit2 import Repository, GIT_STATUS_IGNORED, GIT_STATUS_CURRENT, GIT_BRANCH_REMOTE, GIT_REF_OID
+
+
+def git_is_clean(srcdir, project):
+    repo = Repository(os.path.join(srcdir, project.workspace_path, ".git"))
+    for _, b in iteritems(repo.status()):
+        if b != GIT_STATUS_IGNORED and b != GIT_STATUS_CURRENT:
+            return False, "has uncommitted changes"
+    if repo.head_is_detached:
+        return False, "has detached HEAD"
+    origin = get_origin(repo, project)
+    if not origin:
+        return False, "has no upstream remote"
+    master_remote_branch = repo.lookup_branch("%s/%s" % (origin.name, project.master_branch), GIT_BRANCH_REMOTE)
+    if not master_remote_branch:
+        return False, "has no upstream master branch"
+    for refname in repo.listall_references():
+        if not refname.startswith("refs/remotes/"):
+            ref = repo.lookup_reference(refname)
+            if ref.type == GIT_REF_OID:
+                if not is_ancestor(repo, ref, master_remote_branch):
+                    return False, "'%s' points to a local commit" % refname
+    return True, ""
 
 
 def run(args):
@@ -90,6 +114,33 @@ def run(args):
                 warning("package '%s' is deprecated\n" % escape(name))
                 if details:
                     msg("@{yf}" + reformat_paragraphs(escape(details)) + "\n\n", indent=4)
+
+    if args.delete_unused:
+        depends, system_depends, conflicts = find_dependees(config["pinned_build"] + config["default_build"], ws_state)
+        show_conflicts(conflicts)
+        if conflicts:
+            fatal("cannot resolve dependencies\n")
+            ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
+        unused_projects = set(ws_state.ws_projects)
+        for name, pkg in iteritems(depends):
+            if pkg.project is not None:
+                unused_projects.discard(pkg.project)
+        for p in unused_projects:
+            full_path = os.path.join(wsdir, "src", p.workspace_path)
+            if os.path.islink(full_path):
+                msg("@{cf}Not deleting@|: @{yf}%s@| (is symbolic link)\n" % p.workspace_path)
+            else:
+                ok, info = git_is_clean(os.path.join(wsdir, "src"), p)
+                if ok:
+                    msg("@{rf}Deleting@|: @{yf}%s@|\n" % p.workspace_path)
+                    if not args.dry_run:
+                        rmtree(full_path)
+                        try:
+                            os.removedirs(os.path.normpath(os.path.join(full_path, os.pardir)))
+                        except OSError:
+                            pass
+                else:
+                    msg("@{cf}Not deleting@|: @{yf}%s@| (%s)\n" % (p.workspace_path, info))
 
     if not args.dry_run:
         config.write()
