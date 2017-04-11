@@ -128,7 +128,12 @@ def run(args):
         for p in unused_projects:
             full_path = os.path.join(wsdir, "src", p.workspace_path)
             if os.path.islink(full_path):
-                msg("@{cf}Not deleting@|: @{yf}%s@| (is symbolic link)\n" % p.workspace_path)
+                msg("@{cf}Deleting symbolic link@|: @{yf}%s@|\n" % p.workspace_path)
+                if not args.dry_run:
+                    try:
+                        os.unlink(full_path)
+                    except OSError:
+                        pass
             else:
                 ok, info = git_is_clean(os.path.join(wsdir, "src"), p)
                 if ok:
