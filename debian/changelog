@@ -1,3 +1,9 @@
+rosrepo (3.0.54-1) xenial; urgency=medium
+
+  * New release
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Tue, 11 Apr 2017 09:28:57 +0200
+
 rosrepo (3.0.53-1) xenial; urgency=medium
 
   * New release
