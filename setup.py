@@ -20,6 +20,7 @@
 # limitations under the License.
 #
 #
+import fastentrypoints
 from setuptools import setup, __version__ as setuptools_version
 import os
 import sys
