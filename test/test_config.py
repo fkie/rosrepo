@@ -87,7 +87,7 @@ class ConfigTest(unittest.TestCase):
         self.assertRaises(ConfigError, lambda: Config(self.wsdir))
         os.chmod(cfg_file, 0o644)
         os.chmod(cfg_dir, 0)
-        self.assertRaises(OSError, cfg.write)
+        self.assertRaises(ConfigError, cfg.write)
         os.chmod(cfg_dir, 0o755)
 
     def test_version_mismatch(self):

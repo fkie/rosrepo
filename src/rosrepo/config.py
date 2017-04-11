@@ -24,6 +24,7 @@ import os
 import yaml
 from distutils.version import StrictVersion as Version
 from .util import write_atomic, UserError, makedirs
+from .ui import warning
 from . import __version__
 
 
@@ -61,8 +62,11 @@ class Config(object):
     def write(self):
         if self.read_only:
             raise ConfigError("cannot write config file marked as read only")
-        makedirs(self.config_dir)
-        write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
+        try:
+            makedirs(self.config_dir)
+            write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
+        except (IOError, OSError):
+            raise ConfigError("cannnot write config file %s" % self.config_file)
 
     def _migrate(self, old_version):
         if old_version <= Version("3.0.25"):
@@ -70,7 +74,10 @@ class Config(object):
                 self._data["gitlab_crawl_depth"] = self._data["crawl_depth"]
                 del self._data["crawl_depth"]
         self._data["version"] = __version__
-        self.write()
+        try:
+            self.write()
+        except ConfigError:
+            warning("cannot write updated configuration\n")
 
     def set_default(self, key, value):
         if self.read_only:
