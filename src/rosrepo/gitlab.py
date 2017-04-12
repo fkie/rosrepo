@@ -178,7 +178,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                 try:
                     manifest = parse_package_string(xml_data, filename)
                     if verbose:
-                        msg("@{cf}Updated@|:  %s: @{yf}%s@|\n" % (p.name, manifest.name))
+                        msg("@{cf}Updated@|:  @{yf}%s@| [%s]\n" % (manifest.name, p.name))
                 except InvalidPackage as e:
                     warning("invalid package manifest '%s': %s\n" % (filename, str(e)))
                     manifest = None
