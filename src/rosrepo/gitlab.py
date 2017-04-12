@@ -293,8 +293,8 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_upd
     return gitlab_projects
 
 
-def make_gitlab_distfile(url, private_token=None, cache=None, timeout=None, verbose=True):
-    projects = find_available_gitlab_projects(url, private_token=private_token, cache=cache, timeout=timeout, verbose=verbose)
+def make_gitlab_distfile(label, url, private_token=None, cache=None, timeout=None, verbose=True):
+    projects = find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, timeout=timeout, verbose=verbose)
     result = {}
     for prj in projects:
         packages = []
