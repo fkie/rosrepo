@@ -1,4 +1,4 @@
 catkin_pkg python-catkin-pkg-modules
 catkin_tools python-catkin-tools | python3-catkin-tools
 rosdep python-rosdep
-
+futures python-concurrent.futures
