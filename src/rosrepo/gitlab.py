@@ -24,6 +24,7 @@ import requests
 import sys
 import os
 import yaml
+import concurrent.futures
 from pygit2 import Repository
 
 try:
@@ -132,6 +133,59 @@ _updated_urls = set()
 
 
 def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, force_update=False, verbose=True):
+
+    def update_project_list(page_no, s):
+        r = s.get(urljoin(url, "api/v3/projects/?per_page=100&page=%d" % page_no), timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+
+    def update_single_project(yaml_p, s, server_cache):
+        cached_p = next((q for q in server_cache.projects if q.id == yaml_p["id"]), None)
+        p = GitlabProject(
+            server=server_name,
+            name=yaml_p["name_with_namespace"],
+            id=yaml_p["id"],
+            website=yaml_p["web_url"],
+            url={"ssh": yaml_p["ssh_url_to_repo"], "http": yaml_p["http_url_to_repo"]},
+            master_branch=yaml_p["default_branch"],
+            packages=None,
+            last_modified=date_parse(yaml_p["last_activity_at"]),
+            workspace_path=None,
+            server_path=yaml_p["path_with_namespace"]
+        )
+        if not force_update and cached_p is not None and cached_p.last_modified == p.last_modified:
+            p.packages = cached_p.packages
+            for prj in p.packages:
+                prj.project = p
+        else:
+            cache_update = True
+            if verbose:
+                msg("@{cf}Updating@|: %s\n" % p.website)
+            manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
+            old_manifests = {}
+            if cached_p is not None:
+                for old_p in cached_p.packages:
+                    old_manifests[old_p.manifest_blob] = old_p.manifest_xml
+            p.packages = []
+            for path, blob in manifests:
+                if blob not in old_manifests:
+                    r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s" % (p.id, blob)), timeout=timeout)
+                    r.raise_for_status()
+                    xml_data = r.content
+                else:
+                    xml_data = old_manifests[blob]
+                filename = os.path.join(path, PACKAGE_MANIFEST_FILENAME)
+                try:
+                    manifest = parse_package_string(xml_data, filename)
+                    if verbose:
+                        msg("@{cf}Updated@|:  %s: @{yf}%s@|\n" % (p.name, manifest.name))
+                except InvalidPackage as e:
+                    warning("invalid package manifest '%s': %s\n" % (filename, str(e)))
+                    manifest = None
+                p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
+        return p
+
+    global _updated_urls
     server_name = urlsplit(url)[1]
     cache_update = False
     if cache is not None:
@@ -150,6 +204,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                 r = s.get(urljoin(url, "api/v3/projects/?per_page=1&page=1&order_by=last_activity_at&sort=desc"), timeout=timeout)
                 r.raise_for_status()
                 try:
+                    total_packages = int(r.headers.get("X-Total-Pages", 0))
                     global_last_modified = r.json()[0]["last_activity_at"]
                 except (KeyError, IndexError):
                     global_last_modified = 0
@@ -160,63 +215,22 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                     cache_update = True
                     server_cache.last_modified = global_last_modified
                     project_list = []
-                    page_no = 1
-                    total_pages = 1
-                    while page_no <= total_pages:
-                        r = s.get(urljoin(url, "api/v3/projects/?per_page=100&page=%d" % page_no), timeout=timeout)
-                        r.raise_for_status()
-                        total_pages = int(r.headers.get("X-Total-Pages", 1))
-                        project_list += r.json()
-                        page_no += 1
-                    for yaml_p in project_list:
-                        cached_p = next((q for q in server_cache.projects if q.id == yaml_p["id"]), None)
-                        p = GitlabProject(
-                            server=server_name,
-                            name=yaml_p["name_with_namespace"],
-                            id=yaml_p["id"],
-                            website=yaml_p["web_url"],
-                            url={"ssh": yaml_p["ssh_url_to_repo"], "http": yaml_p["http_url_to_repo"]},
-                            master_branch=yaml_p["default_branch"],
-                            packages=None,
-                            last_modified=date_parse(yaml_p["last_activity_at"]),
-                            workspace_path=None,
-                            server_path=yaml_p["path_with_namespace"]
-                        )
-                        if not force_update and cached_p is not None and cached_p.last_modified == p.last_modified:
-                            p.packages = cached_p.packages
-                            for prj in p.packages:
-                                prj.project = p
-                        else:
-                            cache_update = True
-                            if verbose:
-                                msg("@{cf}Updating@|: %s\n" % p.website)
-                            manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
-                            old_manifests = {}
-                            if cached_p is not None:
-                                for old_p in cached_p.packages:
-                                    old_manifests[old_p.manifest_blob] = old_p.manifest_xml
-                            p.packages = []
-                            for path, blob in manifests:
-                                if blob not in old_manifests:
-                                    r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s" % (p.id, blob)), timeout=timeout)
-                                    r.raise_for_status()
-                                    xml_data = r.content
-                                else:
-                                    xml_data = old_manifests[blob]
-                                filename = os.path.join(path, PACKAGE_MANIFEST_FILENAME)
-                                try:
-                                    manifest = parse_package_string(xml_data, filename)
-                                    if verbose:
-                                        msg("- @{yf}%s@|\n" % manifest.name, indent=10)
-                                except InvalidPackage as e:
-                                    warning("invalid package manifest '%s': %s\n" % (filename, str(e)))
-                                    manifest = None
-                                p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
-                        projects.append(p)
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                        total_pages = int((total_packages + 99) / 100)
+                        fs = []
+                        for page_no in range(1, total_pages + 1):
+                            fs.append(executor.submit(update_project_list, page_no, s))
+                        for future in concurrent.futures.as_completed(fs, timeout=timeout):
+                            project_list += future.result()
+                        fs = []
+                        for yaml_p in project_list:
+                            fs.append(executor.submit(update_single_project, yaml_p, s, server_cache))
+                        for future in concurrent.futures.as_completed(fs, timeout=timeout):
+                            projects.append(future.result())
                 else:
                     projects = server_cache.projects
                     cache_update = False
-        except IOError as e:
+        except (IOError, concurrent.futures.TimeoutError) as e:
             error("cannot update from '%s': %s\n" % (url, e))
             projects = server_cache.projects
             cache_update = False
@@ -293,8 +307,8 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_upd
     return gitlab_projects
 
 
-def make_gitlab_distfile(url, private_token=None, cache=None, timeout=None, verbose=True):
-    projects = find_available_gitlab_projects(url, private_token=private_token, cache=cache, timeout=timeout, verbose=verbose)
+def make_gitlab_distfile(label, url, private_token=None, cache=None, timeout=None, verbose=True):
+    projects = find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, timeout=timeout, verbose=verbose)
     result = {}
     for prj in projects:
         packages = []
