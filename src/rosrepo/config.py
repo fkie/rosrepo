@@ -21,9 +21,8 @@
 #
 #
 import os
-import yaml
 from distutils.version import StrictVersion as Version
-from .util import write_atomic, UserError, makedirs
+from .util import write_atomic, UserError, makedirs, yaml_load, yaml_dump, YAMLError
 from .ui import warning
 from . import __version__
 
@@ -40,8 +39,8 @@ class Config(object):
         if os.path.isfile(self.config_file):
             try:
                 with open(self.config_file, "rb") as f:
-                    self._data = yaml.safe_load(f)
-            except (OSError, IOError, yaml.YAMLError):
+                    self._data = yaml_load(f)
+            except (OSError, IOError, YAMLError):
                 raise ConfigError("unreadable configuration file")
             if not isinstance(self._data, dict):
                 raise ConfigError("invalid configuration file")
@@ -64,7 +63,7 @@ class Config(object):
             raise ConfigError("cannot write config file marked as read only")
         try:
             makedirs(self.config_dir)
-            write_atomic(self.config_file, yaml.safe_dump(self._data, encoding="UTF-8", default_flow_style=False))
+            write_atomic(self.config_file, yaml_dump(self._data, encoding="UTF-8", default_flow_style=False))
         except (IOError, OSError):
             raise ConfigError("cannnot write config file %s" % self.config_file)
 

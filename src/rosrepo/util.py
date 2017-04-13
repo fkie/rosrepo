@@ -29,6 +29,20 @@ import signal
 from tempfile import mkstemp
 from subprocess import Popen, PIPE
 
+from yaml import load as yaml_load_impl, dump as yaml_dump_impl, YAMLError
+try:
+    from yaml import CSafeLoader as SafeLoader, CSafeDumper as SafeDumper
+except ImportError:
+    from yaml import SafeLoader, SafeDumper
+
+
+def yaml_load(stream, Loader=SafeLoader):
+    return yaml_load_impl(stream, Loader=Loader)
+
+
+def yaml_dump(data, stream=None, Dumper=SafeDumper, **kwargs):
+    return yaml_dump_impl(data, stream=stream, Dumper=Dumper, **kwargs)
+
 
 class NamedTuple(object):
     __slots__ = ()

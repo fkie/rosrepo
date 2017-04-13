@@ -20,8 +20,7 @@
 # limitations under the License.
 #
 #
-from .util import UserError
-from yaml import YAMLError
+from .util import UserError, YAMLError
 from pickle import PickleError
 from .ui import error
 from pygit2 import GitError
