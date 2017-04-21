@@ -23,7 +23,6 @@
 import requests
 import sys
 import os
-import yaml
 import concurrent.futures
 from pygit2 import Repository
 
@@ -45,7 +44,7 @@ except ImportError:
     from urllib.parse import urljoin, urlsplit
 
 from .ui import get_credentials, msg, warning, error
-from .util import iteritems, NamedTuple
+from .util import iteritems, NamedTuple, yaml_dump
 
 
 GITLAB_PACKAGE_CACHE_VERSION = 4
@@ -329,4 +328,4 @@ def make_gitlab_distfile(label, url, private_token=None, cache=None, timeout=Non
             "last_modified": prj.last_modified.isoformat(),
             "packages": packages,
         })
-    return yaml.safe_dump(result, default_flow_style=False)
+    return yaml_dump(result, default_flow_style=False)
