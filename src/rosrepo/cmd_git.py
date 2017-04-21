@@ -202,6 +202,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         repo = Repository(os.path.join(srcdir, project.workspace_path, ".git"))
         dirty_files = [a for a, b in iteritems(repo.status()) if b != GIT_STATUS_IGNORED and b != GIT_STATUS_CURRENT]
         head_branch = get_head_branch(repo)
+        tracking_branch = head_branch.upstream if head_branch else None
         master_remote = get_origin(repo, project)
         if master_remote is not None:
             master_remote_branch = repo.lookup_branch("%s/%s" % (master_remote.name, project.master_branch), GIT_BRANCH_REMOTE)
@@ -215,10 +216,6 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         else:
             master_remote_branch = None
             master_branch = None
-        if not repo.head_is_detached:
-            tracking_branch = head_branch.upstream
-        else:
-            tracking_branch = None
         ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
         found_packages |= set(ws_packages.keys())
         upstream_status = create_upstream_status(repo, head_branch, master_branch, master_remote_branch, tracking_branch)
@@ -245,7 +242,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         repo = Repository(os.path.join(srcdir, path, ".git"))
         dirty_files = [a for a, b in iteritems(repo.status()) if b != GIT_STATUS_IGNORED and b != GIT_STATUS_CURRENT]
         head_branch = get_head_branch(repo)
-        tracking_branch = head_branch.upstream
+        tracking_branch = head_branch.upstream if head_branch else None
         ws_packages = find_catkin_packages(srcdir, path, cache=cache)
         found_packages |= set(ws_packages.keys())
         upstream_status = create_upstream_status(repo, head_branch, None, None, tracking_branch)
@@ -302,7 +299,7 @@ def lookup_branches(repo, project):
                     master_branch = b
                     break
     head_branch = get_head_branch(repo)
-    tracking_branch = head_branch.upstream
+    tracking_branch = head_branch.upstream if head_branch else None
     return head_branch, master_branch, tracking_branch
 
 
@@ -311,7 +308,7 @@ def fetch_project(srcdir, project, git_remote_callback, fetch_remote, dry_run):
         repo = Repository(os.path.join(srcdir, project.workspace_path, ".git"))
         master_remote = get_origin(repo, project)
         head_branch = get_head_branch(repo)
-        tracking_branch = head_branch.upstream
+        tracking_branch = head_branch.upstream if head_branch else None
         tracking_remote = repo.remotes[tracking_branch.remote_name] if tracking_branch is not None else None
         if fetch_remote and master_remote is not None:
             msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
@@ -330,7 +327,7 @@ def fetch_other_git(srcdir, path, git_remote_callback, fetch_remote, dry_run):
     try:
         repo = Repository(os.path.join(srcdir, path, ".git"))
         head_branch = get_head_branch(repo)
-        tracking_branch = head_branch.upstream
+        tracking_branch = head_branch.upstream if head_branch else None
         if fetch_remote and tracking_branch is not None:
             tracking_remote = repo.remotes[tracking_branch.remote_name]
             msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
@@ -386,6 +383,8 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_
     def do_pull(repo, path, head_branch, master_branch, tracking_branch):
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
+        if head_branch is None:
+            raise Exception("detached head detected")
         if tracking_branch is not None:
             if need_pull(repo, head_branch, tracking_branch):
                 msg("@{cf}Fast-Forwarding@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), FF_LARROW, escape(tracking_branch.shorthand)))
@@ -415,6 +414,8 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, dry_run
     def do_push(repo, path, head_branch, master_branch, tracking_branch):
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
+        if head_branch is None:
+            raise Exception("detached head detected")
         if tracking_branch is not None and need_push(repo, head_branch, tracking_branch):
             msg("@{cf}Pushing@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), RARROW, escape(tracking_branch.shorthand)))
             if not dry_run:
