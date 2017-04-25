@@ -79,7 +79,7 @@ def is_up_to_date(repo, local_branch, remote_branch=None):
 def get_head_branch(repo):
     try:
         return repo.lookup_branch(repo.head.shorthand, GIT_BRANCH_LOCAL)
-    except ValueError:
+    except (ValueError, GitError):
         return None
 
 
@@ -155,7 +155,10 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                 elif not is_up_to_date(repo, head_branch):
                     status.append("@!@{yf}needs pull -M")
             else:
-                status.append("@!on branch '%s'" % repo.head.shorthand)
+                if head_branch:
+                    status.append("@!on branch '%s'" % repo.head.shorthand)
+                else:
+                    status.append("empty branch")
                 if master_branch is None:
                     status.append("@!@{rf}no remote")
                 if is_up_to_date(repo, master_branch) or need_push(repo, master_branch):
@@ -384,7 +387,7 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
         if head_branch is None:
-            raise Exception("detached head detected")
+            return
         if tracking_branch is not None:
             if need_pull(repo, head_branch, tracking_branch):
                 msg("@{cf}Fast-Forwarding@|: %s (@{cf}%s@| %s @{cf}%s@|)\n" % (escape(path), escape(head_branch.shorthand), FF_LARROW, escape(tracking_branch.shorthand)))

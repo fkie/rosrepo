@@ -24,6 +24,7 @@ from .util import UserError, YAMLError
 from pickle import PickleError
 from .ui import error
 from pygit2 import GitError
+import traceback
 
 
 CMD_INIT = 1
@@ -50,6 +51,7 @@ def prepare_arguments(parser):
     from . import __version__
     from argparse import SUPPRESS
     parser.add_argument("--version", action="version", version="%s" % __version__)
+    parser.add_argument("--stacktrace", action="store_true", help=SUPPRESS)
     parser.add_argument("--dry-run", action="store_true", help=SUPPRESS)
     cmds = parser.add_subparsers(metavar="ACTION", title="Actions", description="The following actions are available:", dest="command")
 
@@ -315,18 +317,32 @@ def run_rosrepo(args):  # pragma: no cover
                 return rosrepo.cmd_list.run(args)
         error("no command\n")
     except UserError as e:
+        if args.stacktrace:
+            traceback.print_exc()
         error("%s\n" % str(e))
     except YAMLError as e:
+        if args.stacktrace:
+            traceback.print_exc()
         error("YAML: %s\n\n" % str(e))
     except PickleError as e:
+        if args.stacktrace:
+            traceback.print_exc()
         error("Pickle: %s\n\n" % str(e))
     except OSError as e:
+        if args.stacktrace:
+            traceback.print_exc()
         error("OS: %s\n\n" % str(e))
     except IOError as e:
+        if args.stacktrace:
+            traceback.print_exc()
         error("IO: %s\n\n" % str(e))
     except GitError as e:
+        if args.stacktrace:
+            traceback.print_exc()
         error("git: %s\n\n" % str(e))
     except KeyboardInterrupt:
+        if args.stacktrace:
+            traceback.print_exc()
         error("interrupted by user\n")
     return 1
 
