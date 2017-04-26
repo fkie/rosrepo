@@ -211,7 +211,7 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
             master_remote_branch = repo.lookup_branch("%s/%s" % (master_remote.name, project.master_branch), GIT_BRANCH_REMOTE)
             for name in repo.listall_branches(GIT_BRANCH_LOCAL):
                 b = repo.lookup_branch(name, GIT_BRANCH_LOCAL)
-                if b.upstream.branch_name == master_remote_branch.branch_name:
+                if b.upstream and b.upstream.branch_name == master_remote_branch.branch_name:
                     master_branch = b
                     break
             else:
@@ -298,7 +298,7 @@ def lookup_branches(repo, project):
             master_remote_branch = repo.lookup_branch("%s/%s" % (master_remote.name, project.master_branch), GIT_BRANCH_REMOTE)
             for name in repo.listall_branches(GIT_BRANCH_LOCAL):
                 b = repo.lookup_branch(name, GIT_BRANCH_LOCAL)
-                if b.upstream.branch_name == master_remote_branch.branch_name:
+                if b.upstream and b.upstream.branch_name == master_remote_branch.branch_name:
                     master_branch = b
                     break
     head_branch = get_head_branch(repo)
