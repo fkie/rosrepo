@@ -159,8 +159,10 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
                     status.append("@!on branch '%s'" % repo.head.shorthand)
                 else:
                     status.append("empty branch")
-                if master_branch is None:
+                if master_remote_branch is None:
                     status.append("@!@{rf}no remote")
+                elif master_branch is None:
+                    status.append("@!@{rf}untracked remote")
                 if is_up_to_date(repo, master_branch) or need_push(repo, master_branch):
                     if need_pull(repo, head_branch, master_branch):
                         status.append("@!@{cf}needs pull -L")
