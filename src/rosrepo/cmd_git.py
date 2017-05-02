@@ -29,7 +29,7 @@ from .cache import Cache
 from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, \
                 show_conflicts, show_missing_system_depends, \
-                LARROW, RARROW, FF_LARROW, FF_RARROW
+                textify, LARROW, RARROW, FF_LARROW, FF_RARROW
 from .util import iteritems, path_has_prefix, call_process, PIPE, \
                 create_multiprocess_manager, run_multiprocess_workers
 from pygit2 import clone_repository, Repository, \
@@ -316,11 +316,11 @@ def fetch_project(srcdir, project, git_remote_callback, fetch_remote, dry_run):
         tracking_branch = head_branch.upstream if head_branch else None
         tracking_remote = repo.remotes[tracking_branch.remote_name] if tracking_branch is not None else None
         if fetch_remote and master_remote is not None:
-            msg("@{cf}Fetching@|: %s\n" % escape(master_remote.url))
+            msg("@{cf}Fetching@|: %s\n" % escape(textify(master_remote.url)))
             if not dry_run:
                 master_remote.fetch(callbacks=git_remote_callback)
         if fetch_remote and tracking_remote is not None and (master_remote is None or master_remote.name != tracking_remote.name):
-            msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
+            msg("@{cf}Fetching@|: %s\n" % escape(textify(tracking_remote.url)))
             if not dry_run:
                 tracking_remote.fetch(callbacks=git_remote_callback)
         return ""
@@ -335,7 +335,7 @@ def fetch_other_git(srcdir, path, git_remote_callback, fetch_remote, dry_run):
         tracking_branch = head_branch.upstream if head_branch else None
         if fetch_remote and tracking_branch is not None:
             tracking_remote = repo.remotes[tracking_branch.remote_name]
-            msg("@{cf}Fetching@|: %s\n" % escape(tracking_remote.url))
+            msg("@{cf}Fetching@|: %s\n" % escape(textify(tracking_remote.url)))
             if not dry_run:
                 tracking_remote.fetch(callbacks=git_remote_callback)
         return ""
@@ -539,7 +539,7 @@ def compute_git_subdir(srcdir, name):
 
 def clone_worker(git_remote_callback, protocol, dry_run, part):
     project, path = part[0], part[1]
-    msg("@{cf}Cloning@|: %s\n" % escape(project.url[protocol]))
+    msg("@{cf}Cloning@|: %s\n" % escape(textify(project.url[protocol])))
     try:
         if not dry_run:
             clone_repository(project.url[protocol], path, callbacks=git_remote_callback)
@@ -570,7 +570,7 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
     for r in result:
         project, e = r
         if e:
-            error("failed to clone '%s': %s\n" % (project.name, e))
+            error("failed to clone '%s': %s\n" % (textify(project.name), e))
             errors += 1
         else:
             success += 1
@@ -592,7 +592,7 @@ def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
                 old_url = remote.url
                 new_url = re.sub("([/@])%s([/:])" % old_host.replace(".", "\\."), "\\1%s\\2" % new_host, old_url)
                 if old_url != new_url:
-                    msg("@{cf}Updating@|: %s %s %s\n" % (old_url, RARROW, new_url), indent_next=10)
+                    msg("@{cf}Updating@|: %s %s %s\n" % (textify(old_url), RARROW, textify(new_url)), indent_next=10)
                     if not args.dry_run:
                         remote.url = new_url
     if args.protocol:
@@ -602,7 +602,7 @@ def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
             old_url = master_remote.url
             new_url = project.url.get(args.protocol, old_url)
             if old_url != new_url:
-                msg("@{cf}Updating@|: %s %s %s\n" % (old_url, RARROW, new_url), indent_next=10)
+                msg("@{cf}Updating@|: %s %s %s\n" % (textify(old_url), RARROW, textify(new_url)), indent_next=10)
                 if not args.dry_run:
                     repo.remotes.set_url(master_remote.name, new_url)
 

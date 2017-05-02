@@ -108,6 +108,7 @@ class TerminalColorTest(unittest.TestCase):
                     table = ui.TableView()
                     table.add_row("One", "1")
                     table.add_row("More Data here", "Yay")
+                    table.add_row(u"Oh-oh", u"Ünicöde nightmare")
                     table.sort(0)
                     table.write(fd=stderr)
                     with patch("rosrepo.ui.get_terminal_size", lambda: (5, 5)):
