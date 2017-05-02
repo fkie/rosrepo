@@ -270,11 +270,14 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
     missing = set(packages) - found_packages
     for name in missing:
         path_list = []
+        status = "no git"
         if name in ws_state.ws_packages:
             for pkg in ws_state.ws_packages[name]:
+                if not os.path.isdir(os.path.join(srcdir, pkg.workspace_path)):
+                    status = "@{rf}deleted"
                 head, tail = os.path.split(pkg.workspace_path)
                 path_list.append(escape(head + "/" if tail == name else pkg.workspace_path))
-        table.add_row(escape(name), path_list, "no git")
+        table.add_row(escape(name), path_list, status)
     if table.empty():
         if found_packages:
             msg("Everything is @!@{gf}up-to-date@|.\n")
