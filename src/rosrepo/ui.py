@@ -31,12 +31,18 @@ from .util import isatty, get_terminal_size, UserError
 from .terminal_color import fmt as color_fmt
 
 
+RARROW = None
+LARROW = None
+FF_LARROW = None
+FF_RARROW = None
+
+
 def enable_unicode_graphics():
     global RARROW, LARROW, FF_LARROW, FF_RARROW, _use_unicode_graphics
-    RARROW = "━▶"
-    LARROW = "◀━"
-    FF_LARROW = "◀◀"
-    FF_RARROW = "▶▶"
+    RARROW = u"━▶".encode(sys.stdout.encoding)
+    LARROW = u"◀━".encode(sys.stdout.encoding)
+    FF_LARROW = u"◀◀".encode(sys.stdout.encoding)
+    FF_RARROW = u"▶▶".encode(sys.stdout.encoding)
     _use_unicode_graphics = True
 
 
@@ -255,6 +261,14 @@ def show_missing_system_depends(missing):
         msg("\n\n")
 
 
+def textify(s, fd=None):
+    if fd is None:
+        fd = sys.stdout
+    if hasattr(s, "encode"):
+        return s.encode(fd.encoding if hasattr(fd, "encoding") and fd.encoding else "UTF-8")
+    return str(s)
+
+
 class TableView(object):
     def __init__(self, *args, **kwargs):
         self.columns = args
@@ -335,5 +349,5 @@ class TableView(object):
             for line in zip_longest(*row, fillvalue=""):
                 chunks = (slice_ansi_text(color_fmt(r, use_color=use_color), w) for r, w in zip(line, width))
                 for chunk in zip_longest(*chunks):
-                    fd.write(fmt % tuple(str(r) if r is not None else " " * w for r, w in zip(chunk, width)))
+                    fd.write(fmt % tuple(textify(r, fd=fd) if r is not None else " " * w for r, w in zip(chunk, width)))
         fd.write(end)
