@@ -184,7 +184,7 @@ def run(args):
                     if e_time < p_time or args.rosclipse:
                         workload.append((rosclipse, name, args.dry_run))
             run_multiprocess_workers(update_rosclipse, workload, jobs=jobs)
-    if not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
+    if os.path.isdir(os.path.join(wsdir, "devel", "bin")) and not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
         warning("%s is not in PATH\n" % os.path.join(wsdir, "devel", "bin"))
         msg("You probably need to source @{cf}%s@| again (or close and re-open your terminal)\n\n" % os.path.join(wsdir, "devel", "setup.bash"))
     if not env_path_list_contains("ROS_PACKAGE_PATH", os.path.join(wsdir, "src")):

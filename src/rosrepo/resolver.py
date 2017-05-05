@@ -22,6 +22,7 @@
 #
 from .ui import pick_dependency_resolution, warning, error, escape
 from .util import is_deprecated_package, call_process, PIPE, iteritems
+from distutils.version import LooseVersion as ManifestVersion
 import platform
 import gc
 
@@ -110,16 +111,37 @@ def find_dependers(packages, ws_state):
     return depends, system_depends
 
 
-def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False, recursive=True):
-    def try_resolve(queue, depends=None, system_depends=None, conflicts=None, score=None):
+def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False, recursive=True, force_workspace=True):
+    P_REMOTE = 1
+    P_WS = 2
+    P_ROS_ROOT = 3
+
+    def find_package_candidates(name, ws_state, resolver_msgs):
+        # Returns a list of packages which satisfy the given dependency
+        if name in ws_state.ws_packages:
+            # If the package is in the workspace, it will be used unconditionally
+            return [(ws_state.ws_packages[name][0], P_WS)]
+        result = []
+        if name in ws_state.ros_root_packages:
+            result.append((ws_state.ros_root_packages[name][0], P_ROS_ROOT))
+        if name in ws_state.remote_packages:
+            remotes = ws_state.remote_packages[name]
+            if len(remotes) > 1 and not auto_resolve:
+                # If desired, let the user pick one
+                desired = pick_dependency_resolution(name, remotes)
+                if result is not None:
+                    remotes = [desired]
+            for pkg in remotes:
+                result.append((pkg, P_REMOTE))
+        return sorted(result, key=lambda x: (ManifestVersion(x[0].manifest.version), x[1]), reverse=True)
+
+    def try_resolve(queue, depends=None, system_depends=None, conflicts=None):
         if depends is None:
             depends = {}
         if system_depends is None:
             system_depends = set()
         if conflicts is None:
             conflicts = {}
-        if score is None:
-            score = 0
         while len(queue) > 0:
             root_depender, depender, name = queue.pop()
             if name not in depends and name not in conflicts and name not in system_depends:
@@ -130,34 +152,21 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                     resolver_msgs.append("is dependee of package @{cf}%s@|" % escape(depender))
                 if root_depender is None:
                     root_depender = name
-                if name in ws_state.ws_packages:
-                    # If the package is in the workspace, we assume it's unique and take the first in the list
-                    depends[name] = ws_state.ws_packages[name][0]
-                    manifest = ws_state.ws_packages[name][0].manifest
-                    if is_deprecated_package(manifest):
-                        score -= 5  # Penalty for being deprecated
-                    if recursive or depender is None:
-                        queue += [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
-                elif name in ws_state.remote_packages:
-                    # Package is not in workspace, so we may have multiple sources
-                    # to download it from. However, since each Gitlab project
-                    # may contain multiple packages, we must verify that no other
-                    # package conflicts with one that's already in the workspace
-                    best_depends = depends
-                    best_sysdep = system_depends
-                    best_score = None  # no solution yet
-                    candidates = []
-                    resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                    for pkg in ws_state.remote_packages[name]:
-                        # Is the package project in the workspace already?
+                candidates = find_package_candidates(name, ws_state, resolver_msgs)
+                for pkg, source in candidates:
+                    if source not in [P_WS, P_REMOTE] and depender is None and force_workspace:
+                        continue  # Ignore other sources if primary depender should be a workspace package
+                    if source == P_REMOTE:
                         if pkg.project in ws_state.ws_projects:
-                            resolver_msgs.append("not found in project @{cf}%s@| which is cloned in @{cf}%s/@| (maybe you need to @{cf}git pull@| the latest version)" % (escape(pkg.project.name), escape(pkg.project.workspace_path)))
-                            continue  # Fail
-                        # Check other packages in the same Gitlab project
+                            resolver_msgs.append("missing from @{cf}%s/@| (maybe you need to @{cf}git pull@|?)" % escape(pkg.project.workspace_path))
+                            continue  # Fail, try next
+                        # Check all other packages in the same project for conflicts
+                        ok = True
                         for other in pkg.project.packages:
                             # Is the other package in the workspace already?
                             if other.manifest.name in ws_state.ws_packages:
                                 resolver_msgs.append("cannot be cloned from @{cf}%s@| because package @{cf}%s@| is in the workspace already" % (escape(pkg.project.name), escape(other.manifest.name)))
+                                ok = False
                                 break  # Fail
                             # If not, check if we already decided to download
                             # the package from another project
@@ -165,73 +174,37 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
                                 # Is it the same project?
                                 if other.project != pkg.project:
                                     resolver_msgs.append("cannot be cloned from @{cf}%s@| because it contains package @{cf}%s@| which will be cloned from @{cf}%s@|" % (escape(pkg.project.name), escape(other.manifest.name), escape(other.project.name)))
+                                    ok = False
                                     break  # Fail
-                        else:
-                            # The chosen package does not create any conflicts
-                            candidates.append(pkg)
-                    if len(candidates) > 1 and not auto_resolve:
-                        # If desired, let the user pick one
-                        result = pick_dependency_resolution(name, candidates)
-                        if result is not None:
-                            candidates = [result]
-                    local_conflicts = {}
-                    for pkg in candidates:
+                        if not ok:
+                            continue  # Fail, try next
+                    # If we got to this point, the package can be used to resolve the dependency
+                    if source in [P_WS, P_REMOTE]:
                         depends[name] = pkg
-                        manifest = pkg.manifest
-                        candidate_queue = [(root_depender, name, p.name) for p in manifest.buildtool_depends + manifest.build_depends + manifest.run_depends + manifest.test_depends]
-                        new_depends, new_sysdep, new_conflicts, new_score = try_resolve(candidate_queue, depends.copy(), system_depends.copy())
-                        conflicts.update(new_conflicts)
-                        local_conflicts.update(new_conflicts)
-                        if not new_conflicts:
-                            # We can build a consistent workspace with that
-                            # If we have multiple choices, we pick the one with
-                            # the smallest number of soft-conflicts
-                            if is_deprecated_package(manifest):
-                                new_score -= 250  # Huge penalty for being deprecated
-                            if best_score is None or new_score > best_score:
-                                best_score = new_score
-                                best_depends = new_depends
-                                best_sysdep = new_sysdep
-                        # Try next available package
-                        del depends[name]
-                    if best_score is not None:
-                        depends.update(best_depends)
-                        system_depends |= best_sysdep
-                        score -= 10  # Small penalty for required download
-                    elif name in ws_state.ros_root_packages:
-                        system_depends.add(name)
-                        best_score = -1  # small penalty for relying on system package
-                    elif name in get_rosdep():
-                        system_depends.add(name)
-                        best_score = -1  # small penalty for relying on system package
+                        if recursive or depender is None:
+                            recursive_depends = pkg.manifest.buildtool_depends + pkg.manifest.build_depends + pkg.manifest.run_depends + pkg.manifest.test_depends
+                            queue += [(root_depender, name, p.name) for p in recursive_depends]
                     else:
-                        resolver_msgs.append("is not installable from a configured Gitlab server due to problems with " + ", ".join("@{cf}%s@|" % s for s in sorted(local_conflicts.keys())))
-                        resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
-                        conflicts[name] = resolver_msgs
-                elif name in ws_state.ros_root_packages:
-                    if depender is not None:
                         system_depends.add(name)
-                    else:
-                        resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                        resolver_msgs.append("is not available from a configured Gitlab server")
-                        resolver_msgs.append("is installed in @{cf}$ROS_ROOT@| and cannot be built")
-                        conflicts[name] = resolver_msgs
-                elif name in get_rosdep():
-                    if depender is not None:
-                        system_depends.add(name)
-                    else:
-                        resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                        resolver_msgs.append("is not available from a configured Gitlab server")
-                        conflicts[name] = resolver_msgs
+                    break  # Success, do not check more candidates
                 else:
-                    resolver_msgs.append("is not in workspace (or disabled with @{cf}CATKIN_IGNORE@|)")
-                    resolver_msgs.append("is not available from a configured Gitlab server")
-                    resolver_msgs.append("is not in rosdep database (or you have to run @{cf}rosdep update@|)")
-                    if not ignore_missing:
-                        conflicts[name] = resolver_msgs
-        return depends, system_depends, conflicts, score
+                    if not candidates:
+                        resolver_msgs.append("no such package available")
+                    else:
+                        resolver_msgs.append("not in workspace and cannot be cloned from Gitlab")
+                    # No candidate matched, but maybe we got lucky and it's a known system dependency
+                    # However, if it is requested explicitly, we won't use system dependencies
+                    if depender is not None and name in get_rosdep():
+                        system_depends.add(name)
+                    else:
+                        # We cannot resolve this
+                        # If the package is unknown, i.e. does not have any installation candidates,
+                        # we may choose to ignore it, if so instructed
+                        if candidates or not ignore_missing:
+                            conflicts[name] = resolver_msgs
+        return depends, system_depends, conflicts
     queue = [(None, None, name) for name in packages]
-    depends, system_depends, conflicts, _ = try_resolve(queue)
+    depends, system_depends, conflicts = try_resolve(queue)
     return depends, system_depends, conflicts
 
 
