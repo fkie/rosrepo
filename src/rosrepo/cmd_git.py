@@ -108,9 +108,18 @@ def is_ancestor(repo, maybe_ancestor, branch):
     return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
 
 
+class AuthenticationFailed(RuntimeError):
+    pass
+
+
 class GitRemoteCallback(RemoteCallbacks):
 
+    def __init__(self):
+        self.last_url = None
     def credentials(self, url, username_from_url, allowed_types):
+        if url == self.last_url:
+            raise AuthenticationFailed()
+        self.last_url = url
         if allowed_types & GIT_CREDTYPE_SSH_KEY:
             return KeypairFromAgent(username_from_url)
         if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
@@ -122,7 +131,7 @@ class GitRemoteCallback(RemoteCallbacks):
                 stdin = "protocol=%s\nhost=%s\n" % (u[0], u[1])
                 username, password = credential_dict.get(stdin, (None, None))
                 if username is None:
-                    exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=stdin, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                    exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=stdin, stdin=PIPE, stdout=PIPE)
                     if exitcode != 0:
                         return None
                     for line in stdout.split("\n"):
@@ -327,6 +336,8 @@ def fetch_project(srcdir, project, git_remote_callback, fetch_remote, dry_run):
             if not dry_run:
                 tracking_remote.fetch(callbacks=git_remote_callback)
         return ""
+    except AuthenticationFailed:
+        return "authentication failed"
     except GitError as e:
         return str(e)
 
@@ -342,6 +353,8 @@ def fetch_other_git(srcdir, path, git_remote_callback, fetch_remote, dry_run):
             if not dry_run:
                 tracking_remote.fetch(callbacks=git_remote_callback)
         return ""
+    except AuthenticationFailed:
+        return "authentication failed"
     except GitError as e:
         return str(e)
 
@@ -546,6 +559,8 @@ def clone_worker(git_remote_callback, protocol, dry_run, part):
     try:
         if not dry_run:
             clone_repository(project.url[protocol], path, callbacks=git_remote_callback)
+    except AuthenticationFailed:
+        return project, "authentication failed"
     except GitError as e:
         return project, str(e)
     return project, ""
