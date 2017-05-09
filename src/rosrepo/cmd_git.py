@@ -23,6 +23,7 @@
 import os
 import sys
 import re
+import shutil
 from .workspace import get_workspace_location, get_workspace_state, find_catkin_packages, resolve_this
 from .config import Config
 from .cache import Cache
@@ -560,8 +561,10 @@ def clone_worker(git_remote_callback, protocol, dry_run, part):
         if not dry_run:
             clone_repository(project.url[protocol], path, callbacks=git_remote_callback)
     except AuthenticationFailed:
+        shutil.rmtree(path, ignore_errors=True)
         return project, "authentication failed"
     except GitError as e:
+        shutil.rmtree(path, ignore_errors=True)
         return project, str(e)
     return project, ""
 
