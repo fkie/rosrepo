@@ -172,7 +172,7 @@ def call_process(args, bufsize=0, stdin=None, stdout=None, stderr=None, cwd=None
     p = Popen(args, bufsize=bufsize, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, env=env)
     if stdin == PIPE or stdout == PIPE or stderr == PIPE:
         stdoutdata, stderrdata = p.communicate(input_data.encode("UTF-8") if input_data else None)
-        return p.returncode, stdoutdata.decode("UTF-8"), stderrdata.decode("UTF-8")
+        return p.returncode, stdoutdata.decode("UTF-8") if stdoutdata is not None else None, stderrdata.decode("UTF-8") if stderrdata is not None else None
     else:
         p.wait()
     return p.returncode
