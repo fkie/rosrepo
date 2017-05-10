@@ -109,7 +109,7 @@ def is_ancestor(repo, maybe_ancestor, branch):
     return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
 
 
-class AuthenticationFailed(RuntimeError):
+class AuthorizationFailed(RuntimeError):
     pass
 
 
@@ -117,24 +117,37 @@ class GitRemoteCallback(RemoteCallbacks):
 
     def __init__(self):
         self.last_url = None
+
     def credentials(self, url, username_from_url, allowed_types):
-        if url == self.last_url:
-            raise AuthenticationFailed()
-        self.last_url = url
-        if allowed_types & GIT_CREDTYPE_SSH_KEY:
-            return KeypairFromAgent(username_from_url)
-        if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
-            global credential_lock
-            global credential_dict
-            credential_lock.acquire()
-            try:
-                u = urlsplit(url)
-                stdin = "protocol=%s\nhost=%s\n" % (u[0], u[1])
-                username, password = credential_dict.get(stdin, (None, None))
+        global credential_lock
+        global credential_dict
+        credential_lock.acquire()
+        msg("@{cf}Fetching@|: %s\n" % escape(textify(url)))
+        try:
+            u = urlsplit(url)
+            query = "protocol=%s\nhost=%s\n" % (u[0], u[1])
+            if url == self.last_url:
+                if allowed_types & GIT_CREDTYPE_SSH_KEY:
+                    reason = "SSH agent has no acceptable key"
+                elif allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
+                    reason = "invalid username or password"
+                else:
+                    reason = "cannot handle requested authorization credentials"
+                error(reason + "\n")
+                credential_dict[query] = (None, AuthorizationFailed(reason))
+                raise AuthorizationFailed(reason)
+            username, password = credential_dict.get(query, (None, None))
+            if type(password) == AuthorizationFailed:
+                error(str(password) + "\n")
+                raise password
+            self.last_url = url
+            if allowed_types & GIT_CREDTYPE_SSH_KEY:
+                return KeypairFromAgent(username_from_url)
+            if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
                 if username is None:
-                    exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=stdin, stdin=PIPE, stdout=PIPE)
+                    exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=query, stdin=PIPE, stdout=PIPE)
                     if exitcode != 0:
-                        return None
+                        raise AuthorizationFailed()
                     for line in stdout.split("\n"):
                         if "=" in line:
                             key, value = line.split("=", 1)
@@ -143,11 +156,11 @@ class GitRemoteCallback(RemoteCallbacks):
                             if key == "password":
                                 password = value
                 if username is not None and password is not None:
-                    credential_dict[stdin] = (username, password)
+                    credential_dict[query] = (username, password)
                     return UserPass(username, password)
-            finally:
-                credential_lock.release()
-        return None
+        finally:
+            credential_lock.release()
+        raise AuthorizationFailed("cannot handle requested authorization credentials")
 
 
 def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=True, cache=None):
@@ -329,17 +342,13 @@ def fetch_project(srcdir, project, git_remote_callback, fetch_remote, dry_run):
         tracking_branch = head_branch.upstream if head_branch else None
         tracking_remote = repo.remotes[tracking_branch.remote_name] if tracking_branch is not None else None
         if fetch_remote and master_remote is not None:
-            msg("@{cf}Fetching@|: %s\n" % escape(textify(master_remote.url)))
             if not dry_run:
                 master_remote.fetch(callbacks=git_remote_callback)
         if fetch_remote and tracking_remote is not None and (master_remote is None or master_remote.name != tracking_remote.name):
-            msg("@{cf}Fetching@|: %s\n" % escape(textify(tracking_remote.url)))
             if not dry_run:
                 tracking_remote.fetch(callbacks=git_remote_callback)
         return ""
-    except AuthenticationFailed:
-        return "authentication failed"
-    except GitError as e:
+    except (GitError, AuthorizationFailed) as e:
         return str(e)
 
 
@@ -350,13 +359,10 @@ def fetch_other_git(srcdir, path, git_remote_callback, fetch_remote, dry_run):
         tracking_branch = head_branch.upstream if head_branch else None
         if fetch_remote and tracking_branch is not None:
             tracking_remote = repo.remotes[tracking_branch.remote_name]
-            msg("@{cf}Fetching@|: %s\n" % escape(textify(tracking_remote.url)))
             if not dry_run:
                 tracking_remote.fetch(callbacks=git_remote_callback)
         return ""
-    except AuthenticationFailed:
-        return "authentication failed"
-    except GitError as e:
+    except (GitError, AuthorizationFailed) as e:
         return str(e)
 
 
@@ -560,10 +566,7 @@ def clone_worker(git_remote_callback, protocol, dry_run, part):
     try:
         if not dry_run:
             clone_repository(project.url[protocol], path, callbacks=git_remote_callback)
-    except AuthenticationFailed:
-        shutil.rmtree(path, ignore_errors=True)
-        return project, "authentication failed"
-    except GitError as e:
+    except (GitError, AuthorizationFailed) as e:
         shutil.rmtree(path, ignore_errors=True)
         return project, str(e)
     return project, ""
