@@ -147,7 +147,7 @@ class GitRemoteCallback(RemoteCallbacks):
                 if username is None:
                     exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=query, stdin=PIPE, stdout=PIPE)
                     if exitcode != 0:
-                        raise AuthorizationFailed()
+                        raise AuthorizationFailed("git credential helper failed")
                     for line in stdout.split("\n"):
                         if "=" in line:
                             key, value = line.split("=", 1)
