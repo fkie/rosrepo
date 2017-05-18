@@ -234,13 +234,13 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         master_remote = get_origin(repo, project)
         if master_remote is not None:
             master_remote_branch = repo.lookup_branch("%s/%s" % (master_remote.name, project.master_branch), GIT_BRANCH_REMOTE)
-            for name in repo.listall_branches(GIT_BRANCH_LOCAL):
-                b = repo.lookup_branch(name, GIT_BRANCH_LOCAL)
-                if b.upstream and b.upstream.branch_name == master_remote_branch.branch_name:
-                    master_branch = b
-                    break
-            else:
-                master_branch = None
+            master_branch = None
+            if master_remote_branch is not None:
+                for name in repo.listall_branches(GIT_BRANCH_LOCAL):
+                    b = repo.lookup_branch(name, GIT_BRANCH_LOCAL)
+                    if b.upstream and b.upstream.branch_name == master_remote_branch.branch_name:
+                        master_branch = b
+                        break
         else:
             master_remote_branch = None
             master_branch = None
