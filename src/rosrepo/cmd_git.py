@@ -698,6 +698,8 @@ def run(args):
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies\n")
+        if not args.with_depends:
+            depends = {n: p for n, p in iteritems(depends) if n in args.packages}
         if not clone_packages(srcdir, depends, ws_state, jobs=args.jobs, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
         missing = resolve_system_depends(ws_state, system_depends, missing_only=True)

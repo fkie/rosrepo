@@ -142,7 +142,7 @@ _rosrepo_complete()
         rosrepo_cmd+=("-a")
         if [ "${arg:0:1}" = "-" ]
         then
-            COMPREPLY=($(compgen -W "$common_opts --set-default --set-pinned -a --all -l --last --this --rebuild -c --clean --clean-all -v --verbose -k --keep-going -j --jobs -m --ignore-missing-depends --no-status --no-rosclipse --rosclipse --no-catkin-lint --catkin-lint" -- "$arg"))
+            COMPREPLY=($(compgen -W "$common_opts --set-default --set-pinned -a --all -l --last --this --rebuild -c --clean --clean-all -v --verbose -k --keep-going -j --jobs --clone --no-clone -m --ignore-missing-depends --no-status --no-rosclipse --rosclipse --no-catkin-lint --catkin-lint" -- "$arg"))
         else
             [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 -o "${has_opt["-l"]}" = 1 -o "${has_opt["--last"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
         fi
@@ -205,7 +205,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                   COMPREPLY=($(compgen -W "-a --all --with-depends" -- "$arg"))
+                   COMPREPLY=($(compgen -W "-a --all --with-depends --without-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
@@ -216,7 +216,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W" "-v")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                    COMPREPLY=($(compgen -W "--dry-run -j --jobs -p --protocol -a --all" -- "$arg"))
+                    COMPREPLY=($(compgen -W "--dry-run -j --jobs -p --protocol -a --all --with-depends --without-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
@@ -227,7 +227,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                    COMPREPLY=($(compgen -W "--dry-run --with-depends --this" -- "$arg"))
+                    COMPREPLY=($(compgen -W "--dry-run --with-depends --without-depends --this" -- "$arg"))
                     if [ "$cmd2" == "push" ]
                     then
                         COMPREPLY+=($(compgen -W "-j --jobs" -- "$arg"))
