@@ -58,6 +58,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    if args.offline is None:
+        args.offline = config.get("offline_mode", False)
+        if args.offline:
+            warning("offline mode. Run 'rosrepo config --online' to disable\n")
     config.set_default("default_build", [])
     config.set_default("pinned_build", [])
     set_name = "pinned_build" if args.pinned else "default_build"

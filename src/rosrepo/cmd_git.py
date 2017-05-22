@@ -147,7 +147,7 @@ class GitRemoteCallback(RemoteCallbacks):
                 if username is None:
                     exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=query, stdin=PIPE, stdout=PIPE)
                     if exitcode != 0:
-                        raise AuthorizationFailed()
+                        raise AuthorizationFailed("git credential helper failed")
                     for line in stdout.split("\n"):
                         if "=" in line:
                             key, value = line.split("=", 1)
@@ -234,13 +234,13 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         master_remote = get_origin(repo, project)
         if master_remote is not None:
             master_remote_branch = repo.lookup_branch("%s/%s" % (master_remote.name, project.master_branch), GIT_BRANCH_REMOTE)
-            for name in repo.listall_branches(GIT_BRANCH_LOCAL):
-                b = repo.lookup_branch(name, GIT_BRANCH_LOCAL)
-                if b.upstream and b.upstream.branch_name == master_remote_branch.branch_name:
-                    master_branch = b
-                    break
-            else:
-                master_branch = None
+            master_branch = None
+            if master_remote_branch is not None:
+                for name in repo.listall_branches(GIT_BRANCH_LOCAL):
+                    b = repo.lookup_branch(name, GIT_BRANCH_LOCAL)
+                    if b.upstream and b.upstream.branch_name == master_remote_branch.branch_name:
+                        master_branch = b
+                        break
         else:
             master_remote_branch = None
             master_branch = None
@@ -418,9 +418,9 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
     if done:
         report = ("%s completed successfully for" % action.title()) if not dry_run else ("Dry-run: %s would have been executed for" % action)
         if done == 1:
-            msg("%s one repository\n" % report)
+            msg("@!%s one repository@|\n" % report)
         else:
-            msg("%s %d repositories\n" % (report, done))
+            msg("@!%s %d repositories@|\n" % (report, done))
     if errors:
         if errors == 1:
             warning("an error has occurred\n")
@@ -653,9 +653,9 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
         fatal("cloning failed")
     report = "Successfully cloned" if not dry_run else "Dry-run: would have cloned"
     if success == 1:
-        msg("%s one repository\n" % report)
+        msg("@!%s one repository@|\n" % report)
     elif success > 1:
-        msg("%s %d repositories\n" % (report, success))
+        msg("@!%s %d repositories@|\n" % (report, success))
     return True
 
 
@@ -687,6 +687,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    if args.offline is None:
+        args.offline = config.get("offline_mode", False)
+        if args.offline:
+            warning("offline mode. Run 'rosrepo config --online' to disable\n")
     srcdir = os.path.join(wsdir, "src")
     ws_state = get_workspace_state(wsdir, config, cache=cache, offline_mode=args.offline)
     if args.git_cmd == "clone":
@@ -698,6 +702,8 @@ def run(args):
         if conflicts:
             show_conflicts(conflicts)
             fatal("cannot resolve dependencies\n")
+        if not args.with_depends:
+            depends = {n: p for n, p in iteritems(depends) if n in args.packages}
         if not clone_packages(srcdir, depends, ws_state, jobs=args.jobs, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
         missing = resolve_system_depends(ws_state, system_depends, missing_only=True)

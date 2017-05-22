@@ -66,6 +66,7 @@ def show_config(config):
         table.add_row("@{cf}Install:", "@{yf}" + ("Yes" if config["install"] else "No"))
     table.add_row("@{cf}Run catkin_lint Before Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
     table.add_row("@{cf}Run rosclipse After Build:", "@{yf}" + ("Yes" if config["use_rosclipse"] else "No"))
+    table.add_row("@{cf}Offline Mode:", "@{yf}" + ("Yes" if config.get("offline_mode", False) else "No"))
     table.add_separator()
     table.add_row("@{cf}Pinned Packages:", ["@{yf}" + escape(s) for s in config.get("pinned_build", [])])
     table.add_row("@{cf}Default Build:", ["@{yf}" + escape(s) for s in config.get("default_build", [])])
@@ -104,11 +105,14 @@ def run(args):
         need_clean = old_ros_root != new_ros_root
         del config["ros_root"]
 
+    if args.offline is not None:
+        config["offline_mode"] = args.offline
+    else:
+        args.offline = config.get("offline_mode", False)
+
     config.set_default("store_credentials", True)
-    if args.store_credentials:
-        config["store_credentials"] = True
-    if args.no_store_credentials:
-        config["store_credentials"] = False
+    if args.store_credentials is not None:
+        config["store_credentials"] = args.store_credentials
 
     if args.gitlab_logout:
         config.set_default("gitlab_servers", [])
@@ -202,16 +206,11 @@ def run(args):
             config["job_limit"] = args.job_limit
         else:
             del config["job_limit"]
-    if args.no_job_limit:
-        del config["job_limit"]
 
     config.set_default("install", False)
-    if args.install:
-        need_clean = need_clean or not config["install"]
-        config["install"] = True
-    if args.no_install:
-        need_clean = need_clean or config["install"]
-        config["install"] = False
+    if args.install is not None:
+        need_clean = need_clean or config["install"] != args.install
+        config["install"] = args.install
 
     if args.set_compiler:
         cc = get_c_compiler(args.set_compiler)
@@ -226,22 +225,16 @@ def run(args):
         del config["compiler"]
 
     config.set_default("use_rosclipse", True)
-    if args.rosclipse:
-        config["use_rosclipse"] = True
-    if args.no_rosclipse:
-        config["use_rosclipse"] = False
+    if args.rosclipse is not None:
+        config["use_rosclipse"] = args.rosclipse
 
     config.set_default("use_catkin_lint", True)
-    if args.catkin_lint:
-        config["use_catkin_lint"] = True
-    if args.no_catkin_lint:
-        config["use_catkin_lint"] = False
+    if args.catkin_lint is not None:
+        config["use_catkin_lint"] = args.catkin_lint
 
     config.set_default("use_env_cache", True)
-    if args.env_cache:
-        config["use_env_cache"] = True
-    if args.no_env_cache:
-        config["use_env_cache"] = False
+    if args.env_cache is not None:
+        config["use_env_cache"] = args.env_cache
 
     config.set_default("gitlab_crawl_depth", 1)
     if args.set_gitlab_crawl_depth is not None:

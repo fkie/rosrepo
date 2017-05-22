@@ -36,6 +36,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    if args.offline is None:
+        args.offline = config.get("offline_mode", False)
+        if args.offline:
+            warning("offline mode. Run 'rosrepo config --online' to disable\n")
     ros_rootdir = find_ros_root(config.get("ros_root", None))
     if ros_rootdir is None:
         fatal("cannot detect ROS distribution. Have you sourced your setup.bash?\n")
@@ -111,11 +115,17 @@ def run(args):
     if missing and not args.ignore_missing_depends:
         fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)\n")
 
-    clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
-    ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
+    if args.clone:
+        clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
+        ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
     build_packages, _, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
     assert not conflicts
+    missing_ws = [n for n in build_packages if n not in ws_state.ws_packages]
+    if missing_ws and not args.dry_run:
+        msg("@{cf}The following packages are missing from your workspace@|:\n")
+        msg(", ".join(sorted(missing_ws)) + "\n\n", indent=4)
+        fatal("missing build dependencies\n")
 
     if args.clean_all:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--yes", "--all"]
@@ -130,7 +140,9 @@ def run(args):
         call_process(invoke)
 
     catkin_lint = find_program("catkin_lint")
-    if catkin_lint and (args.catkin_lint or config.get("use_catkin_lint", True)) and not args.no_catkin_lint:
+    if args.catkin_lint is None:
+        args.catkin_lint = config.get("use_catkin_lint", True)
+    if catkin_lint and args.catkin_lint:
         catkin_lint = [catkin_lint, "--package-path", srcdir]
         if args.offline:
             catkin_lint += ["--offline"]
@@ -150,14 +162,19 @@ def run(args):
     if args.keep_going:
         catkin_build += ["--continue-on-failure"]
 
-    if (args.env_cache or config.get("use_env_cache", True)) and not args.no_env_cache:
+    if args.env_cache is None:
+        args.env_cache = config.get("use_env_cache", True)
+    if args.env_cache:
         catkin_build += ["--env-cache"]
     else:
         catkin_build += ["--no-env-cache"]
 
     if args.jobs:
         jobs = int(args.jobs)
-        catkin_build += ["-j", str(args.jobs), "-p", str(args.jobs)]
+        if jobs > 0:
+            catkin_build += ["-j", str(args.jobs), "-p", str(args.jobs)]
+        else:
+            jobs = None
     elif "job_limit" in config:
         jobs = int(config["job_limit"])
         catkin_build += ["-j", str(config["job_limit"]), "-p", str(config["job_limit"])]
@@ -167,12 +184,14 @@ def run(args):
     catkin_build += build_packages.keys()
 
     if args.verbose:
-        catkin_build += ["--make-args", "VERBOSE=ON", "--"]
+        catkin_build += ["--make-args", "VERBOSE=ON"]
 
     ret = call_process(catkin_build)
 
     rosclipse = find_program("rosclipse")
-    if rosclipse is not None and (args.rosclipse or config.get("use_rosclipse", True)) and not args.no_rosclipse:
+    use_rosclipse = args.rosclipse or (args.rosclipse is None and config.get("use_rosclipse", True))
+    force_rosclipse = args.rosclipse
+    if rosclipse is not None and use_rosclipse:
         eclipse_ok, _, _ = call_process([rosclipse, "-d"], stdout=PIPE, stderr=PIPE)
         if eclipse_ok == 0:
             workload = []
@@ -181,7 +200,7 @@ def run(args):
                     pkgdir = os.path.join(wsdir, "src", pkg.workspace_path)
                     p_time = max(getmtime(os.path.join(pkgdir, "CMakeLists.txt")), getmtime(os.path.join(pkgdir, "package.xml")))
                     e_time = getmtime(os.path.join(pkgdir, ".project"))
-                    if e_time < p_time or args.rosclipse:
+                    if e_time < p_time or force_rosclipse:
                         workload.append((rosclipse, name, args.dry_run))
             run_multiprocess_workers(update_rosclipse, workload, jobs=jobs)
     if os.path.isdir(os.path.join(wsdir, "devel", "bin")) and not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
