@@ -418,9 +418,9 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
     if done:
         report = ("%s completed successfully for" % action.title()) if not dry_run else ("Dry-run: %s would have been executed for" % action)
         if done == 1:
-            msg("%s one repository\n" % report)
+            msg("@!%s one repository@|\n" % report)
         else:
-            msg("%s %d repositories\n" % (report, done))
+            msg("@!%s %d repositories@|\n" % (report, done))
     if errors:
         if errors == 1:
             warning("an error has occurred\n")
@@ -653,9 +653,9 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
         fatal("cloning failed")
     report = "Successfully cloned" if not dry_run else "Dry-run: would have cloned"
     if success == 1:
-        msg("%s one repository\n" % report)
+        msg("@!%s one repository@|\n" % report)
     elif success > 1:
-        msg("%s %d repositories\n" % (report, success))
+        msg("@!%s %d repositories@|\n" % (report, success))
     return True
 
 
