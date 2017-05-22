@@ -687,6 +687,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    if args.offline is None:
+        args.offline = config.get("offline_mode", False)
+        if args.offline:
+            warning("offline mode. Run 'rosrepo config --online' to disable\n")
     srcdir = os.path.join(wsdir, "src")
     ws_state = get_workspace_state(wsdir, config, cache=cache, offline_mode=args.offline)
     if args.git_cmd == "clone":

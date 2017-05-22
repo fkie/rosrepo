@@ -23,7 +23,7 @@
 from .workspace import get_workspace_location, get_workspace_state, resolve_this
 from .config import Config
 from .cache import Cache
-from .ui import msg
+from .ui import msg, warning
 from .util import call_process
 import os
 try:
@@ -37,11 +37,19 @@ def run(args):
     if args.this:
         config = Config(wsdir)
         cache = Cache(wsdir)
+        if args.offline is None:
+            args.offline = config.get("offline_mode", False)
+            if args.offline:
+                warning("offline mode. Run 'rosrepo config --online' to disable\n")
         ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
         args.packages = resolve_this(wsdir, ws_state)
     elif args.vanished:
         config = Config(wsdir)
         cache = Cache(wsdir)
+        if args.offline is None:
+            args.offline = config.get("offline_mode", False)
+            if args.offline:
+                warning("offline mode. Run 'rosrepo config --online' to disable\n")
         ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
         args.packages = []
         for d in scandir(os.path.join(wsdir, "build")):

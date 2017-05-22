@@ -66,6 +66,7 @@ def show_config(config):
         table.add_row("@{cf}Install:", "@{yf}" + ("Yes" if config["install"] else "No"))
     table.add_row("@{cf}Run catkin_lint Before Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
     table.add_row("@{cf}Run rosclipse After Build:", "@{yf}" + ("Yes" if config["use_rosclipse"] else "No"))
+    table.add_row("@{cf}Offline Mode:", "@{yf}" + ("Yes" if config.get("offline_mode", False) else "No"))
     table.add_separator()
     table.add_row("@{cf}Pinned Packages:", ["@{yf}" + escape(s) for s in config.get("pinned_build", [])])
     table.add_row("@{cf}Default Build:", ["@{yf}" + escape(s) for s in config.get("default_build", [])])
@@ -103,6 +104,11 @@ def run(args):
         new_ros_root = find_ros_root(None)
         need_clean = old_ros_root != new_ros_root
         del config["ros_root"]
+
+    if args.offline is not None:
+        config["offline_mode"] = args.offline
+    else:
+        args.offline = config.get("offline_mode", False)
 
     config.set_default("store_credentials", True)
     if args.store_credentials is not None:

@@ -35,7 +35,7 @@ _rosrepo_complete()
     cmd=
     rosrepo_cmd=(rosrepo list --offline --autocomplete)
     nargs=0
-    common_opts="-h --help -w --workspace --offline --offline-mode --dry-run"
+    common_opts="-h --help -w --workspace --offline --offline-mode --no-offline --no-offline-mode --online --dry-run"
     set -- "${COMP_WORDS[@]:0:COMP_CWORD}"
     while [ $# -gt 0 ]
     do

@@ -36,6 +36,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    if args.offline is None:
+        args.offline = config.get("offline_mode", False)
+        if args.offline:
+            warning("offline mode. Run 'rosrepo config --online' to disable\n")
     ros_rootdir = find_ros_root(config.get("ros_root", None))
     if ros_rootdir is None:
         fatal("cannot detect ROS distribution. Have you sourced your setup.bash?\n")

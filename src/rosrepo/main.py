@@ -43,7 +43,9 @@ def add_common_options(parser):
     parser.add_argument("--autocomplete", action="store_true", help=SUPPRESS)
     g = parser.add_argument_group("common options")
     g.add_argument("-w", "--workspace", help="override workspace location (default: autodetect)")
-    g.add_argument("--offline", "--offline-mode", action="store_true", help="assume no network connection; do not contact Gitlab servers")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--offline", "--offline-mode", action="store_true", default=None, help="assume no network connection; do not contact Gitlab servers")
+    m.add_argument("--no-offline", "--no-offline-mode", "--online", action="store_false", dest="offline", help="assume network connection; fetch updates from Gitlab servers (default)")
     g.add_argument("--dry-run", action="store_true", help="do nothing and just print what would be done")
 
 

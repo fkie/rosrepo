@@ -24,7 +24,7 @@ from .workspace import get_workspace_location, get_workspace_state, resolve_this
 from .resolver import find_dependers, find_dependees
 from .config import Config
 from .cache import Cache
-from .ui import error, TableView, escape
+from .ui import warning, error, TableView, escape
 import sys
 
 
@@ -32,6 +32,10 @@ def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
     cache = Cache(wsdir)
+    if args.offline is None:
+        args.offline = config.get("offline_mode", False)
+        if args.offline:
+            warning("offline mode. Run 'rosrepo config --online' to disable\n")
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
     if args.this:
         args.packages = resolve_this(wsdir, ws_state)
