@@ -234,6 +234,8 @@ def prepare_arguments(parser):
     # git commit
     q = git_cmds.add_parser("commit", help="commit local changes for a package")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    q.add_argument("--push", action="store_true", help="push new commits to upstream server")
+    q.add_argument("-j", "--jobs", type=int, default=5, help="set the number of parallel connections")
     m = q.add_mutually_exclusive_group(required=False)
     m.add_argument("--with-depends", action="store_true", default=False, help="also commit dependencies")
     m.add_argument("--without-depends", action="store_false", dest="with_depends", help="do not commit dependencies (default)")

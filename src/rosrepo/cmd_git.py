@@ -467,7 +467,7 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_
     update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run, action="pull", jobs=jobs)
 
 
-def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, dry_run=False):
+def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, fetch_remote=True, dry_run=False):
     def do_push(repo, path, head_branch, master_branch, tracking_branch):
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
@@ -490,7 +490,7 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, dry_run
                     raise Exception("push to %s failed" % master_branch.shorthand)
         return result
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, action="push", jobs=jobs)
+    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, fetch_remote=fetch_remote, action="push", jobs=jobs)
 
 
 def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
@@ -744,7 +744,11 @@ def run(args):
     if args.git_cmd == "merge":
         merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     if args.git_cmd == "commit":
+        if args.push:
+            pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, dry_run=args.dry_run)
         commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+        if args.push:
+            push_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, fetch_remote=False, dry_run=args.dry_run)
     if args.git_cmd == "remote":
         remote_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     return 0

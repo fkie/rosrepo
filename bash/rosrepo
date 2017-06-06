@@ -244,6 +244,10 @@ _rosrepo_complete()
                     then
                         COMPREPLY+=($(compgen -W "-p --protocol --move-host" -- "$arg"))
                     fi
+                    if [ "$cmd2" == "commit" ]
+                    then
+                        COMPREPLY+=($(compgen -W "-j --jobs --push" -- "$arg"))
+                    fi
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
