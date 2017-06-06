@@ -501,7 +501,10 @@ def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=Fal
         if dirty_files:
             msg("@{cf}Commit@|: %s\n" % path)
             if not dry_run:
-                call_process(["git-cola", "--repo", os.path.join(srcdir, path)])
+                if os.environ.get("DISPLAY", "") != "":
+                    call_process(["git-cola", "--repo", os.path.join(srcdir, path)])
+                else:
+                    call_process(["git", "-C", os.path.join(srcdir, path), "commit", "--interactive"])
             return True
         return False
 
