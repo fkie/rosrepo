@@ -45,6 +45,9 @@ DEFAULT_CMAKE_ARGS = [
 DEFAULT_GIT_IGNORE = set([
     "*.egg-info/",
     "__pycache__/",
+    ".project",
+    ".cproject",
+    ".pydevproject",
     ".settings/",
     "CATKIN_IGNORE",
     ".catkin_tools/",
