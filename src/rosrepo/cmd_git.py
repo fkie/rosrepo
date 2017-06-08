@@ -131,6 +131,7 @@ class GitRemoteCallback(RemoteCallbacks):
                     reason = "SSH agent has no acceptable key"
                 elif allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
                     reason = "invalid username or password"
+                    exitcode, stdout, _ = call_process(["git", "credential", "reject"], input_data=query, stdin=PIPE, stdout=PIPE)
                 else:
                     reason = "cannot handle requested authorization credentials"
                 error(reason + "\n")
@@ -157,6 +158,7 @@ class GitRemoteCallback(RemoteCallbacks):
                                 password = value
                 if username is not None and password is not None:
                     credential_dict[query] = (username, password)
+                    exitcode, stdout, _ = call_process(["git", "credential", "approve"], input_data=stdout, stdin=PIPE, stdout=PIPE)
                     return UserPass(username, password)
         finally:
             credential_lock.release()
@@ -426,7 +428,6 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
             warning("an error has occurred\n")
         else:
             warning("%d errors have occurred\n" % errors)
-    show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
 
 
 def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_local=False, merge=False, dry_run=False):
@@ -739,16 +740,20 @@ def run(args):
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
     if args.git_cmd == "pull":
         pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
+        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "push":
         push_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, dry_run=args.dry_run)
+        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "merge":
         merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
+        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "commit":
         if args.push:
             pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, dry_run=args.dry_run)
         commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
         if args.push:
             push_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, fetch_remote=False, dry_run=args.dry_run)
+        show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "remote":
         remote_projects(srcdir, packages, projects, other_git, ws_state, args=args)
     return 0
