@@ -156,9 +156,10 @@ class GitRemoteCallback(RemoteCallbacks):
                                 username = value
                             if key == "password":
                                 password = value
+                    if username is not None and password is not None:
+                        exitcode, stdout, _ = call_process(["git", "credential", "approve"], input_data=stdout, stdin=PIPE, stdout=PIPE)
                 if username is not None and password is not None:
                     credential_dict[query] = (username, password)
-                    exitcode, stdout, _ = call_process(["git", "credential", "approve"], input_data=stdout, stdin=PIPE, stdout=PIPE)
                     return UserPass(username, password)
         finally:
             credential_lock.release()
