@@ -26,7 +26,7 @@ from .cmd_git import clone_packages
 from .resolver import find_dependees, resolve_system_depends
 from .config import Config
 from .cache import Cache
-from .ui import msg, warning, fatal, show_conflicts, show_missing_system_depends
+from .ui import msg, warning, error, fatal, show_conflicts, show_missing_system_depends
 from .util import call_process, find_program, iteritems, getmtime, PIPE, env_path_list_contains, \
                 run_multiprocess_workers
 from functools import reduce
@@ -201,7 +201,7 @@ def run(args):
                     p_time = max(getmtime(os.path.join(pkgdir, "CMakeLists.txt")), getmtime(os.path.join(pkgdir, "package.xml")))
                     e_time = getmtime(os.path.join(pkgdir, ".project"))
                     if e_time < p_time or force_rosclipse:
-                        workload.append((rosclipse, name, args.dry_run))
+                        workload.append((wsdir, rosclipse, name, args.dry_run))
             run_multiprocess_workers(update_rosclipse, workload, jobs=jobs)
     if os.path.isdir(os.path.join(wsdir, "devel", "bin")) and not env_path_list_contains("PATH", os.path.join(wsdir, "devel", "bin")):
         warning("%s is not in PATH\n" % os.path.join(wsdir, "devel", "bin"))
@@ -217,7 +217,13 @@ def run(args):
 
 
 def update_rosclipse(part):
-    rosclipse, name, dry_run = part[0], part[1], part[2]
+    wsdir, rosclipse, name, dry_run = part[0], part[1], part[2], part[3]
     msg("@{cf}Updating rosclipse project files@|: %s\n" % name)
     if not dry_run:
-        call_process([rosclipse, name])
+        result, catkin_env, _ = call_process(["catkin", "build", "--workspace", wsdir, "--get-env", name], stdout=PIPE)
+        if result != 0:
+            error("%s: failed to setup environment\n" % name)
+            return
+        result, _, _ = call_process(["catkin", "env", "-i", "--stdin", rosclipse, name], input_data=catkin_env, stdin=PIPE)
+        if result != 0:
+            error("%s: failed to update rosclipse project files\n" % name)
