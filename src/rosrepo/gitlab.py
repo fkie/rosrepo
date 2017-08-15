@@ -87,7 +87,7 @@ def url_to_cache_name(label, url):
 
 
 def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
-    r = session.get(urljoin(url, "api/v3/projects/%s/repository/tree" % project_id), params={"path": path})
+    r = session.get(urljoin(url, "api/v4/projects/%s/repository/tree" % project_id), params={"path": path})
     if r.status_code == 200:
         entries = r.json()
         files = [e["name"] for e in entries if e["type"] == "blob"]
@@ -117,7 +117,7 @@ def acquire_gitlab_private_token(label, url, credentials_callback=get_credential
     while retries > 0:
         retries -= 1
         login, passwd = credentials_callback("%s [%s]" % (label, url))
-        r = requests.post(urljoin(url, "api/v3/session"), data={"login": login, "password": passwd})
+        r = requests.post(urljoin(url, "api/v4/session"), data={"login": login, "password": passwd})
         if r.status_code == 401:
             msg("@!@{rf}Access denied@!\n", fd=sys.stderr)
             continue
@@ -134,7 +134,7 @@ _updated_urls = set()
 def find_available_gitlab_projects(label, url, private_token=None, cache=None, timeout=None, crawl_depth=-1, cache_only=False, force_update=False, verbose=True):
 
     def update_project_list(page_no, s):
-        r = s.get(urljoin(url, "api/v3/projects/?per_page=100&page=%d" % page_no), timeout=timeout)
+        r = s.get(urljoin(url, "api/v4/projects/?per_page=100&page=%d" % page_no), timeout=timeout)
         r.raise_for_status()
         return r.json()
 
@@ -168,7 +168,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
             p.packages = []
             for path, blob in manifests:
                 if blob not in old_manifests:
-                    r = s.get(urljoin(url, "api/v3/projects/%s/repository/raw_blobs/%s" % (p.id, blob)), timeout=timeout)
+                    r = s.get(urljoin(url, "api/v4/projects/%s/repository/blobs/%s/raw" % (p.id, blob)), timeout=timeout)
                     r.raise_for_status()
                     xml_data = r.content
                 else:
@@ -200,7 +200,7 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
         try:
             with requests.Session() as s:
                 s.headers.update({"PRIVATE-TOKEN": private_token})
-                r = s.get(urljoin(url, "api/v3/projects/?per_page=1&page=1&order_by=last_activity_at&sort=desc"), timeout=timeout)
+                r = s.get(urljoin(url, "api/v4/projects/?per_page=1&page=1&order_by=last_activity_at&sort=desc"), timeout=timeout)
                 r.raise_for_status()
                 try:
                     total_packages = int(r.headers.get("X-Total-Pages", 0))
