@@ -129,7 +129,7 @@ def find_dependees(packages, ws_state, auto_resolve=False, ignore_missing=False,
             if len(remotes) > 1 and not auto_resolve:
                 # If desired, let the user pick one
                 desired = pick_dependency_resolution(name, remotes)
-                if result is not None:
+                if desired is not None:
                     remotes = [desired]
             for pkg in remotes:
                 result.append((pkg, P_REMOTE))

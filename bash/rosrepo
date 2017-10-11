@@ -72,13 +72,18 @@ _rosrepo_complete()
     done
     if [ "$nargs" -eq 1 ]
     then
-        COMPREPLY=($(compgen -W "-h --help --version init config depend list git bash build include exclude clean" -- "$arg"))
+        COMPREPLY=($(compgen -W "-h --help --version init config depend list git bash build include exclude clean export" -- "$arg"))
         return 0
     fi
     case "$prev" in
         -w|--workspace)
             compopt -o filenames 2>/dev/null
             COMPREPLY=($(compgen -d -- "$arg"))
+            return 0
+            ;;
+        -o|--output)
+            compopt -o filenames 2>/dev/null
+            COMPREPLY=($(compgen -f -- "$arg"))
             return 0
             ;;
         -p|--protocol)
@@ -175,6 +180,19 @@ _rosrepo_complete()
         return 0
     fi
     ####
+    if [ "$cmd" = "export" ]
+    then
+        rosrepo_cmd[1]="list"
+        rosrepo_cmd+=("-a")
+        if [ "${arg:0:1}" = "-" ]
+        then
+            COMPREPLY=($(compgen -W "$common_opts -p --protocol -o --output -a --all --this" -- "$arg"))
+        else
+            [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 -o "${has_opt["--this"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+        fi
+        return 0
+    fi
+    ####
     if [ "$cmd" = "include" -o "$cmd" = "exclude" ]
     then
         buildset="-S"
@@ -187,7 +205,7 @@ _rosrepo_complete()
             COMPREPLY=($(compgen -W "$common_opts -p --protocol -P --pinned -S --default -a --all --last --this --delete-unused" -- "$arg"))
             [ "$cmd" = "include" ] && COMPREPLY+=($(compgen -W "--replace" -- "$arg"))
         else
-            [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 -o "${has_opt["--last"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 -o "${has_opt["--last"]}" = 1 -o "${has_opt["--this"]}" = 1 ] || COMPREPLY+=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
         fi
         return 0
     fi
