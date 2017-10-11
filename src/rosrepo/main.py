@@ -24,6 +24,7 @@ from .util import UserError, YAMLError
 from pickle import PickleError
 from .ui import error
 from pygit2 import GitError
+import sys
 import traceback
 
 
@@ -36,6 +37,7 @@ CMD_GIT = 6
 CMD_CLEAN = 7
 CMD_INCLUDE_EXCLUDE = 8
 CMD_DEPEND = 9
+CMD_EXPORT = 10
 
 
 def add_common_options(parser):
@@ -51,7 +53,7 @@ def add_common_options(parser):
 
 def prepare_arguments(parser):
     from . import __version__
-    from argparse import SUPPRESS
+    from argparse import SUPPRESS, FileType
     parser.add_argument("--version", action="version", version="%s" % __version__)
     parser.add_argument("--stacktrace", action="store_true", help=SUPPRESS)
     parser.add_argument("--dry-run", action="store_true", help=SUPPRESS)
@@ -302,6 +304,18 @@ def prepare_arguments(parser):
     m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
     p.set_defaults(func=CMD_DEPEND)
+
+    # export
+    p = cmds.add_parser("export", help="export workspace packages to rosinstall files")
+    add_common_options(p)
+    p.add_argument("-o", "--output", metavar="FILE", type=FileType("w"), default=sys.stdout, help="write rosinstall information to FILE")
+    p.add_argument("-p", "--protocol", help="use PROTOCOL in the Git URLs (default: ssh)")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("-a", "--all", action="store_true", help="select all packages")
+    m.add_argument("--this", action="store_true", help="select package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to export")
+    p.set_defaults(func=CMD_EXPORT)
+
     return parser
 
 
@@ -335,6 +349,9 @@ def run_rosrepo(args):  # pragma: no cover
             if args.func == CMD_LIST:
                 import rosrepo.cmd_list
                 return rosrepo.cmd_list.run(args)
+            if args.func == CMD_EXPORT:
+                import rosrepo.cmd_export
+                return rosrepo.cmd_export.run(args)
         error("no command\n")
     except UserError as e:
         if args.stacktrace:
