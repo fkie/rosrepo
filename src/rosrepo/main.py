@@ -34,7 +34,7 @@ CMD_BASH = 4
 CMD_BUILD = 5
 CMD_GIT = 6
 CMD_CLEAN = 7
-CMD_BUILDSET = 8
+CMD_INCLUDE_EXCLUDE = 8
 CMD_DEPEND = 9
 
 
@@ -277,7 +277,7 @@ def prepare_arguments(parser):
     m.add_argument("--last", action="store_true", help="select packages from the last build")
     m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to include")
-    p.set_defaults(func=CMD_BUILDSET)
+    p.set_defaults(func=CMD_INCLUDE_EXCLUDE)
 
     # exclude
     p = cmds.add_parser("exclude", help="remove packages from default set or pinned set")
@@ -293,7 +293,7 @@ def prepare_arguments(parser):
     m.add_argument("--last", action="store_true", help="select packages from the last build")
     m.add_argument("--this", action="store_true", help="select packages in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to exclude")
-    p.set_defaults(func=CMD_BUILDSET)
+    p.set_defaults(func=CMD_INCLUDE_EXCLUDE)
 
     # depend
     p = cmds.add_parser("depend", help="show package dependencies")
@@ -314,9 +314,9 @@ def run_rosrepo(args):  # pragma: no cover
             if args.func == CMD_BUILD:
                 import rosrepo.cmd_build
                 return rosrepo.cmd_build.run(args)
-            if args.func == CMD_BUILDSET:
-                import rosrepo.buildset
-                return rosrepo.buildset.run(args)
+            if args.func == CMD_INCLUDE_EXCLUDE:
+                import rosrepo.cmd_include_exclude
+                return rosrepo.cmd_include_exclude.run(args)
             if args.func == CMD_CLEAN:
                 import rosrepo.cmd_clean
                 return rosrepo.cmd_clean.run(args)
