@@ -74,7 +74,7 @@ class GitTest(unittest.TestCase):
         self.git.clone(self.upstream_gitdir, ".")
         self.git.config("user.name", "Unit Tester")
         self.git.config("user.email", "unittest@example.com")
-        self.git.branch("other", "origin/other", set_upstream=True)
+        self.git.branch("other", "origin/other", track=True)
 
     def tearDown(self):
         shutil.rmtree(self.gitdir, ignore_errors=True)
