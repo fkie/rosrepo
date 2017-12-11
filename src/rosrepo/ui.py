@@ -35,23 +35,41 @@ RARROW = None
 LARROW = None
 FF_LARROW = None
 FF_RARROW = None
+HTHIN = None
+HTHICK = None
+THEAD = None
+TFOOT = None
+HSEP = None
+XSEP = None
 
 
 def enable_unicode_graphics():
-    global RARROW, LARROW, FF_LARROW, FF_RARROW, _use_unicode_graphics
+    global RARROW, LARROW, FF_LARROW, FF_RARROW, HTHIN, HTHICK, THEAD, TFOOT, HSEP, XSEP, _use_unicode_graphics
     RARROW = u"━▶".encode(sys.stdout.encoding)
     LARROW = u"◀━".encode(sys.stdout.encoding)
     FF_LARROW = u"◀◀".encode(sys.stdout.encoding)
     FF_RARROW = u"▶▶".encode(sys.stdout.encoding)
+    HTHIN = u"─".encode(sys.stdout.encoding)
+    HTHICK = u"━".encode(sys.stdout.encoding)
+    HSEP = u"│".encode(sys.stdout.encoding)
+    THEAD = u"━┯━".encode(sys.stdout.encoding)
+    TFOOT = u"━┷━".encode(sys.stdout.encoding)
+    XSEP = u"─┼─".encode(sys.stdout.encoding)
     _use_unicode_graphics = True
 
 
 def disable_unicode_graphics():
-    global RARROW, LARROW, FF_LARROW, FF_RARROW, _use_unicode_graphics
+    global RARROW, LARROW, FF_LARROW, FF_RARROW, HTHIN, HTHICK, THEAD, TFOOT, HSEP, XSEP, _use_unicode_graphics
     RARROW = "->"
     LARROW = "<-"
     FF_LARROW = "<<"
     FF_RARROW = ">>"
+    HTHIN = "-"
+    HTHICK = "-"
+    THEAD = "-+-"
+    TFOOT = "-+-"
+    HSEP = "|"
+    XSEP = "-+-"
     _use_unicode_graphics = False
 
 
@@ -296,7 +314,6 @@ class TableView(object):
         self.rows.sort(key=lambda x: x[column_index])
 
     def write(self, fd=None, use_color=None):
-        global _use_unicode_graphics
         width = self.width
         actual_width = sum(width) + 3 * len(width) - 1
         try:
@@ -321,25 +338,14 @@ class TableView(object):
                         actual_width -= 1
                         break
         if self.columns:
-            if _use_unicode_graphics:
-                fmt = color_fmt(" " + " @{pf}│@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
-            else:
-                fmt = color_fmt(" " + " @{pf}|@| ".join(["%s"] * len(width)) + "\n", use_color=use_color)
-            if _use_unicode_graphics:
-                fd.write(color_fmt("@{pf}━" + "━┯━".join(["━" * w for w in width]) + "━\n", use_color=use_color))
-                sep = color_fmt("@{pf}─" + "─┼─".join(["─" * w for w in width]) + "─\n", use_color=use_color)
-                end = color_fmt("@{pf}━" + "━┷━".join(["━" * w for w in width]) + "━\n", use_color=use_color)
-            else:
-                sep = color_fmt("@{pf}-" + "-+-".join(["-" * w for w in width]) + "-\n", use_color=use_color)
-                end = sep
-                fd.write(sep)
+            fmt = color_fmt(" " + (" @{pf}" + HSEP + "@| ").join(["%s"] * len(width)) + "\n", use_color=use_color)
+            fd.write(color_fmt("@{pf}" + HTHICK + THEAD.join([HTHICK * w for w in width]) + HTHICK + "\n", use_color=use_color))
+            sep = color_fmt("@{pf}" + HTHIN + XSEP.join([HTHIN * w for w in width]) + HTHIN + "\n", use_color=use_color)
+            end = color_fmt("@{pf}" + HTHICK + TFOOT.join([HTHICK * w for w in width]) + HTHICK + "\n", use_color=use_color)
             fd.write(fmt % tuple(pad_ansi_text(color_fmt("@!%s" % c, use_color=use_color), w) for c, w in zip(self.columns, width)))
         else:
             fmt = " %s   %s\n"
-            if _use_unicode_graphics:
-                sep = color_fmt("@{pf}" + ("─" * actual_width) + "@|\n", use_color=use_color)
-            else:
-                sep = color_fmt("@{pf}" + ("-" * actual_width) + "@|\n", use_color=use_color)
+            sep = color_fmt("@{pf}" + (HTHIN * actual_width) + "@|\n", use_color=use_color)
             end = sep
         fd.write(sep)
         for row in self.rows:

@@ -87,23 +87,30 @@ def url_to_cache_name(label, url):
 
 
 def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
-    r = session.get(urljoin(url, "api/v4/projects/%s/repository/tree" % project_id), params={"path": path})
-    if r.status_code == 200:
-        entries = r.json()
-        files = [e["name"] for e in entries if e["type"] == "blob"]
-        dirs = [e["name"] for e in entries if e["type"] == "tree" and not e["name"].startswith(".")]
-        if "CATKIN_IGNORE" in files:
+    page_count = 1
+    page_no = 1
+    entries = []
+    while page_no <= page_count:
+        r = session.get(urljoin(url, "api/v4/projects/%s/repository/tree" % project_id), params={"path": path, "per_page": 100, "page": page_no})
+        if r.status_code == 200:
+            entries += r.json()
+            page_count = int(r.headers.get("X-Total-Pages", 0))
+        else:
             return []
-        for e in entries:
-            if e["type"] == "blob" and e["name"] == PACKAGE_MANIFEST_FILENAME:
-                return [(path, e["id"])]
-        if depth == 0:
-            return []
-        result = []
-        for d in dirs:
-            result += crawl_project_for_packages(session, url, project_id, os.path.join(path, d), depth - 1, timeout)
-        return result
-    return []
+        page_no += 1
+    files = [e["name"] for e in entries if e["type"] == "blob"]
+    dirs = [e["name"] for e in entries if e["type"] == "tree" and not e["name"].startswith(".")]
+    if "CATKIN_IGNORE" in files:
+        return []
+    for e in entries:
+        if e["type"] == "blob" and e["name"] == PACKAGE_MANIFEST_FILENAME:
+            return [(path, e["id"])]
+    if depth == 0:
+        return []
+    result = []
+    for d in dirs:
+        result += crawl_project_for_packages(session, url, project_id, os.path.join(path, d), depth - 1, timeout)
+    return result
 
 
 _cached_tokens = {}
