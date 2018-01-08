@@ -43,7 +43,7 @@ try:
 except ImportError:
     from urllib.parse import urljoin, urlsplit
 
-from .ui import get_credentials, msg, warning, error
+from .ui import get_credentials, msg, warning, error, fatal
 from .util import iteritems, NamedTuple, yaml_dump
 
 
@@ -125,8 +125,14 @@ def acquire_gitlab_private_token(label, url, credentials_callback=get_credential
         retries -= 1
         login, passwd = credentials_callback("%s [%s]" % (label, url))
         r = requests.post(urljoin(url, "api/v4/session"), data={"login": login, "password": passwd})
+        if r.status_code == 404:
+            msg("This version of the Gitlab server will not create access tokens via API. "
+                "You need to create a personal access token with @!api@| scope manually "
+                "and pass it to resrepo with the --private-token option. Visit the following URL:\n\n@{cf}%s/profile/personal_access_tokens@|\n\n" % url
+            )
+            fatal("required feature unavailabe")
         if r.status_code == 401:
-            msg("@!@{rf}Access denied@!\n", fd=sys.stderr)
+            msg("@!@{rf}Access denied@|\n", fd=sys.stderr)
             continue
         break
     r.raise_for_status()
