@@ -143,12 +143,17 @@ def run(args):
     if args.catkin_lint is None:
         args.catkin_lint = config.get("use_catkin_lint", True)
     if catkin_lint and args.catkin_lint:
+        skip_catkin_lint = set(config.get("skip_catkin_lint", [])) & set(build_packages.keys())
         catkin_lint = [catkin_lint, "--package-path", srcdir]
         if args.offline:
             catkin_lint += ["--offline"]
         catkin_lint += reduce(lambda x, y: x + y, (["--pkg", pkg] for pkg in build_packages.keys()))
+        if skip_catkin_lint:
+            catkin_lint += reduce(lambda x, y: x + y, (["--skip", pkg] for pkg in skip_catkin_lint))
         msg("@{cf}Running catkin_lint@|\n")
         ret = call_process(catkin_lint)
+        for pkg in skip_catkin_lint:
+            warning("skipped catkin_lint for package '%s'\n" % pkg)
         if ret != 0 and not args.dry_run:
             fatal("catkin_lint reported errors\n")
 
