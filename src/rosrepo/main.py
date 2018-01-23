@@ -104,6 +104,8 @@ def prepare_arguments(parser):
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--catkin-lint", action="store_true", default=None, help="use catkin_lint to check packages before build")
     m.add_argument("--no-catkin-lint", action="store_false", dest="catkin_lint", help="do not use catkin_lint to check packages before build")
+    g.add_argument("--skip-catkin-lint", metavar="PACKAGE", action="append", default=[], help="skip catkin_lint for the named packages")
+    g.add_argument("--no-skip-catkin-lint", metavar="PACKAGE", action="append", default=[], help="do not skip catkin_lint for the named packages")
     m = g.add_mutually_exclusive_group(required=False)
     m.add_argument("--env-cache", action="store_true", default=None, help="cache build environment settings to build workspace faster")
     m.add_argument("--no-env-cache", action="store_false", dest="env_cache", help="do not cache build environment settings")

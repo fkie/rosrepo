@@ -64,8 +64,9 @@ def show_config(config):
     table.add_row("@{cf}Parallel Build Jobs:", "@{yf}" + ("%d" % jobs if jobs is not None else "Unlimited"))
     if "install" in config:
         table.add_row("@{cf}Install:", "@{yf}" + ("Yes" if config["install"] else "No"))
-    table.add_row("@{cf}Run catkin_lint Before Build:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
-    table.add_row("@{cf}Run rosclipse After Build:", "@{yf}" + ("Yes" if config["use_rosclipse"] else "No"))
+    table.add_row("@{cf}Run catkin_lint:", "@{yf}" + ("Yes" if config["use_catkin_lint"] else "No"))
+    table.add_row("@{cf}Skip catkin_lint:", ["@{yf}" + escape(s) for s in config.get("skip_catkin_lint", [])])
+    table.add_row("@{cf}Run rosclipse:", "@{yf}" + ("Yes" if config["use_rosclipse"] else "No"))
     table.add_row("@{cf}Offline Mode:", "@{yf}" + ("Yes" if config.get("offline_mode", False) else "No"))
     table.add_separator()
     table.add_row("@{cf}Pinned Packages:", ["@{yf}" + escape(s) for s in config.get("pinned_build", [])])
@@ -231,6 +232,16 @@ def run(args):
     config.set_default("use_catkin_lint", True)
     if args.catkin_lint is not None:
         config["use_catkin_lint"] = args.catkin_lint
+
+    config.set_default("skip_catkin_lint", [])
+    if args.skip_catkin_lint:
+        for pkg in args.skip_catkin_lint:
+            if pkg not in config["skip_catkin_lint"]:
+                config["skip_catkin_lint"].append(pkg)
+    if args.no_skip_catkin_lint:
+        for pkg in args.no_skip_catkin_lint:
+            config["skip_catkin_lint"].remove(pkg)
+    config["skip_catkin_lint"].sort()
 
     config.set_default("use_env_cache", True)
     if args.env_cache is not None:

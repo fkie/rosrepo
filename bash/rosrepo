@@ -103,6 +103,12 @@ _rosrepo_complete()
         --move-host)
             return 0
             ;;
+        --skip-catkin-lint|--no-skip-catkin-lint)
+            rosrepo_cmd[1]="list"
+            rosrepo_cmd+=("-a")
+            COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+            return 0
+            ;;
     esac
     case "$prev2" in
          --set-gitlab-url)
@@ -131,7 +137,7 @@ _rosrepo_complete()
     ####
     if [ "$cmd" = "config" ]
     then
-    COMPREPLY=($(compgen -W "$common_opts --protocol --set-gitlab-crawl-depth --set-gitlab-url --unset-gitlab-url --force-gitlab-update --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token --no-store-credentials --store-credentials --remove-credentials -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --env-cache --no-env-cache" -- "$arg"))
+    COMPREPLY=($(compgen -W "$common_opts --protocol --set-gitlab-crawl-depth --set-gitlab-url --unset-gitlab-url --force-gitlab-update --show-gitlab-urls --get-gitlab-url --gitlab-login --gitlab-logout --private-token --no-private-token --no-store-credentials --store-credentials --remove-credentials -j --job-limit --no-job-limit --install --no-install --set-compiler --unset-compiler --rosclipse --no-rosclipse --catkin-lint --no-catkin-lint --skip-catkin-lint --no-skip-catkin-lint --env-cache --no-env-cache" -- "$arg"))
         return 0
     fi
     ####
