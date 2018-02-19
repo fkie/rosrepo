@@ -196,6 +196,18 @@ def prepare_arguments(parser):
     m = q.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="show status of package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
+    # git diff
+    q = git_cmds.add_parser("diff", help="show changes in Git repositories")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--cached", action="store_true", help="compare index instead of workspace")
+    m.add_argument("--upstream", action="store_true", help="show changes which have not been pushed to upstream")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--with-depends", action="store_true", default=False, help="also show diff for dependencies")
+    m.add_argument("--without-depends", action="store_false", dest="with_depends", help="do not show diff for dependencies (default)")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="show status of package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
     # git push
     q = git_cmds.add_parser("push", help="push commits to upstream repository")
     q.add_argument("--dry-run", action="store_true", help=SUPPRESS)

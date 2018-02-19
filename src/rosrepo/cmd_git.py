@@ -317,6 +317,18 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         table.write(sys.stdout)
 
 
+def show_diff(srcdir, packages, projects, other_git, cached=False, upstream=False):
+    extra_args = []
+    if cached:
+        extra_args.append("--cached")
+    if upstream:
+        extra_args += ["@{upstream}", "HEAD"]
+    for project in projects:
+        call_process(["git", "-C", os.path.join(srcdir, project.workspace_path), "--no-pager", "diff", "--src-prefix=a/%s/" % project.workspace_path, "--dst-prefix=b/%s/" % project.workspace_path] + extra_args)
+    for path in other_git:
+        call_process(["git", "-C", os.path.join(srcdir, path), "--no-pager", "diff", "--src-prefix=a/%s/" % path, "--dst-prefix=b/%s/" % path] + extra_args)
+
+
 def has_package_path(obj, paths):
     for path in paths:
         if path_has_prefix(path, obj.workspace_path if hasattr(obj, "workspace_path") else obj):
@@ -742,6 +754,8 @@ def run(args):
         other_git = ws_state.other_git
     if args.git_cmd == "status":
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
+    if args.git_cmd == "diff":
+        show_diff(srcdir, packages, projects, other_git, cached=args.cached, upstream=args.upstream)
     if args.git_cmd == "pull":
         pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
