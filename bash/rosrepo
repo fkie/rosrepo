@@ -220,7 +220,7 @@ _rosrepo_complete()
     then
         if [ "$nargs" -eq 2 ]
         then
-            COMPREPLY=($(compgen -W "$common_opts clone status push pull merge commit remote" -- "$arg"))
+            COMPREPLY=($(compgen -W "$common_opts clone status diff push pull merge commit remote" -- "$arg"))
             return 0
         fi
         case "$cmd2" in
@@ -230,6 +230,17 @@ _rosrepo_complete()
                 if [ "${arg:0:1}" = "-" ]
                 then
                    COMPREPLY=($(compgen -W "-a --all --with-depends --without-depends" -- "$arg"))
+                else
+                    [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
+                fi
+                return 0
+                ;;
+            diff)
+                rosrepo_cmd[1]="list"
+                rosrepo_cmd+=("-W")
+                if [ "${arg:0:1}" = "-" ]
+                then
+                   COMPREPLY=($(compgen -W "--cached --upstream --with-depends --without-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
