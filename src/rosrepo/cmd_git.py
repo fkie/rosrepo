@@ -317,16 +317,32 @@ def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date
         table.write(sys.stdout)
 
 
-def show_diff(srcdir, packages, projects, other_git, cached=False, upstream=False):
+def show_diff(srcdir, packages, projects, other_git, diff_staged=False, diff_upstream=False, cache=None):
     extra_args = []
-    if cached:
+    if diff_staged:
         extra_args.append("--cached")
-    if upstream:
+    if diff_upstream:
         extra_args += ["@{upstream}", "HEAD"]
     for project in projects:
-        call_process(["git", "-C", os.path.join(srcdir, project.workspace_path), "--no-pager", "diff", "--src-prefix=a/%s/" % project.workspace_path, "--dst-prefix=b/%s/" % project.workspace_path] + extra_args)
+        ws_packages = find_catkin_packages(srcdir, project.workspace_path, cache=cache)
+        if set(ws_packages.keys()) <= packages:
+            call_process(["git", "-C", os.path.join(srcdir, project.workspace_path), "--no-pager", "diff", "--src-prefix=a/%s/" % project.workspace_path, "--dst-prefix=b/%s/" % project.workspace_path] + extra_args)
+        else:
+            for name, pkg_list in iteritems(ws_packages):
+                if name not in packages:
+                    continue
+                for pkg in pkg_list:
+                    call_process(["git", "-C", os.path.join(srcdir, pkg.workspace_path), "--no-pager", "diff", "--relative", "--src-prefix=a/%s/" % pkg.workspace_path, "--dst-prefix=b/%s/" % pkg.workspace_path] + extra_args)
     for path in other_git:
-        call_process(["git", "-C", os.path.join(srcdir, path), "--no-pager", "diff", "--src-prefix=a/%s/" % path, "--dst-prefix=b/%s/" % path] + extra_args)
+        ws_packages = find_catkin_packages(srcdir, path, cache=cache)
+        if set(ws_packages.keys()) <= packages:
+            call_process(["git", "-C", os.path.join(srcdir, path), "--no-pager", "diff", "--src-prefix=a/%s/" % path, "--dst-prefix=b/%s/" % path] + extra_args)
+        else:
+            for name, pkg_list in iteritems(ws_packages):
+                if name not in packages:
+                    continue
+                for pkg in pkg_list:
+                    call_process(["git", "-C", os.path.join(srcdir, pkg.workspace_path), "--no-pager", "diff", "--relative", "--src-prefix=a/%s/" % pkg.workspace_path, "--dst-prefix=b/%s/" % pkg.workspace_path] + extra_args)
 
 
 def has_package_path(obj, paths):
@@ -755,7 +771,7 @@ def run(args):
     if args.git_cmd == "status":
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
     if args.git_cmd == "diff":
-        show_diff(srcdir, packages, projects, other_git, cached=args.cached, upstream=args.upstream)
+        show_diff(srcdir, packages, projects, other_git, diff_staged=args.staged, diff_upstream=args.upstream, cache=cache)
     if args.git_cmd == "pull":
         pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
