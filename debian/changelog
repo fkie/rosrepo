@@ -1,3 +1,9 @@
+rosrepo (3.0.78-1~16.04+1) xenial; urgency=medium
+
+  * Remove unneeded Build-Depend.
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Fri, 23 Feb 2018 16:02:45 +0100
+
 rosrepo (3.0.78-1~16.04) xenial; urgency=medium
 
   * Initial PPA release.
