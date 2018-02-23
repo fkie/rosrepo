@@ -7,10 +7,10 @@ Build-Depends: debhelper (>= 9), help2man, dh-python,
         python3-all, python3-setuptools, python3-nose,
         python-mock, python3-mock,
         python-catkin-tools, git (>= 1:1.7.5),
-        python-catkin-pkg-modules, python-dateutil,
+        python-catkin-pkg, python-dateutil,
         python-pygit2, python-requests, python-scandir, python-yaml,
         python-concurrent.futures,
-        python3-catkin-pkg-modules, python3-dateutil,
+        python3-dateutil,
         python3-pygit2, python3-requests, python3-scandir, python3-yaml
 Homepage: https://gitlab.fkie.fraunhofer.de/timo.roehling/rosrepo
 X-Python-Version: >= 2.7

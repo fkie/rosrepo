@@ -13,6 +13,7 @@ $(error Package version $(package_version) does not match actual version $(debia
 endif
 
 export PYBUILD_NAME=rosrepo
+export PYBUILD_DISABLE_python3=test
 
 %:
 	dh $@ --with python2,python3 --buildsystem=pybuild
@@ -24,5 +25,5 @@ override_dh_auto_install:
 
 make-orig-tar:
 	git config tar.tar.xz.command "xz -c"
-	git archive --prefix=rosrepo-$(debianized_version)/ -o ../rosrepo_$(debianized_version).orig.tar.xz $(shell git merge-base debian master )
+	git archive --prefix=rosrepo-$(debianized_version)/ -o ../rosrepo_$(debianized_version).orig.tar.xz $(shell git merge-base debian-ppa master )
 
