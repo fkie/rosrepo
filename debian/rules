@@ -13,7 +13,7 @@ $(error Package version $(package_version) does not match actual version $(debia
 endif
 
 export PYBUILD_NAME=rosrepo
-export PYBUILD_DISABLE_python3=test
+export PYBUILD_DISABLE=test
 
 %:
 	dh $@ --with python2,python3 --buildsystem=pybuild

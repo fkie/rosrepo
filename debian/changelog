@@ -1,3 +1,9 @@
+rosrepo (3.0.78-1~16.04+2) xenial; urgency=medium
+
+  * Disable unit tests altogether, difficult without ROS package archive
+
+ -- Timo Röhling <timo.roehling@fkie.fraunhofer.de>  Fri, 23 Feb 2018 16:08:45 +0100
+
 rosrepo (3.0.78-1~16.04+1) xenial; urgency=medium
 
   * Remove unneeded Build-Depend.
