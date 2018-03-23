@@ -38,6 +38,7 @@ CMD_CLEAN = 7
 CMD_INCLUDE_EXCLUDE = 8
 CMD_DEPEND = 9
 CMD_EXPORT = 10
+CMD_FIND = 11
 
 
 def add_common_options(parser):
@@ -330,6 +331,13 @@ def prepare_arguments(parser):
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to export")
     p.set_defaults(func=CMD_EXPORT)
 
+    # find
+    p = cmds.add_parser("find", help="find packages and Git repositories")
+    add_common_options(p)
+    p.add_argument("--git", action="store_true", help="show Git repository location")
+    p.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to find")
+    p.set_defaults(func=CMD_FIND)
+
     return parser
 
 
@@ -366,6 +374,9 @@ def run_rosrepo(args):  # pragma: no cover
             if args.func == CMD_EXPORT:
                 import rosrepo.cmd_export
                 return rosrepo.cmd_export.run(args)
+            if args.func == CMD_FIND:
+                import rosrepo.cmd_find
+                return rosrepo.cmd_find.run(args)
         error("no command\n")
     except UserError as e:
         if args.stacktrace:
