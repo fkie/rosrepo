@@ -31,7 +31,7 @@ from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, \
                 show_conflicts, show_missing_system_depends, \
                 textify, LARROW, RARROW, FF_LARROW, FF_RARROW
-from .util import iteritems, path_has_prefix, call_process, PIPE, \
+from .util import iteritems, path_has_prefix, has_package_path, call_process, PIPE, \
                 create_multiprocess_manager, run_multiprocess_workers
 from pygit2 import clone_repository, Repository, \
                 RemoteCallbacks, KeypairFromAgent, UserPass, \
@@ -343,13 +343,6 @@ def show_diff(srcdir, packages, projects, other_git, diff_staged=False, diff_ups
                     continue
                 for pkg in pkg_list:
                     call_process(["git", "-C", os.path.join(srcdir, pkg.workspace_path), "--no-pager", "diff", "--relative", "--src-prefix=a/%s/" % pkg.workspace_path, "--dst-prefix=b/%s/" % pkg.workspace_path] + extra_args)
-
-
-def has_package_path(obj, paths):
-    for path in paths:
-        if path_has_prefix(path, obj.workspace_path if hasattr(obj, "workspace_path") else obj):
-            return True
-    return False
 
 
 def lookup_branches(repo, project):

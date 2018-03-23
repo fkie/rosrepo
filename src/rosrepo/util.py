@@ -104,6 +104,13 @@ def path_has_prefix(path, prefix):
     return False
 
 
+def has_package_path(obj, paths):
+    for path in paths:
+        if path_has_prefix(path, obj.workspace_path if hasattr(obj, "workspace_path") else obj):
+            return True
+    return False
+
+
 def env_path_list_contains(path_list, path):
     if path_list not in os.environ:
         return False
