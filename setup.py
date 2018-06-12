@@ -49,7 +49,7 @@ if int(setuptools_version.split(".", 1)[0]) < 18:
     assert "bdist_wheel" not in sys.argv
 else:
     # We have a reasonably modern setuptools version
-    from distutils import StrictVersion as Version
+    from distutils.version import StrictVersion as Version
     if Version(setuptools_version) >= Version("36.2"):
         # Starting with setuptools 36.2, we can do proper conditional
         # dependencies "PEP 508 style", the way God intended
