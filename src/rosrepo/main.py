@@ -268,6 +268,16 @@ def prepare_arguments(parser):
     m = q.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="modify package in the current working directory")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select affected packages")
+    # git gc
+    q = git_cmds.add_parser("gc", help="run Git maintenance tasks")
+    q.add_argument("--dry-run", action="store_true", help=SUPPRESS)
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--with-depends", action="store_true", default=False, help="also perform maintenance for dependencies")
+    m.add_argument("--without-depends", action="store_false", dest="with_depends", help="do not perform maintenance for dependencies (default)")
+    m = q.add_mutually_exclusive_group(required=False)
+    m.add_argument("--this", action="store_true", help="show status of package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="only show selected packages")
+    #
     p.set_defaults(func=CMD_GIT)
 
     # clean

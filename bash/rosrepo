@@ -233,7 +233,7 @@ _rosrepo_complete()
     then
         if [ "$nargs" -eq 2 ]
         then
-            COMPREPLY=($(compgen -W "$common_opts clone status diff push pull merge commit remote" -- "$arg"))
+            COMPREPLY=($(compgen -W "$common_opts clone status diff push pull merge commit remote gc" -- "$arg"))
             return 0
         fi
         case "$cmd2" in
@@ -270,7 +270,7 @@ _rosrepo_complete()
                 fi
                 return 0
                 ;;
-            push|pull|merge|commit|remote)
+            push|pull|merge|commit|remote|gc)
                 rosrepo_cmd[1]="list"
                 rosrepo_cmd+=("-W")
                 if [ "${arg:0:1}" = "-" ]

@@ -712,6 +712,12 @@ def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
                     repo.remotes.set_url(master_remote.name, new_url)
 
 
+def git_gc(srcdir, packages, projects, other_git, ws_state, args):
+    for path in [project.workspace_path for project in projects] + other_git:
+        msg("@{cf}Running@|: @!git -C %s gc@|\n" % path)
+        call_process(["git", "-C", os.path.join(srcdir, path), "gc"])
+
+
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
@@ -763,6 +769,8 @@ def run(args):
         other_git = ws_state.other_git
     if args.git_cmd == "status":
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
+    if args.git_cmd == "gc":
+        git_gc(srcdir, packages, projects, other_git, ws_state, args=args)
     if args.git_cmd == "diff":
         show_diff(srcdir, packages, projects, other_git, diff_staged=args.staged, diff_upstream=args.upstream, cache=cache)
     if args.git_cmd == "pull":
