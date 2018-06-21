@@ -31,7 +31,7 @@ from .resolver import find_dependees, resolve_system_depends
 from .ui import TableView, msg, warning, error, fatal, escape, \
                 show_conflicts, show_missing_system_depends, \
                 textify, LARROW, RARROW, FF_LARROW, FF_RARROW
-from .util import iteritems, path_has_prefix, call_process, PIPE, \
+from .util import iteritems, path_has_prefix, has_package_path, call_process, PIPE, \
                 create_multiprocess_manager, run_multiprocess_workers
 from pygit2 import clone_repository, Repository, \
                 RemoteCallbacks, KeypairFromAgent, UserPass, \
@@ -343,13 +343,6 @@ def show_diff(srcdir, packages, projects, other_git, diff_staged=False, diff_ups
                     continue
                 for pkg in pkg_list:
                     call_process(["git", "-C", os.path.join(srcdir, pkg.workspace_path), "--no-pager", "diff", "--relative", "--src-prefix=a/%s/" % pkg.workspace_path, "--dst-prefix=b/%s/" % pkg.workspace_path] + extra_args)
-
-
-def has_package_path(obj, paths):
-    for path in paths:
-        if path_has_prefix(path, obj.workspace_path if hasattr(obj, "workspace_path") else obj):
-            return True
-    return False
 
 
 def lookup_branches(repo, project):
@@ -719,6 +712,12 @@ def remote_projects(srcdir, packages, projects, other_git, ws_state, args):
                     repo.remotes.set_url(master_remote.name, new_url)
 
 
+def git_gc(srcdir, packages, projects, other_git, ws_state, args):
+    for path in [project.workspace_path for project in projects] + other_git:
+        msg("@{cf}Running@|: @!git -C %s gc@|\n" % path)
+        call_process(["git", "-C", os.path.join(srcdir, path), "gc"])
+
+
 def run(args):
     wsdir = get_workspace_location(args.workspace)
     config = Config(wsdir)
@@ -770,6 +769,8 @@ def run(args):
         other_git = ws_state.other_git
     if args.git_cmd == "status":
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=args.all, cache=cache)
+    if args.git_cmd == "gc":
+        git_gc(srcdir, packages, projects, other_git, ws_state, args=args)
     if args.git_cmd == "diff":
         show_diff(srcdir, packages, projects, other_git, diff_staged=args.staged, diff_upstream=args.upstream, cache=cache)
     if args.git_cmd == "pull":
