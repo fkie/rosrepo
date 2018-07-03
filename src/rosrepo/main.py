@@ -286,6 +286,7 @@ def prepare_arguments(parser):
     m = p.add_mutually_exclusive_group(required=False)
     m.add_argument("--this", action="store_true", help="clean package in the current working directory")
     m.add_argument("--vanished", action="store_true", help="clean build artifacts for packages which are no longer in the workspace")
+    m.add_argument("--unused", action="store_true", help="clean build artifacts for packages which are neither pinned nor built by default (implies --vanished)")
     m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to clean (default: all)")
     p.set_defaults(func=CMD_CLEAN)
 

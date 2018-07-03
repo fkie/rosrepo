@@ -166,7 +166,7 @@ _rosrepo_complete()
         rosrepo_cmd+=("-B")
         if [ "${arg:0:1}" = "-" ]
         then
-            COMPREPLY=($(compgen -W "$common_opts --vanished --this" -- "$arg"))
+            COMPREPLY=($(compgen -W "$common_opts --vanished --unused --this" -- "$arg"))
         else
             COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
         fi
@@ -264,7 +264,7 @@ _rosrepo_complete()
                 rosrepo_cmd+=("-W" "-v")
                 if [ "${arg:0:1}" = "-" ]
                 then
-                    COMPREPLY=($(compgen -W "--dry-run -j --jobs -p --protocol -a --all --with-depends --without-depends" -- "$arg"))
+                    COMPREPLY=($(compgen -W "--dry-run -j --jobs -p --protocol -a --all --with-depends --without-depends -m --ignore-missing-depends" -- "$arg"))
                 else
                     [ "${has_opt["-a"]}" = 1 -o "${has_opt["--all"]}" = 1 ] || COMPREPLY=($(compgen -W "$("${rosrepo_cmd[@]}" 2>/dev/null)" -- "$arg"))
                 fi
