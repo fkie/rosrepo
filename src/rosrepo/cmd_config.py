@@ -22,6 +22,7 @@
 #
 import sys
 import requests
+import platform
 try:
     from urlparse import urljoin
 except ImportError:
@@ -278,6 +279,19 @@ def run(args):
     catkin_config += ["--install"] if config.get("install", False) else ["--no-install"]
 
     catkin_config += ["--cmake-args"] + DEFAULT_CMAKE_ARGS
+    system = platform.system()
+    if system in ["Linux", "Darwin"]:
+        catkin_config += [
+            "-DCMAKE_CXX_FLAGS=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer",
+            "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -g",
+            "-DCMAKE_C_FLAGS=-Wall -Wextra -Wno-unused-parameter -fno-omit-frame-pointer",
+            "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O2 -g",
+        ]
+    if system == "Linux":
+        catkin_config += [
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,defs",
+            "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,defs"
+        ]
     compiler = config.get("compiler", None)
     if compiler:
         cc = get_c_compiler(compiler)
