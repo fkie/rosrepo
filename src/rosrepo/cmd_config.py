@@ -270,10 +270,8 @@ def run(args):
     ros_rootdir = find_ros_root(config.get("ros_root"))
     if ros_rootdir is None:
         fatal("cannot detect ROS distribution. Please source setup.bash or use --ros-root option\n")
-
-    if need_clean:
-        catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
-        call_process(catkin_clean)
+    if ros_rootdir != config.get("last_ros_root", None):
+        need_clean = True
 
     catkin_config = ["catkin", "config", "--workspace", wsdir, "--extend", ros_rootdir]
     catkin_config += ["--install"] if config.get("install", False) else ["--no-install"]
@@ -299,5 +297,12 @@ def run(args):
         if cc and cxx:
             catkin_config += ["-DCMAKE_C_COMPILER=%s" % cc, "-DCMAKE_CXX_COMPILER=%s" % cxx]
     ret = call_process(catkin_config)
+
+    if need_clean:
+        catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
+        call_process(catkin_clean)
+        config["last_ros_root"] = ros_rootdir
+        config.write()
+
     show_config(config)
     return ret
