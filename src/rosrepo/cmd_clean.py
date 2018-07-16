@@ -20,11 +20,11 @@
 # limitations under the License.
 #
 #
-from .workspace import get_workspace_location, get_workspace_state, resolve_this, WSFL_WS_PACKAGES
+from .workspace import get_workspace_location, get_workspace_state, resolve_this, find_ros_root
 from .config import Config
 from .cache import Cache
 from .ui import msg, warning, fatal, show_conflicts
-from .util import call_process, iteritems
+from .util import call_process, PIPE
 from .resolver import find_dependees
 import os
 try:
@@ -35,9 +35,13 @@ except ImportError:
 
 def run(args):
     wsdir = get_workspace_location(args.workspace)
+    config = Config(wsdir)
+    cache = Cache(wsdir)
+    ros_rootdir = find_ros_root(config.get("ros_root", None))
+    if ros_rootdir is None:
+        fatal("cannot detect ROS distribution. Have you sourced your setup.bash?\n")
+
     if args.this:
-        config = Config(wsdir)
-        cache = Cache(wsdir)
         if args.offline is None:
             args.offline = config.get("offline_mode", False)
             if args.offline:
@@ -45,8 +49,6 @@ def run(args):
         ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
         args.packages = resolve_this(wsdir, ws_state)
     elif args.vanished or args.unused:
-        config = Config(wsdir)
-        cache = Cache(wsdir)
         if args.offline is None:
             args.offline = config.get("offline_mode", False)
             if args.offline:
@@ -66,6 +68,12 @@ def run(args):
         if not args.packages:
             msg("Nothing to clean\n")
             return 0
+
+    if not args.dry_run:
+        invoke = ["catkin", "config", "--extend", ros_rootdir]
+        call_process(invoke, stdout=PIPE, stderr=PIPE)
+        config["last_ros_root"] = ros_rootdir
+        config.write()
 
     catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--yes"]
     if args.dry_run:
