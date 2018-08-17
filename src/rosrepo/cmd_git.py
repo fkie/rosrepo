@@ -106,7 +106,10 @@ def has_pending_merge(repo):
 
 
 def is_ancestor(repo, maybe_ancestor, branch):
-    return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
+    try:
+        return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
+    except ValueError:
+        return False
 
 
 class AuthorizationFailed(RuntimeError):
