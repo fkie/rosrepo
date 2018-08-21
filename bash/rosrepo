@@ -49,7 +49,7 @@ _rosrepo_complete()
             -r|--ros-root)
                 [ "$cmd" = "init" ] && shift
                 ;;
-            --with-private-token|--unset-gitlab-url|-j|--job-limit|--set-compiler|protocol)
+            --private-token|--unset-gitlab-url|-j|--job-limit|--set-compiler|protocol)
                 shift
                 ;;
             --set-gitlab-url|--move-host)

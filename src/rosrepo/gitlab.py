@@ -311,10 +311,7 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_upd
         url = gitlab_cfg.get("url", None)
         private_token = gitlab_cfg.get("private_token", None)
         if url is not None and private_token is None and not offline_mode:
-            private_token = acquire_gitlab_private_token(label, url)
-            if config.get("store_credentials", True):
-                gitlab_cfg["private_token"] = private_token
-                config.write()
+            warning("not updating '%s': no personal access token available\n" % url)
         gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", config.get("gitlab_crawl_depth", 1)), force_update=force_update, verbose=verbose)
     return gitlab_projects
 
