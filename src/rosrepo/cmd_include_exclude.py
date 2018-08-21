@@ -118,7 +118,7 @@ def run(args):
             msg("@{cf}The following additional packages are needed to satisfy dependencies@|:\n")
             msg(escape(", ".join(sorted(extra_depends)) + "\n\n"), indent=4)
 
-        clone_packages(os.path.join(wsdir, "src"), depends, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
+        clone_packages(os.path.join(wsdir, "src"), depends, ws_state, config, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
 
         if system_depends:
             msg("@{cf}The following system packages are needed to satisfy dependencies@|:\n")
