@@ -43,7 +43,7 @@ try:
 except ImportError:
     from urllib.parse import urljoin, urlsplit
 
-from .ui import get_credentials, msg, warning, error, fatal
+from .ui import ask_personal_access_token, ask_username_and_password, msg, warning, error, fatal
 from .util import iteritems, NamedTuple, yaml_dump
 
 
@@ -116,7 +116,7 @@ def crawl_project_for_packages(session, url, project_id, path, depth, timeout):
 _cached_tokens = {}
 
 
-def acquire_gitlab_private_token(label, url, credentials_callback=get_credentials):
+def acquire_gitlab_private_token(label, url, credentials_callback=ask_username_and_password):
     global _cached_tokens
     if url in _cached_tokens:
         return _cached_tokens[url]
@@ -128,8 +128,7 @@ def acquire_gitlab_private_token(label, url, credentials_callback=get_credential
         if r.status_code == 404:
             msg("This version of the Gitlab server will not create access tokens via API. "
                 "You need to create a personal access token with @!api@| scope manually "
-                "and pass it to resrepo with the --private-token option. Visit the following URL:\n\n@{cf}%s/profile/personal_access_tokens@|\n\n" % url
-            )
+                "and pass it to resrepo with the --private-token option. Visit the following URL:\n\n@{cf}%s/profile/personal_access_tokens@|\n\n" % url)
             fatal("required feature unavailabe")
         if r.status_code == 401:
             msg("@!@{rf}Access denied@|\n", fd=sys.stderr)
@@ -170,7 +169,6 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
             for prj in p.packages:
                 prj.project = p
         else:
-            cache_update = True
             if verbose:
                 msg("@{cf}Updating@|: %s\n" % p.website)
             manifests = crawl_project_for_packages(s, url, p.id, "", depth=crawl_depth, timeout=timeout)
@@ -311,7 +309,7 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_upd
         url = gitlab_cfg.get("url", None)
         private_token = gitlab_cfg.get("private_token", None)
         if url is not None and private_token is None and not offline_mode:
-            warning("not updating '%s': no personal access token available\n" % url)
+            private_token = ask_personal_access_token(url) or None
         gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", config.get("gitlab_crawl_depth", 1)), force_update=force_update, verbose=verbose)
     return gitlab_projects
 
