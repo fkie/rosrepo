@@ -47,6 +47,18 @@ def run(args):
     config.set_default("default_build", [])
     config.set_default("pinned_build", [])
     config.set_default("last_build", [])
+    config.set_default("last_ros_root", ros_rootdir)
+
+    if config["last_ros_root"] != ros_rootdir and not args.clean_all:
+        msg(
+            "You have changed your ROS distribution from "
+            "@{cf}%(old_path)s@| to @{cf}%(new_path)s@|. Please run\n\n"
+            "    @!rosrepo clean@|\n\n"
+            "to remove all obsolete build artifacts and rebuild your workspace with "
+            "the new ROS version.\n\n" % {"old_path": config["last_ros_root"], "new_path": ros_rootdir}
+        )
+        fatal("need to clean workspace")
+
     ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline)
     if args.last:
         args.packages = config["last_build"]
@@ -116,7 +128,7 @@ def run(args):
         fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)\n")
 
     if args.clone:
-        clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
+        clone_packages(srcdir, build_packages, ws_state, config, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
         ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
     build_packages, _, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)
@@ -126,6 +138,12 @@ def run(args):
         msg("@{cf}The following packages are missing from your workspace@|:\n")
         msg(", ".join(sorted(missing_ws)) + "\n\n", indent=4)
         fatal("missing build dependencies\n")
+
+    if config["last_ros_root"] != ros_rootdir and not args.dry_run:
+        invoke = ["catkin", "config", "--extend", ros_rootdir]
+        call_process(invoke, stdout=PIPE, stderr=PIPE)
+        config["last_ros_root"] = ros_rootdir
+        config.write()
 
     if args.clean_all:
         invoke = ["catkin", "clean", "--workspace", wsdir, "--yes", "--all"]

@@ -22,6 +22,7 @@
 #
 import sys
 import requests
+import platform
 try:
     from urlparse import urljoin
 except ImportError:
@@ -146,7 +147,7 @@ def run(args):
                     if "private_token" in srv:
                         private_token = srv["private_token"]
                         if not args.offline:
-                            r = requests.get(urljoin(url, "api/v3/projects"), headers={"PRIVATE-TOKEN": private_token})
+                            r = requests.get(urljoin(url, "api/v4/projects"), headers={"PRIVATE-TOKEN": private_token})
                             if r.status_code == 401:
                                 private_token = None
                             else:
@@ -159,6 +160,8 @@ def run(args):
                         private_token = acquire_gitlab_private_token(label, url)
                 if config["store_credentials"]:
                     srv["private_token"] = private_token
+                else:
+                    warning("credential storage has been disabled")
                 break
         else:
             fatal("no such Gitlab server\n")
@@ -176,7 +179,7 @@ def run(args):
                     if private_token is None and "private_token" in srv:
                         private_token = srv["private_token"]
                         if not args.offline:
-                            r = requests.get(urljoin(url, "api/v3/projects"), headers={"PRIVATE-TOKEN": private_token})
+                            r = requests.get(urljoin(url, "api/v4/projects"), headers={"PRIVATE-TOKEN": private_token})
                             if r.status_code == 401:
                                 private_token = None
                             else:
@@ -269,15 +272,26 @@ def run(args):
     ros_rootdir = find_ros_root(config.get("ros_root"))
     if ros_rootdir is None:
         fatal("cannot detect ROS distribution. Please source setup.bash or use --ros-root option\n")
-
-    if need_clean:
-        catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
-        call_process(catkin_clean)
+    if ros_rootdir != config.get("last_ros_root", None):
+        need_clean = True
 
     catkin_config = ["catkin", "config", "--workspace", wsdir, "--extend", ros_rootdir]
     catkin_config += ["--install"] if config.get("install", False) else ["--no-install"]
 
     catkin_config += ["--cmake-args"] + DEFAULT_CMAKE_ARGS
+    system = platform.system()
+    if system in ["Linux", "Darwin"]:
+        catkin_config += [
+            "-DCMAKE_CXX_FLAGS=-Wall -Wextra -Wno-ignored-qualifiers -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer",
+            "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -g",
+            "-DCMAKE_C_FLAGS=-Wall -Wextra -Wno-unused-parameter -fno-omit-frame-pointer",
+            "-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O2 -g",
+        ]
+    if system == "Linux":
+        catkin_config += [
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,defs",
+            "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,defs"
+        ]
     compiler = config.get("compiler", None)
     if compiler:
         cc = get_c_compiler(compiler)
@@ -285,5 +299,12 @@ def run(args):
         if cc and cxx:
             catkin_config += ["-DCMAKE_C_COMPILER=%s" % cc, "-DCMAKE_CXX_COMPILER=%s" % cxx]
     ret = call_process(catkin_config)
+
+    if need_clean:
+        catkin_clean = ["catkin", "clean", "--workspace", wsdir, "--all", "--yes"]
+        call_process(catkin_clean)
+        config["last_ros_root"] = ros_rootdir
+        config.write()
+
     show_config(config)
     return ret

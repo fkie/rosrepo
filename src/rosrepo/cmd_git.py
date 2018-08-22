@@ -106,7 +106,10 @@ def has_pending_merge(repo):
 
 
 def is_ancestor(repo, maybe_ancestor, branch):
-    return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
+    try:
+        return repo.merge_base(maybe_ancestor.target, branch.target) == maybe_ancestor.target
+    except ValueError:
+        return False
 
 
 class AuthorizationFailed(RuntimeError):
@@ -115,55 +118,84 @@ class AuthorizationFailed(RuntimeError):
 
 class GitRemoteCallback(RemoteCallbacks):
 
-    def __init__(self):
-        self.last_url = None
+    def __init__(self, config):
+        self.config = config
+        self.urls = {}
+
+    def get_private_token(self, url):
+        for gitlab_cfg in self.config.get("gitlab_servers", []):
+            url_prefix = gitlab_cfg.get("url", None)
+            private_token = gitlab_cfg.get("private_token", None)
+            if url.startswith(url_prefix):
+                return private_token
+        return None
+
+    def save_working_credentials(self, query, username, credential):
+        global credential_dict
+        credential_dict[query] = (username, credential)
+
+    def record_permanent_failure(self, query, reason):
+        global credential_dict
+        credential_dict[query] = (None, AuthorizationFailed(reason))
+        raise AuthorizationFailed(reason)
+
+    def get_cached_credentials(self, query):
+        global credential_dict
+        username, credential = credential_dict.get(query, (None, None))
+        if type(credential) == AuthorizationFailed:
+            raise credential
+        return username, credential
 
     def credentials(self, url, username_from_url, allowed_types):
         global credential_lock
-        global credential_dict
         credential_lock.acquire()
         msg("@{cf}Fetching@|: %s\n" % escape(textify(url)))
         try:
+            if url not in self.urls:
+                retry = 0
+            else:
+                retry = self.urls[url]
             u = urlsplit(url)
             query = "protocol=%s\nhost=%s\n" % (u[0], u[1])
-            if url == self.last_url:
-                if allowed_types & GIT_CREDTYPE_SSH_KEY:
-                    reason = "SSH agent has no acceptable key"
-                elif allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
-                    reason = "invalid username or password"
-                    exitcode, stdout, _ = call_process(["git", "credential", "reject"], input_data=query, stdin=PIPE, stdout=PIPE)
-                else:
-                    reason = "cannot handle requested authorization credentials"
-                error(reason + "\n")
-                credential_dict[query] = (None, AuthorizationFailed(reason))
-                raise AuthorizationFailed(reason)
-            username, password = credential_dict.get(query, (None, None))
-            if type(password) == AuthorizationFailed:
-                error(str(password) + "\n")
-                raise password
-            self.last_url = url
-            if allowed_types & GIT_CREDTYPE_SSH_KEY:
-                return KeypairFromAgent(username_from_url)
-            if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
-                if username is None:
-                    exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=query, stdin=PIPE, stdout=PIPE)
-                    if exitcode != 0:
-                        raise AuthorizationFailed("git credential helper failed")
-                    for line in stdout.split("\n"):
-                        if "=" in line:
-                            key, value = line.split("=", 1)
-                            if key == "username":
-                                username = value
-                            if key == "password":
-                                password = value
-                    if username is not None and password is not None:
-                        exitcode, stdout, _ = call_process(["git", "credential", "approve"], input_data=stdout, stdin=PIPE, stdout=PIPE)
-                if username is not None and password is not None:
-                    credential_dict[query] = (username, password)
-                    return UserPass(username, password)
+            while True:
+                retry += 1
+                self.urls[url] = retry
+                if retry == 1:
+                    if allowed_types & GIT_CREDTYPE_SSH_KEY:
+                        return KeypairFromAgent(username_from_url)
+                    if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
+                        private_token = self.get_private_token(url)
+                        if private_token:
+                            return UserPass("rosrepo", private_token)
+                if retry == 2:
+                    if allowed_types & GIT_CREDTYPE_SSH_KEY:
+                        self.record_permanent_failure("SSH agent has no acceptable key")
+                    if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
+                        username, password = self.get_cached_credentials(query)
+                        if username is None:
+                            exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=query, stdin=PIPE, stdout=PIPE)
+                            if exitcode != 0:
+                                self.record_permanent_failure("git credential helper failed")
+                            for line in stdout.split("\n"):
+                                if "=" in line:
+                                    key, value = line.split("=", 1)
+                                    if key == "username":
+                                        username = value
+                                    if key == "password":
+                                        password = value
+                            if username is not None and password is not None:
+                                exitcode, stdout, _ = call_process(["git", "credential", "approve"], input_data=stdout, stdin=PIPE, stdout=PIPE)
+                        if username is not None and password is not None:
+                            self.save_working_credentials(query, username, password)
+                            return UserPass(username, password)
+                if retry == 3:
+                    if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
+                        exitcode, stdout, _ = call_process(["git", "credential", "reject"], input_data=query, stdin=PIPE, stdout=PIPE)
+                        self.record_permanent_failure(query, "invalid username or password")
+                if retry > 3:
+                    self.record_permanent_failure(query, "cannot handle requested authorization credentials")
         finally:
             credential_lock.release()
-        raise AuthorizationFailed("cannot handle requested authorization credentials")
 
 
 def show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=True, cache=None):
@@ -415,12 +447,12 @@ def fetch_worker_init(L, d):
     credential_dict = d
 
 
-def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, jobs, dry_run=False, action="update", fetch_remote=True):
+def update_projects(srcdir, packages, projects, other_git, ws_state, config, update_op, jobs, dry_run=False, action="update", fetch_remote=True):
     if (pygit2_features & GIT_FEATURE_HTTPS) == 0:
         warning("your libgit2 has no built-in HTTPS support\n")
     if (pygit2_features & GIT_FEATURE_SSH) == 0:
         warning("your libgit2 has no built-in SSH support\n")
-    git_remote_callback = GitRemoteCallback()
+    git_remote_callback = GitRemoteCallback(config)
     manager = create_multiprocess_manager()
     L = manager.Lock()
     d = manager.dict()
@@ -455,7 +487,7 @@ def update_projects(srcdir, packages, projects, other_git, ws_state, update_op, 
             warning("%d errors have occurred\n" % errors)
 
 
-def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_local=False, merge=False, dry_run=False):
+def pull_projects(srcdir, packages, projects, other_git, ws_state, config, jobs, update_local=False, merge=False, dry_run=False):
     def do_pull(repo, path, head_branch, master_branch, tracking_branch):
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
@@ -490,10 +522,10 @@ def pull_projects(srcdir, packages, projects, other_git, ws_state, jobs, update_
                     raise Exception("fast-forward merge of %s failed" % master_branch.shorthand)
         return result
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_pull, dry_run=dry_run, action="pull", jobs=jobs)
+    update_projects(srcdir, packages, projects, other_git, ws_state, config, do_pull, dry_run=dry_run, action="pull", jobs=jobs)
 
 
-def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, fetch_remote=True, dry_run=False):
+def push_projects(srcdir, packages, projects, other_git, ws_state, config, jobs, fetch_remote=True, dry_run=False):
     def do_push(repo, path, head_branch, master_branch, tracking_branch):
         if has_pending_merge(repo):
             raise Exception("unfinished merge detected")
@@ -516,10 +548,10 @@ def push_projects(srcdir, packages, projects, other_git, ws_state, jobs, fetch_r
                     raise Exception("push to %s failed" % master_branch.shorthand)
         return result
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_push, dry_run=dry_run, fetch_remote=fetch_remote, action="push", jobs=jobs)
+    update_projects(srcdir, packages, projects, other_git, ws_state, config, do_push, dry_run=dry_run, fetch_remote=fetch_remote, action="push", jobs=jobs)
 
 
-def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=False):
+def commit_projects(srcdir, packages, projects, other_git, ws_state, config, dry_run=False):
     def do_commit(repo, path, head_branch, master_branch, tracking_branch):
         if repo.index.conflicts:
             raise Exception("unresolved merge conflicts")
@@ -534,7 +566,7 @@ def commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=Fal
             return True
         return False
 
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_commit, dry_run=dry_run, fetch_remote=False, action="commit", jobs=1)
+    update_projects(srcdir, packages, projects, other_git, ws_state, config, do_commit, dry_run=dry_run, fetch_remote=False, action="commit", jobs=1)
 
 
 def robust_merge(repo, path, merged_branch, message):
@@ -555,7 +587,7 @@ def robust_merge(repo, path, merged_branch, message):
     repo.index.read()
 
 
-def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
+def merge_projects(srcdir, packages, projects, other_git, ws_state, config, args):
     def do_merge(repo, path, head_branch, master_branch, tracking_branch):
         git_cmd = ["git", "-C", os.path.join(srcdir, path)]
         if args.abort:
@@ -625,7 +657,7 @@ def merge_projects(srcdir, packages, projects, other_git, ws_state, args):
         action = "abort merge"
     if args.resolve:
         action = "resolve merge"
-    update_projects(srcdir, packages, projects, other_git, ws_state, do_merge, dry_run=args.dry_run, action=action, fetch_remote=not args.abort and not args.resolve, jobs=args.jobs)
+    update_projects(srcdir, packages, projects, other_git, ws_state, config, do_merge, dry_run=args.dry_run, action=action, fetch_remote=not args.abort and not args.resolve, jobs=args.jobs)
 
 
 def compute_git_subdir(srcdir, name, new_paths):
@@ -651,7 +683,7 @@ def clone_worker(git_remote_callback, protocol, dry_run, part):
     return project, ""
 
 
-def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_mode=False, dry_run=False):
+def clone_packages(srcdir, packages, ws_state, config, jobs=5, protocol="ssh", offline_mode=False, dry_run=False):
     global credential_lock
     global credential_dict
     need_cloning = [(n, p) for n, p in iteritems(packages) if n not in ws_state.ws_packages and p.project not in ws_state.ws_projects]
@@ -661,7 +693,7 @@ def clone_packages(srcdir, packages, ws_state, jobs=5, protocol="ssh", offline_m
     msg(escape(", ".join(sorted(n for n, _ in need_cloning)) + "\n\n"), indent=4)
     if offline_mode:
         fatal("cannot clone projects in offline mode\n")
-    git_remote_callback = GitRemoteCallback()
+    git_remote_callback = GitRemoteCallback(config)
     manager = create_multiprocess_manager()
     L = manager.Lock()
     d = manager.dict()
@@ -739,7 +771,7 @@ def run(args):
             fatal("cannot resolve dependencies\n")
         if not args.with_depends:
             depends = {n: p for n, p in iteritems(depends) if n in args.packages}
-        if not clone_packages(srcdir, depends, ws_state, jobs=args.jobs, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
+        if not clone_packages(srcdir, depends, ws_state, config, jobs=args.jobs, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run):
             warning("already in workspace\n")
         missing = resolve_system_depends(ws_state, system_depends, missing_only=True)
         show_missing_system_depends(missing)
@@ -774,20 +806,20 @@ def run(args):
     if args.git_cmd == "diff":
         show_diff(srcdir, packages, projects, other_git, diff_staged=args.staged, diff_upstream=args.upstream, cache=cache)
     if args.git_cmd == "pull":
-        pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
+        pull_projects(srcdir, packages, projects, other_git, ws_state, config, jobs=args.jobs, update_local=args.update_local, merge=args.merge, dry_run=args.dry_run)
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "push":
-        push_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, dry_run=args.dry_run)
+        push_projects(srcdir, packages, projects, other_git, ws_state, config, jobs=args.jobs, dry_run=args.dry_run)
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "merge":
-        merge_projects(srcdir, packages, projects, other_git, ws_state, args=args)
+        merge_projects(srcdir, packages, projects, other_git, ws_state, config, args=args)
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "commit":
         if args.push:
-            pull_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, dry_run=args.dry_run)
-        commit_projects(srcdir, packages, projects, other_git, ws_state, dry_run=args.dry_run)
+            pull_projects(srcdir, packages, projects, other_git, ws_state, config, jobs=args.jobs, dry_run=args.dry_run)
+        commit_projects(srcdir, packages, projects, other_git, ws_state, config, dry_run=args.dry_run)
         if args.push:
-            push_projects(srcdir, packages, projects, other_git, ws_state, jobs=args.jobs, fetch_remote=False, dry_run=args.dry_run)
+            push_projects(srcdir, packages, projects, other_git, ws_state, config, jobs=args.jobs, fetch_remote=False, dry_run=args.dry_run)
         show_status(srcdir, packages, projects, other_git, ws_state, show_up_to_date=False)
     if args.git_cmd == "remote":
         remote_projects(srcdir, packages, projects, other_git, ws_state, args=args)
