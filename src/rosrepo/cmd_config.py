@@ -147,7 +147,7 @@ def run(args):
                     if "private_token" in srv:
                         private_token = srv["private_token"]
                         if not args.offline:
-                            r = requests.get(urljoin(url, "api/v3/projects"), headers={"PRIVATE-TOKEN": private_token})
+                            r = requests.get(urljoin(url, "api/v4/projects"), headers={"PRIVATE-TOKEN": private_token})
                             if r.status_code == 401:
                                 private_token = None
                             else:
@@ -160,6 +160,8 @@ def run(args):
                         private_token = acquire_gitlab_private_token(label, url)
                 if config["store_credentials"]:
                     srv["private_token"] = private_token
+                else:
+                    warning("credential storage has been disabled")
                 break
         else:
             fatal("no such Gitlab server\n")
@@ -177,7 +179,7 @@ def run(args):
                     if private_token is None and "private_token" in srv:
                         private_token = srv["private_token"]
                         if not args.offline:
-                            r = requests.get(urljoin(url, "api/v3/projects"), headers={"PRIVATE-TOKEN": private_token})
+                            r = requests.get(urljoin(url, "api/v4/projects"), headers={"PRIVATE-TOKEN": private_token})
                             if r.status_code == 401:
                                 private_token = None
                             else:

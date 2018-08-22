@@ -309,7 +309,9 @@ def get_gitlab_projects(wsdir, config, cache=None, offline_mode=False, force_upd
         url = gitlab_cfg.get("url", None)
         private_token = gitlab_cfg.get("private_token", None)
         if url is not None and private_token is None and not offline_mode:
-            private_token = ask_personal_access_token(url) or None
+            warning("not updating '%s': no personal access token configured\n" % url)
+            msg("Please visit @{cf}%s/profile/personal_access_tokens@| to create your token and configure it with\n\n    @!rosrepo config --gitlab-login %s --private-token TOKEN@|\n\n" % (url, label))
+            # private_token = ask_personal_access_token(url) or None
         gitlab_projects += find_available_gitlab_projects(label, url, private_token=private_token, cache=cache, cache_only=offline_mode, crawl_depth=gitlab_cfg.get("crawl_depth", config.get("gitlab_crawl_depth", 1)), force_update=force_update, verbose=verbose)
     return gitlab_projects
 
