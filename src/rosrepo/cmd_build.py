@@ -128,7 +128,7 @@ def run(args):
         fatal("missing system packages (use -m/--ignore-missing-depends) to build anyway)\n")
 
     if args.clone:
-        clone_packages(srcdir, build_packages, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
+        clone_packages(srcdir, build_packages, ws_state, config, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
         ws_state = get_workspace_state(wsdir, config, cache, offline_mode=args.offline, ws_state=ws_state, flags=WSFL_WS_PACKAGES)
     build_packages, _, conflicts = find_dependees(build_set, ws_state)
     show_conflicts(conflicts)

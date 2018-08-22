@@ -211,7 +211,7 @@ def readline(prompt, fd=None):
     return sys.stdin.readline().rstrip("\r\n")
 
 
-def get_credentials(domain):
+def ask_username_and_password(domain):
     if not isatty(sys.stdin):
         fatal("Need TTY to query credentials\n")
     if isatty(sys.stderr):
@@ -230,6 +230,19 @@ def get_credentials(domain):
             msg("Starting over\n\n", fd=fd)
             continue
         return login, passwd
+
+
+def ask_personal_access_token(domain):
+    if not isatty(sys.stdin):
+        fatal("Need TTY to query credentials\n")
+    if isatty(sys.stderr):
+        fd = sys.stderr
+    elif isatty(sys.stdout):
+        fd = sys.stdout
+    else:
+        fatal("Need TTY to query credentials\n")
+    msg("\n@!Authentication required for @{cf}%s\n" % domain, fd=fd)
+    return readline("Personal Access Token: ", fd=fd)
 
 
 def pick_dependency_resolution(package_name, pkg_list):

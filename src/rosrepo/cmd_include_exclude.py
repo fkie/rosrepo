@@ -28,7 +28,7 @@ from .config import Config
 from .ui import msg, warning, fatal, escape, show_conflicts, show_missing_system_depends, reformat_paragraphs
 from .resolver import find_dependees, resolve_system_depends
 from .util import iteritems, is_deprecated_package, deprecated_package_info
-from .cmd_git import clone_packages, get_origin, is_ancestor
+from .cmd_git import clone_packages, get_origin
 from pygit2 import Repository, GIT_STATUS_IGNORED, GIT_STATUS_CURRENT, GIT_BRANCH_REMOTE, GIT_REF_OID
 
 
@@ -42,15 +42,29 @@ def git_is_clean(srcdir, project):
     origin = get_origin(repo, project)
     if not origin:
         return False, "has no upstream remote"
-    master_remote_branch = repo.lookup_branch("%s/%s" % (origin.name, project.master_branch), GIT_BRANCH_REMOTE)
-    if not master_remote_branch:
-        return False, "has no upstream master branch"
+    remote_refs = []
+    local_refs = {}
     for refname in repo.listall_references():
-        if not refname.startswith("refs/remotes/"):
+        if refname.startswith("refs/remotes/%s/" % origin.name):
             ref = repo.lookup_reference(refname)
             if ref.type == GIT_REF_OID:
-                if not is_ancestor(repo, ref, master_remote_branch):
-                    return False, "'%s' points to a local commit" % refname
+                remote_refs.append(ref.target)
+        elif not refname.startswith("refs/remotes/"):
+            ref = repo.lookup_reference(refname)
+            if ref.type == GIT_REF_OID:
+                local_refs[ref.peel().id] = refname
+    if not remote_refs:
+        return False, "has no upstream remote branches"
+    if not local_refs:
+        return False, "has no local branches"
+    if not repo.lookup_branch("%s/%s" % (origin.name, project.master_branch), GIT_BRANCH_REMOTE):
+        return False, "has no upstream master branch"
+    for remote_ref in remote_refs:
+        for commit in repo.walk(remote_ref):
+            if commit.id in local_refs:
+                del local_refs[commit.id]
+    if local_refs:
+        return False, "has local commits: %s" % ", ".join(["'%s'" % name for _, name in iteritems(local_refs)])
     return True, ""
 
 
@@ -104,7 +118,7 @@ def run(args):
             msg("@{cf}The following additional packages are needed to satisfy dependencies@|:\n")
             msg(escape(", ".join(sorted(extra_depends)) + "\n\n"), indent=4)
 
-        clone_packages(os.path.join(wsdir, "src"), depends, ws_state, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
+        clone_packages(os.path.join(wsdir, "src"), depends, ws_state, config, protocol=args.protocol or config.get("git_default_transport", "ssh"), offline_mode=args.offline, dry_run=args.dry_run)
 
         if system_depends:
             msg("@{cf}The following system packages are needed to satisfy dependencies@|:\n")
