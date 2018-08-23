@@ -12,23 +12,26 @@ Build-Depends: debhelper (>= 9), help2man, dh-python,
         python3-dateutil,
         python3-pygit2, python3-requests, python3-yaml
 Homepage: https://gitlab.fkie.fraunhofer.de/timo.roehling/rosrepo
-X-Python-Version: >= 2.7
-X-Python3-Version: >= 3.2
-Standards-Version: 3.9.7
+X-Python3-Version: >= 3.5
+Testsuite: autopkgtest-pkg-python
+Standards-Version: 4.2.0
 
 Package: python-rosrepo
 Architecture: all
-Depends: ${python:Depends}, python-concurrent.futures, ${misc:Depends},
-    git (>= 1:1.7.5)
+Depends: ${python:Depends}, python-concurrent.futures, python-scandir,
+    ${misc:Depends}, git (>= 1:1.7.5)
 Recommends: git-cola, meld
 Conflicts: python3-rosrepo
 Description: Manage ROS workspaces with multiple Gitlab repositories
  rosrepo is the standard tool for ROS workspace management in Fraunhofer
  FKIE with a number of nice features:
+ .
   - More comfortable management of package builds and dependencies
   - Mark packages as pinned so they will always be built
   - Clone, push, and pull from Gitlab repositories
   - Automatically clone Gitlab projects to satisfy package dependencies
+ .
+ This package provides the Python 2 version of rosrepo.
 
 Package: python3-rosrepo
 Architecture: all
@@ -36,11 +39,14 @@ Conflicts: python-rosrepo
 Depends: ${python3:Depends}, ${misc:Depends},
     git (>= 1:1.7.5)
 Recommends: git-cola, meld
-Description: Manage ROS workspaces with multiple Gitlab repositories
+Description: Manage ROS workspaces with multiple Gitlab repositories (Python 3)
  rosrepo is the standard tool for ROS workspace management in Fraunhofer
  FKIE with a number of nice features:
+ .
   - More comfortable management of package builds and dependencies
   - Mark packages as pinned so they will always be built
   - Clone, push, and pull from Gitlab repositories
   - Automatically clone Gitlab projects to satisfy package dependencies
+ .
+ This package provides the Python 3 version of rosrepo.
 
