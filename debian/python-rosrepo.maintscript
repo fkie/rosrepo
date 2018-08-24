@@ -1,2 +1,0 @@
-rm_conffile /etc/bash_completion.d/rosrepo 3.0.46-1
-
