@@ -169,13 +169,13 @@ class GitRemoteCallback(RemoteCallbacks):
                             return UserPass("rosrepo", private_token)
                 if retry == 2:
                     if allowed_types & GIT_CREDTYPE_SSH_KEY:
-                        self.record_permanent_failure("SSH agent has no acceptable key")
+                        self.record_permanent_failure(query, "SSH agent has no acceptable key")
                     if allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT:
                         username, password = self.get_cached_credentials(query)
                         if username is None:
                             exitcode, stdout, _ = call_process(["git", "credential", "fill"], input_data=query, stdin=PIPE, stdout=PIPE)
                             if exitcode != 0:
-                                self.record_permanent_failure("git credential helper failed")
+                                self.record_permanent_failure(query, "git credential helper failed")
                             for line in stdout.split("\n"):
                                 if "=" in line:
                                     key, value = line.split("=", 1)
