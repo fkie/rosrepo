@@ -215,7 +215,7 @@ class SystemPackageManager(object):
         self._installed_packages = None
         if self._system == "Linux":
             self._installer = "apt"
-            self._installer_cmd = "sudo apt-get install"
+            self._installer_cmd = "sudo apt install"
         elif self._system == "Darwin":
             self._installer = "homebrew"
             self._installer_cmd = "brew install"
