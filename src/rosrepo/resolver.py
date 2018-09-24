@@ -38,6 +38,9 @@ class Rosdep(object):
         self.cached_installers = {}
         gc.disable()
         try:
+            import sys
+            from . import dummy_pkg_resources
+            sys.modules["pkg_resources"] = dummy_pkg_resources
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
             from rosdep2 import get_default_installer, create_default_installer_context
