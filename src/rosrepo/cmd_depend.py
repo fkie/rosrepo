@@ -43,7 +43,16 @@ def run(args):
     table = TableView("Package", "Depends On", "Used By")
     for pkg in args.packages:
         if pkg not in ws_state.ws_packages and pkg not in ws_state.remote_packages and pkg not in ws_state.ros_root_packages:
-            error("unknown package '%s'\n" % pkg)
+            rdepends, system_rdepends = find_dependers([pkg], ws_state)
+            dependers = []
+            for dep in sorted(list(rdepends)):
+                if dep in ws_state.ws_packages:
+                    dependers.append("@{gf}%s@|" % escape(dep))
+                else:
+                    dependers.append("@{yf}%s@|" % escape(dep))
+            for dep in sorted(list(system_rdepends)):
+                dependers.append(escape(dep))
+            table.add_row("@{rf}%s@|" % escape(pkg), "", dependers)
         else:
             rdepends, system_rdepends = find_dependers([pkg], ws_state)
             depends, system_depends, conflicts = find_dependees([pkg], ws_state, auto_resolve=True)

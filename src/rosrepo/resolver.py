@@ -38,6 +38,9 @@ class Rosdep(object):
         self.cached_installers = {}
         gc.disable()
         try:
+            import sys
+            from . import dummy_pkg_resources
+            sys.modules["pkg_resources"] = dummy_pkg_resources
             from rosdep2.lookup import RosdepLookup
             from rosdep2.rospkg_loader import DEFAULT_VIEW_KEY
             from rosdep2 import get_default_installer, create_default_installer_context
@@ -215,7 +218,7 @@ class SystemPackageManager(object):
         self._installed_packages = None
         if self._system == "Linux":
             self._installer = "apt"
-            self._installer_cmd = "sudo apt-get install"
+            self._installer_cmd = "sudo apt install"
         elif self._system == "Darwin":
             self._installer = "homebrew"
             self._installer_cmd = "brew install"
