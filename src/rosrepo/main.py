@@ -39,6 +39,7 @@ CMD_INCLUDE_EXCLUDE = 8
 CMD_DEPEND = 9
 CMD_EXPORT = 10
 CMD_FIND = 11
+CMD_TEST = 12
 
 
 def add_common_options(parser):
@@ -349,6 +350,31 @@ def prepare_arguments(parser):
     p.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to find")
     p.set_defaults(func=CMD_FIND)
 
+    # test
+    p = cmds.add_parser("test", help="run unit tests on packages")
+    add_common_options(p)
+    p.add_argument("-p", "--protocol", help="use PROTOCOL to clone missing packages from Gitlab (default: ssh)")
+    g = p.add_argument_group("build options")
+    g.add_argument("-c", "--clean", action="store_true", help="remove build artifacts of selected packages first")
+    g.add_argument("--clean-all", action="store_true", help="clean the whole workspace before testing")
+    g.add_argument("-v", "--verbose", action="store_true", help="verbose build log")
+    g.add_argument("-k", "--keep-going", action="store_true", help="continue as much as possible after errors")
+    g.add_argument("-j", "--jobs", help="limit the number of simultaneous jobs")
+    g.add_argument("--no-status", action="store_true", help="suppress status line")
+    g.add_argument("-m", "--ignore-missing-depends", action="store_true", help="do not abort the test if system dependencies are missing")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--clone", action="store_true", default=True, help="clone missing dependencies (default)")
+    m.add_argument("--no-clone", action="store_false", dest="clone", help="do not clone missing dependencies")
+    m = g.add_mutually_exclusive_group(required=False)
+    m.add_argument("--env-cache", action="store_true", default=None, help="cache build environment settings to build workspace faster")
+    m.add_argument("--no-env-cache", action="store_false", dest="env_cache", help="do not cache build environment settings")
+    m = p.add_mutually_exclusive_group(required=False)
+    m.add_argument("-a", "--all", action="store_true", help="test all packages in the workspace")
+    m.add_argument("-l", "--last", action="store_true", help="test the packages that were most recently built")
+    m.add_argument("--this", action="store_true", help="test package in the current working directory")
+    m.add_argument("packages", metavar="PACKAGE", default=[], nargs="*", help="select packages to test")
+    p.set_defaults(func=CMD_TEST)
+
     return parser
 
 
@@ -388,6 +414,9 @@ def run_rosrepo(args):  # pragma: no cover
             if args.func == CMD_FIND:
                 import rosrepo.cmd_find
                 return rosrepo.cmd_find.run(args)
+            if args.func == CMD_TEST:
+                import rosrepo.cmd_test
+                return rosrepo.cmd_test.run(args)
         error("no command\n")
     except UserError as e:
         if args.stacktrace:
