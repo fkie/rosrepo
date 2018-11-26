@@ -189,10 +189,9 @@ def find_available_gitlab_projects(label, url, private_token=None, cache=None, t
                     manifest = parse_package_string(xml_data, filename)
                     if verbose:
                         msg("@{cf}Updated@|:  @{yf}%s@| [%s]\n" % (manifest.name, p.name))
+                    p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
                 except InvalidPackage as e:
                     warning("invalid package manifest '%s': %s\n" % (filename, str(e)))
-                    manifest = None
-                p.packages.append(GitlabPackage(manifest=manifest, project=p, project_path=path, manifest_blob=blob, manifest_xml=xml_data))
         return p
 
     global _updated_urls
