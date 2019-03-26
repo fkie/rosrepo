@@ -19,7 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from .workspace import find_ros_root, get_workspace_location, get_workspace_state, resolve_this
+from .workspace import get_workspace_location, get_workspace_state, resolve_this
 from .cache import Cache
 from .config import Config
 from .resolver import find_dependees
@@ -94,7 +94,12 @@ def run(args):
         url, version = get_current_remote(os.path.join(wsdir, "src", prj.workspace_path))
         if args.protocol:
             url = prj.url[args.protocol]
-        d = {"local-name": prj.workspace_path, "uri": url}
+        packages = {}
+        for p in prj.packages:
+            if p.manifest.name in depends.keys():
+                packages[p.manifest.name] = p.project_path or "."
+        meta = {"packages": packages}
+        d = {"local-name": prj.workspace_path, "uri": url, "meta": meta}
         if version:
             d["version"] = version
         yaml.append({"git": d})
@@ -105,7 +110,12 @@ def run(args):
             d["version"] = version
         yaml.append({"git": d})
     for prj in remote_projects:
-        d = {"local-name": compute_git_subdir(prj.server_path, paths), "uri": prj.url[protocol], "version": prj.master_branch}
+        packages = {}
+        for p in prj.packages:
+            if p.manifest.name in depends.keys():
+                packages[p.manifest.name] = p.project_path or "."
+        meta = {"packages": packages}
+        d = {"local-name": compute_git_subdir(prj.server_path, paths), "uri": prj.url[protocol], "version": prj.master_branch, "meta": meta}
         yaml.append({"git": d})
     if yaml:
         args.output.write(yaml_dump(yaml, encoding="UTF-8", default_flow_style=False))
